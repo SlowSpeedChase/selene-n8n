@@ -23,6 +23,7 @@ This roadmap has been reorganized into focused, modular documents to make it eas
 Work on specific features:
 
 - **[Phase 1: Core System](./docs/roadmap/03-PHASE-1-CORE.md)** ✅ COMPLETE - Drafts → Ollama → SQLite
+- **[Phase 1.5: UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** 🔨 IN PROGRESS - Draft UUID tracking & edit detection
 - **[Phase 2: Obsidian Export](./docs/roadmap/04-PHASE-2-OBSIDIAN.md)** ⬜ Next up
 - **[Phase 3: Pattern Detection](./docs/roadmap/05-PHASE-3-PATTERNS.md)** ⬜ Future
 - **[Phase 4: Polish & Enhancements](./docs/roadmap/06-PHASE-4-POLISH.md)** ⬜ Future
@@ -39,6 +40,12 @@ Integration details and specifications:
 - **[n8n Workflow Specs](./docs/roadmap/13-N8N-WORKFLOW-SPECS.md)** - Detailed node configurations
 - **[Configuration Files](./docs/roadmap/14-CONFIGURATION.md)** - Environment and config
 - **[Testing Procedures](./docs/roadmap/15-TESTING.md)** - How to test and validate
+
+### 🏗️ **Foundation Improvements**
+
+Infrastructure and architectural enhancements:
+
+- **[UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** - Draft identification and edit detection
 
 ### 🛠️ **Setup & Maintenance**
 
@@ -119,7 +126,13 @@ Task: Mark tasks complete, update metrics
 - 100% resource efficiency (no wasted cron executions)
 - Workflows 04 & 05 still using cron/schedule triggers
 
-**⬜ Phase 2 Next** (Obsidian Export)
+**🔨 Phase 1.5 In Progress** (UUID Tracking Foundation - Started 2025-11-01)
+- Add source_uuid field to database
+- Track individual drafts by UUID
+- Implement edit detection (UUID-first duplicate logic)
+- Foundation for version tracking and edit history
+
+**⬜ Phase 2 Next** (Obsidian Export - After Phase 1.5)
 - Export processed notes to markdown
 - Create Obsidian vault structure
 - Test concept/theme linking
@@ -241,6 +254,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2025-11-01**: Added Phase 1.5 (UUID Tracking Foundation) - Draft identification and edit detection
 - **2025-10-31**: Reorganized into modular documentation structure
 - **2025-10-30**: Phase 1 completed (10 notes processed, all features working)
 - **2025-10-18**: Initial roadmap created, project started

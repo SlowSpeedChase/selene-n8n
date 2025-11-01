@@ -75,10 +75,48 @@ SELECT AVG(confidence_score) FROM processed_notes;  # ~0.82 (good quality)
 
 ## In-Progress Phases
 
+### 🔨 Phase 1.5: UUID Tracking Foundation
+
+**Status:** PLANNED (Starting 2025-11-01)
+**Priority:** HIGH - Foundational improvement
+**Goal:** Add source UUID tracking for draft identification and edit detection
+
+#### Overview
+
+Add `source_uuid` field to track individual drafts by their UUID. This enables:
+- Precise draft identification ("did draft X get processed?")
+- Edit detection (update existing record when draft is modified)
+- Foundation for version tracking and edit history
+- Link database records back to original drafts
+
+#### Implementation Phases
+
+1. **Phase 1: Database Foundation** - Add `source_uuid` column and index
+2. **Phase 2: Capture UUIDs** - Update Drafts action to send UUID
+3. **Phase 3: Store UUIDs** - Update workflow to store UUID
+4. **Phase 4: UUID-First Logic** - Implement UUID-based duplicate detection with edit support
+5. **Phase 5: Integration Testing** - Verify new draft, duplicate, and edit scenarios
+
+#### Strategy: UUID-First with Override
+
+- If UUID exists in DB → Check if content changed
+  - Content same → Skip (duplicate)
+  - Content different → Update existing record (edit detected)
+- If UUID is new → Check content_hash for accidental duplicates
+  - Content exists → Skip
+  - Content new → Insert new record
+- If no UUID provided → Fall back to content_hash (backward compatible)
+
+**Time Estimate:** 4-5 hours (incremental over 1-2 days)
+
+See [09-UUID-TRACKING-FOUNDATION.md](./09-UUID-TRACKING-FOUNDATION.md) for complete plan.
+
+---
+
 ### ⬜ Phase 2: Obsidian Export
 
-**Status:** NOT STARTED
-**Next Up:** To be implemented
+**Status:** NOT STARTED (After Phase 1.5)
+**Next Up:** To be implemented after UUID tracking
 **Goal:** Export processed notes to Obsidian vault
 
 #### Tasks Remaining
@@ -174,6 +212,12 @@ SELECT theme, COUNT(*) FROM (
 
 ## Recent Changes
 
+### 2025-11-01
+- Added Phase 1.5: UUID Tracking Foundation
+- Created comprehensive plan for draft UUID tracking
+- Planned UUID-first duplicate detection with edit support
+- Identified need for foundational UUID tracking before additional features
+
 ### 2025-10-31
 - Created modular roadmap documentation structure
 - Split monolithic ROADMAP.md into focused files
@@ -198,7 +242,15 @@ SELECT theme, COUNT(*) FROM (
 
 ### For Development
 
-1. **Start Phase 2** (Obsidian Export)
+1. **Start Phase 1.5** (UUID Tracking Foundation) - PRIORITY
+   - Read [09-UUID-TRACKING-FOUNDATION.md](./09-UUID-TRACKING-FOUNDATION.md)
+   - Phase 1: Add `source_uuid` column to database
+   - Phase 2: Update Drafts action to send UUID
+   - Phase 3: Update workflow to store UUID
+   - Phase 4: Implement UUID-first duplicate logic
+   - Phase 5: Test new draft, duplicate, and edit scenarios
+
+2. **Start Phase 2** (Obsidian Export) - After Phase 1.5
    - Read [04-PHASE-2-OBSIDIAN.md](./04-PHASE-2-OBSIDIAN.md)
    - Create vault directory structure
    - Build export workflow
