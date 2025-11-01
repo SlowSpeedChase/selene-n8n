@@ -1,0 +1,280 @@
+{
+  "name": "01-Note-Ingestion | Selene",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/drafts",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-receive",
+      "name": "Webhook: Receive from Drafts",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "selene-drafts-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse incoming note from Drafts app or other sources\nconst body = $input.item.json.body || $input.item.json;\nconst query = $input.item.json.query || {};\n\n// Support multiple input formats\nconst title = body.title || query.title || 'Untitled Note';\nconst content = body.content || query.content || body.text || '';\nconst timestamp = body.created_at || body.timestamp || query.timestamp || new Date().toISOString();\nconst sourceType = body.source_type || query.source_type || 'drafts';\nconst testRun = body.test_run || query.test_run || null;\n\n// Validate required fields\nif (!content || content.trim().length === 0) {\n  throw new Error('Content is required and cannot be empty');\n}\n\n// Generate content hash for duplicate detection (simple hash function)\n// Using a FNV-1a hash algorithm that works without crypto module\nfunction simpleHash(str) {\n  let hash = 2166136261;\n  for (let i = 0; i < str.length; i++) {\n    hash ^= str.charCodeAt(i);\n    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);\n  }\n  return (hash >>> 0).toString(16);\n}\n\nconst contentHash = simpleHash(content.trim());\n\n// Calculate metadata\nconst words = content.trim().split(/\\s+/).filter(w => w.length > 0);\nconst wordCount = words.length;\nconst characterCount = content.length;\n\n// Extract tags if present (format: #tag)\nconst tagMatches = content.match(/#(\\w+)/g) || [];\nconst tags = tagMatches.map(t => t.substring(1));\n\nreturn {\n  json: {\n    title: title.trim(),\n    content: content.trim(),\n    contentHash: contentHash,\n    timestamp: timestamp,\n    wordCount: wordCount,\n    characterCount: characterCount,\n    tags: tags,\n    sourceType: sourceType,\n    testRun: testRun,\n    status: 'pending'\n  }\n};"
+      },
+      "id": "function-parse",
+      "name": "Parse Note Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst noteData = $json;\n\ntry {\n  const db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  const query = `SELECT id, title, created_at FROM raw_notes WHERE content_hash = ? LIMIT 1`;\n  const stmt = db.prepare(query);\n  const result = stmt.get(noteData.contentHash);\n  \n  db.close();\n  \n  return { json: result || { id: null } };\n  \n} catch (error) {\n  console.error('SQLite Duplicate Check Error:', error);\n  // If database doesn't exist or has errors, treat as new note\n  return { json: { id: null } };\n}"
+      },
+      "id": "sqlite-check-duplicate",
+      "name": "Check for Duplicate",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.id == null || $json.id == undefined }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "switch-is-duplicate",
+      "name": "Is New Note?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst noteData = $('Parse Note Data').item.json;\n\ntry {\n  const db = new Database('/selene/data/selene.db');\n\n  // Insert the note into raw_notes table\n  // Sets both status='pending' (for Ollama) and status_apple='pending_apple' (for Apple Intelligence)\n  const insertQuery = `INSERT INTO raw_notes (\n    title, content, content_hash, source_type,\n    word_count, character_count, tags,\n    created_at, imported_at, status, status_apple, test_run\n  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 'pending', 'pending_apple', ?)`;\n\n  const stmt = db.prepare(insertQuery);\n  const result = stmt.run(\n    noteData.title,\n    noteData.content,\n    noteData.contentHash,\n    noteData.sourceType,\n    noteData.wordCount,\n    noteData.characterCount,\n    JSON.stringify(noteData.tags),\n    noteData.timestamp,\n    noteData.testRun\n  );\n\n  db.close();\n\n  return {\n    json: {\n      note_id: result.lastInsertRowid,\n      title: noteData.title,\n      wordCount: noteData.wordCount,\n      contentHash: noteData.contentHash,\n      sourceType: noteData.sourceType,\n      testRun: noteData.testRun\n    }\n  };\n\n} catch (error) {\n  console.error('SQLite Insert Error:', error);\n  throw new Error(`Failed to insert note: ${error.message}`);\n}"
+      },
+      "id": "sqlite-insert",
+      "name": "Insert Note",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const insertResult = $json;\n\nreturn {\n  json: {\n    success: true,\n    action: 'stored',\n    message: 'Note successfully ingested into raw_notes table',\n    noteId: insertResult.note_id,\n    title: insertResult.title,\n    wordCount: insertResult.wordCount,\n    contentHash: insertResult.contentHash,\n    sourceType: insertResult.sourceType,\n    status: 'pending'\n  }\n};"
+      },
+      "id": "function-success",
+      "name": "Build Success Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/api/process-note",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"noteId\": $json.noteId } }}",
+        "options": {
+          "timeout": 120000,
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "http-trigger-processing",
+      "name": "Trigger LLM Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1450,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const ingestionData = $('Build Success Response').item.json;\nconst processingData = $json;\n\nreturn {\n  json: {\n    success: true,\n    action: 'stored_and_processed',\n    message: 'Note ingested and LLM processing triggered successfully',\n    noteId: ingestionData.noteId,\n    title: ingestionData.title,\n    wordCount: ingestionData.wordCount,\n    processing: {\n      status: processingData.success ? 'processing' : 'queued',\n      conceptsExtracted: processingData.conceptsExtracted || 0,\n      primaryTheme: processingData.primaryTheme || null,\n      sentiment: processingData.sentiment || null\n    }\n  }\n};"
+      },
+      "id": "function-merge-response",
+      "name": "Merge Processing Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const noteData = $('Parse Note Data').item.json;\nconst existingNote = $('Check for Duplicate').item.json;\n\nreturn {\n  json: {\n    success: true,\n    action: 'duplicate_skipped',\n    message: 'Duplicate note detected and skipped',\n    contentHash: noteData.contentHash,\n    title: noteData.title,\n    existingNoteId: existingNote.id,\n    existingNoteTitle: existingNote.title,\n    existingNoteCreatedAt: existingNote.created_at\n  }\n};"
+      },
+      "id": "function-duplicate",
+      "name": "Build Duplicate Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Receive from Drafts": {
+      "main": [
+        [
+          {
+            "node": "Parse Note Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Note Data": {
+      "main": [
+        [
+          {
+            "node": "Check for Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Is New Note?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New Note?": {
+      "main": [
+        [
+          {
+            "node": "Insert Note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Duplicate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Note": {
+      "main": [
+        [
+          {
+            "node": "Build Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Success Response": {
+      "main": [
+        [
+          {
+            "node": "Trigger LLM Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger LLM Processing": {
+      "main": [
+        [
+          {
+            "node": "Merge Processing Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Processing Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Duplicate Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Selene",
+      "id": "selene-tag"
+    }
+  ],
+  "meta": {
+    "instanceId": "selene-local"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,388 @@
+# Selene n8n Project - Current Status
+
+**Last Updated:** 2025-10-30
+**Status:** Workflow 01 Complete, Ready for Workflow 02
+
+---
+
+## Project Overview
+
+Selene is an n8n-based automation system for capturing, processing, and managing notes from various sources (primarily Drafts app) with LLM processing and Obsidian export.
+
+**Architecture:** Docker-based n8n with SQLite database
+**Location:** `/Users/chaseeasterling/selene-n8n`
+
+---
+
+## Completed Workflows
+
+### ✅ 01-Ingestion Workflow (COMPLETE)
+
+**Status:** Tested and Production Ready (6/7 tests passing)
+**Location:** `workflows/01-ingestion/`
+**Webhook:** `http://localhost:5678/webhook/api/drafts`
+
+**What It Does:**
+- Receives notes via webhook (POST JSON)
+- Validates content and extracts metadata
+- Generates content hash for duplicate detection
+- Extracts hashtags from content
+- Stores in `raw_notes` table with status='pending'
+
+**Key Features:**
+- ✅ Duplicate detection via content hash
+- ✅ Tag extraction (#hashtag support)
+- ✅ Word/character count calculation
+- ✅ Test data marking system (`test_run` column)
+- ✅ Automated test suite with cleanup
+- ✅ Drafts app integration ready
+
+**Database Table:** `raw_notes`
+```sql
+CREATE TABLE raw_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    content_hash TEXT UNIQUE NOT NULL,
+    source_type TEXT DEFAULT 'drafts',
+    word_count INTEGER DEFAULT 0,
+    character_count INTEGER DEFAULT 0,
+    tags TEXT, -- JSON array
+    created_at DATETIME NOT NULL,
+    imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
+    exported_at DATETIME,
+    status TEXT DEFAULT 'pending',
+    exported_to_obsidian INTEGER DEFAULT 0,
+    test_run TEXT DEFAULT NULL
+);
+```
+
+**Configuration:**
+- better-sqlite3 installed in `/home/node/.n8n/node_modules/`
+- `NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3`
+- `NODE_PATH=/home/node/.n8n/node_modules`
+
+**Known Issues:**
+- Alternative query parameter format not supported (low priority)
+
+**Testing:**
+- Test suite: `./workflows/01-ingestion/scripts/test-with-markers.sh`
+- Cleanup: `./workflows/01-ingestion/scripts/cleanup-tests.sh`
+
+**Documentation:**
+- Quick reference: `workflows/01-ingestion/INDEX.md`
+- Status/results: `workflows/01-ingestion/docs/STATUS.md`
+- Drafts setup: `workflows/01-ingestion/docs/DRAFTS-QUICKSTART.md`
+
+---
+
+## Next Workflows (TODO)
+
+### 🔄 02-LLM Processing (IN PROGRESS)
+
+**Status:** Not Started
+**Location:** `workflows/02-llm-processing/` (file exists: `02-llm-processing-workflow.json`)
+**Purpose:** Process notes from `raw_notes` with LLM
+
+**Expected Flow:**
+1. Query `raw_notes` WHERE status='pending'
+2. Send to Ollama for processing
+3. Extract insights, topics, connections
+4. Store in `processed_notes` table
+5. Update raw_notes.status='processed'
+
+**Ollama Configuration:**
+- URL: `http://host.docker.internal:11434` (from n8n container)
+- Model: `mistral:7b` (configurable via `OLLAMA_MODEL` env var)
+- Container has `host.docker.internal` mapped to host gateway
+
+**Database Table:** `processed_notes` (needs verification)
+
+**Questions to Answer:**
+- What processing should be done?
+- What should be extracted?
+- How to structure processed_notes table?
+- Batch processing or one-by-one?
+- Error handling for LLM failures?
+
+### 📊 03-Pattern Detection
+
+**Status:** Not Started
+**Location:** `workflows/03-pattern-detection/` (file exists: `03-pattern-detection-workflow.json`)
+
+**Expected:** Analyze patterns across processed notes
+
+### 📤 04-Obsidian Export
+
+**Status:** Not Started
+**Location:** `workflows/04-obsidian-export/` (file exists: `04-obsidian-export-workflow.json`)
+
+**Expected:** Export processed notes to Obsidian vault
+**Vault Path:** `/obsidian` (mounted from `${OBSIDIAN_VAULT_PATH:-./vault}`)
+
+### 📈 05-Sentiment Analysis
+
+**Status:** Not Started
+**Location:** (file exists: `05-sentiment-analysis-workflow.json`)
+
+### 🕸️ 06-Connection Network
+
+**Status:** Not Started
+**Location:** (file exists: `06-connection-network-workflow.json`)
+
+---
+
+## Technical Architecture
+
+### Database
+
+**Type:** SQLite
+**Location:** `data/selene.db`
+**Container Path:** `/selene/data/selene.db`
+
+**Tables:**
+- `raw_notes` - Ingested notes (workflow 01 ✅)
+- `processed_notes` - LLM processed notes (workflow 02)
+- `detected_patterns` - Pattern detection results (workflow 03)
+- `sentiment_history` - Sentiment analysis (workflow 05)
+- `network_analysis_history` - Connection network (workflow 06)
+- `pattern_reports` - Pattern reports (workflow 03)
+- `test_table` - Unknown purpose
+
+**Schema Location:** `database/schema.sql`
+
+### Docker Setup
+
+**Container:** `selene-n8n`
+**Image:** Custom build from `Dockerfile`
+**Base:** `n8nio/n8n:latest`
+
+**Volumes:**
+- `n8n_data:/home/node/.n8n` - Persistent n8n data
+- `./data:/selene/data:rw` - Database
+- `./vault:/obsidian:rw` - Obsidian vault
+- `.:/workflows:ro` - Workflow files (read-only)
+
+**Environment Variables:**
+```yaml
+# Authentication
+N8N_BASIC_AUTH_ACTIVE=true
+N8N_BASIC_AUTH_USER=admin
+N8N_BASIC_AUTH_PASSWORD=selene_n8n_2025
+
+# Node modules
+NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3
+NODE_PATH=/home/node/.n8n/node_modules
+
+# Database paths
+SELENE_DB_PATH=/selene/data/selene.db
+OBSIDIAN_VAULT_PATH=/obsidian
+
+# Ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=mistral:7b
+
+# Community packages
+N8N_COMMUNITY_PACKAGES_ENABLED=true
+N8N_COMMUNITY_PACKAGES_INSTALL=n8n-nodes-sqlite
+```
+
+**Network:**
+- `host.docker.internal:host-gateway` mapped for Ollama access
+
+### Dependencies
+
+**Installed in Container:**
+- better-sqlite3@11.0.0 (in `/home/node/.n8n/node_modules/`)
+- n8n-nodes-sqlite (community package)
+
+**System Packages:**
+- python3, make, g++, sqlite, sqlite-dev
+
+---
+
+## Important Patterns & Decisions
+
+### 1. Better-SQLite3 Integration
+
+**Problem:** n8n's VM2 sandbox can't access globally installed modules
+**Solution:** Install in workspace + set NODE_PATH + whitelist with NODE_FUNCTION_ALLOW_EXTERNAL
+
+**Usage in workflows:**
+```javascript
+const Database = require('better-sqlite3');
+const db = new Database('/selene/data/selene.db');
+// ... use db
+db.close();
+```
+
+### 2. Test Data Management
+
+**Pattern:** All test data marked with `test_run` column
+**Benefit:** Easy programmatic cleanup without affecting production data
+
+**Usage:**
+```json
+{
+  "title": "Test Note",
+  "content": "Content",
+  "test_run": "test-run-20251030-120000"
+}
+```
+
+**Cleanup:**
+```bash
+./scripts/cleanup-tests.sh test-run-20251030-120000
+```
+
+### 3. Switch vs IF Nodes
+
+**Issue:** Switch node with `notExists` doesn't work with `null` values
+**Solution:** Use IF node with explicit null check
+
+**Correct Pattern:**
+```javascript
+// In IF node condition:
+$json.id == null || $json.id == undefined
+```
+
+### 4. Workflow Response Modes
+
+**webhook responseMode: "onReceived"** - Returns immediately, workflow runs async
+**webhook responseMode: "lastNode"** - Waits for workflow completion
+
+Currently using `onReceived` for ingestion workflow.
+
+---
+
+## Network Configuration
+
+**Local Network IP:** 192.168.1.26
+**Tailscale IP:** 100.111.6.10
+**n8n Port:** 5678
+
+**Drafts Webhook URLs:**
+- Same device: `http://localhost:5678/webhook/api/drafts`
+- Same WiFi: `http://192.168.1.26:5678/webhook/api/drafts`
+- Tailscale: `http://100.111.6.10:5678/webhook/api/drafts`
+
+---
+
+## Testing Strategy
+
+### Automated Tests
+- Location: `workflows/*/scripts/test-with-markers.sh`
+- Marks all data with unique `test_run` ID
+- Provides cleanup instructions
+
+### Manual Tests
+- Always include `test_run` parameter
+- Clean up after testing
+
+### CI/CD Ready
+- Tests can run in pipeline
+- Automatic cleanup possible
+- Test data isolated from production
+
+---
+
+## Common Commands
+
+### Docker Management
+```bash
+docker-compose ps              # Check status
+docker-compose logs n8n        # View logs
+docker-compose restart n8n     # Restart
+docker-compose down            # Stop
+docker-compose up -d           # Start
+```
+
+### Database Access
+```bash
+sqlite3 data/selene.db "SELECT * FROM raw_notes LIMIT 5;"
+sqlite3 data/selene.db ".tables"
+sqlite3 data/selene.db ".schema raw_notes"
+```
+
+### Testing
+```bash
+cd workflows/01-ingestion
+./scripts/test-with-markers.sh           # Run tests
+./scripts/cleanup-tests.sh --list        # List test runs
+./scripts/cleanup-tests.sh <test-run-id> # Clean specific run
+```
+
+---
+
+## Next Session Priorities
+
+1. **Review 02-llm-processing-workflow.json**
+   - Understand current implementation
+   - Identify gaps or issues
+   - Plan modifications
+
+2. **Set up Ollama Integration**
+   - Verify Ollama is accessible from n8n
+   - Test API calls
+   - Configure model parameters
+
+3. **Design processed_notes Schema**
+   - Determine what data to store
+   - Create or verify table structure
+   - Add test_run column for consistency
+
+4. **Implement LLM Processing**
+   - Create workflow logic
+   - Handle errors gracefully
+   - Test with sample notes
+
+5. **Testing & Documentation**
+   - Create test suite for workflow 02
+   - Document in same pattern as workflow 01
+   - Update this status file
+
+---
+
+## Files to Reference
+
+**Must Read:**
+- `workflows/01-ingestion/INDEX.md` - Complete file reference
+- `workflows/01-ingestion/docs/STATUS.md` - Test results & patterns
+- `database/schema.sql` - Database structure
+- `docker-compose.yml` - Environment configuration
+
+**Workflow Files:**
+- `02-llm-processing-workflow.json` - Next to implement
+- `03-pattern-detection-workflow.json`
+- `04-obsidian-export-workflow.json`
+- `05-sentiment-analysis-workflow.json`
+- `06-connection-network-workflow.json`
+
+---
+
+## Questions for Next Session
+
+1. Is Ollama running and accessible?
+2. What model should be used? (default: mistral:7b)
+3. What insights should LLM extract?
+4. Should processing be batched or individual?
+5. How to handle LLM failures/timeouts?
+6. What metadata should be stored in processed_notes?
+7. Should we trigger processing automatically or manually?
+
+---
+
+## Achievements This Session
+
+✅ Completed ingestion workflow testing (6/7 pass rate)
+✅ Fixed better-sqlite3 module loading
+✅ Fixed switch node logic for duplicate detection
+✅ Implemented test data management system
+✅ Created comprehensive documentation
+✅ Organized folder structure
+✅ Set up Drafts app integration guide
+✅ Marked existing test data for cleanup
+✅ Updated all documentation paths
+
+**Ready for:** Workflow 02 - LLM Processing

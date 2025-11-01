@@ -1,0 +1,211 @@
+{
+  "main": {
+    "id": "9279978b708bfeda",
+    "type": "split",
+    "children": [
+      {
+        "id": "bc4eaeb57928726b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "26921550a8963c03",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Selene/Timeline/2025/10/2025-10-30-amazing-breakthrough-today.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2025-10-30-amazing-breakthrough-today"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "aca2efc952d8223e",
+    "type": "split",
+    "children": [
+      {
+        "id": "e12d2226a8d2a510",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c35b299789132173",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "8114cce171445606",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "8995a024ab942bef",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "17aa6e7a67a4a823",
+    "type": "split",
+    "children": [
+      {
+        "id": "3542b67bcb0bc85c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "48ac016f6b7f3004",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Selene/Timeline/2025/10/2025-10-30-amazing-breakthrough-today.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 2025-10-30-amazing-breakthrough-today"
+            }
+          },
+          {
+            "id": "b3762353b26aa476",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Selene/Timeline/2025/10/2025-10-30-amazing-breakthrough-today.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 2025-10-30-amazing-breakthrough-today"
+            }
+          },
+          {
+            "id": "ed7e1a507c989cea",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "fea77e46cc9da548",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Selene/Timeline/2025/10/2025-10-30-amazing-breakthrough-today.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 2025-10-30-amazing-breakthrough-today"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "26921550a8963c03",
+  "lastOpenFiles": [
+    "Selene/Concepts/remember.md",
+    "Selene/Concepts/quick test.md",
+    "Selene/By-Energy/medium/2025-10-30-test.md",
+    "Selene/By-Theme/learning/2025-10-30-test.md",
+    "Selene/By-Theme/learning",
+    "Selene/By-Concept/quick test/2025-10-30-test.md",
+    "Selene/By-Concept/quick test",
+    "Selene/Timeline/2025/10/2025-10-30-test.md",
+    "Selene/Concepts/Entertainment.md",
+    "Selene/Concepts/Intrinsic value.md",
+    "Selene/Concepts/Interaction.md",
+    "Selene/Concepts/Halloween party.md",
+    "Selene/By-Energy/medium/2025-11-01-i-went-to-emily-and-seans-halloween-party-tonight-.md",
+    "Selene/By-Theme/reflection/2025-11-01-i-went-to-emily-and-seans-halloween-party-tonight-.md",
+    "Selene/By-Theme/reflection",
+    "Selene/By-Concept/Halloween party/2025-11-01-i-went-to-emily-and-seans-halloween-party-tonight-.md",
+    "Selene/By-Concept/Halloween party",
+    "Selene/Timeline/2025/11/2025-11-01-i-went-to-emily-and-seans-halloween-party-tonight-.md",
+    "Selene/Concepts/journey.md",
+    "Selene/Concepts/opportunities.md",
+    "Selene/By-Energy/high/2025-10-30-excited-about-new-project.md",
+    "Selene/By-Theme/project/2025-10-30-excited-about-new-project.md",
+    "Selene/By-Theme/project",
+    "Selene/By-Concept/project/2025-10-30-excited-about-new-project.md",
+    "Selene/By-Concept/project",
+    "Selene/Timeline/2025/10/2025-10-30-excited-about-new-project.md",
+    "Selene/Concepts/project.md",
+    "Selene/Concepts/codebase.md",
+    "Selene/Concepts/bugs.md",
+    "Selene/By-Energy/low/2025-10-30-frustrated-with-bugs.md",
+    "Selene/By-Theme/problem_solving/2025-10-30-frustrated-with-bugs.md",
+    "Selene/By-Theme/problem_solving",
+    "Selene/By-Concept/bugs/2025-10-30-frustrated-with-bugs.md",
+    "Selene/By-Concept/bugs",
+    "Selene/By-Theme/work",
+    "Selene/By-Concept/Selene"
+  ]
+}

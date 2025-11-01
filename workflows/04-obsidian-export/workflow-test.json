@@ -1,0 +1,158 @@
+{
+  "name": "Selene TEST: Obsidian Export",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-export",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test/obsidian-test-export",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-on-demand",
+      "name": "On-Demand Export Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 500],
+      "webhookId": "obsidian-export-trigger"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if noteId was provided in the webhook payload\nconst body = $input.item.json.body || $input.item.json.query || $input.item.json;\nconst noteId = body.noteId || body.note_id || null;\n\n// Build command with optional noteId argument\nlet command = 'python3 /workflows/scripts/obsidian-test_export.py';\nif (noteId) {\n  command += ` ${noteId}`;\n}\n\nreturn {\n  json: {\n    command: command,\n    noteId: noteId,\n    mode: noteId ? 'event-driven' : 'batch'\n  }\n};"
+      },
+      "id": "function-build-command",
+      "name": "Build Export Command",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}",
+        "options": {}
+      },
+      "id": "exec-export-script",
+      "name": "Run Export Script",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON output from the Python script\nconst output = $input.first().json.stdout;\nconst result = JSON.parse(output);\n\nreturn {\n  json: result\n};"
+      },
+      "id": "parse-result",
+      "name": "Parse Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 400]
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Build Export Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On-Demand Export Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Export Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Export Command": {
+      "main": [
+        [
+          {
+            "node": "Run Export Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Export Script": {
+      "main": [
+        [
+          {
+            "node": "Parse Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Result": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-10-30T00:00:00.000Z",
+      "updatedAt": "2025-10-30T00:00:00.000Z",
+      "id": "1",
+      "name": "Selene"
+    },
+    {
+      "createdAt": "2025-10-30T00:00:00.000Z",
+      "updatedAt": "2025-10-30T00:00:00.000Z",
+      "id": "2",
+      "name": "ADHD"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-10-30T00:00:00.000Z",
+  "versionId": "1"
+}
