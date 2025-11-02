@@ -5,6 +5,7 @@ CREATE TABLE raw_notes (
     content TEXT NOT NULL,
     content_hash TEXT UNIQUE NOT NULL,
     source_type TEXT DEFAULT 'drafts',
+    source_uuid TEXT DEFAULT NULL, -- UUID from Drafts app for tracking individual drafts
     word_count INTEGER DEFAULT 0,
     character_count INTEGER DEFAULT 0,
     tags TEXT, -- JSON array of tags
@@ -13,7 +14,10 @@ CREATE TABLE raw_notes (
     processed_at DATETIME,
     exported_at DATETIME,
     status TEXT DEFAULT 'pending', -- pending, processed, archived
-    exported_to_obsidian INTEGER DEFAULT 0
+    exported_to_obsidian INTEGER DEFAULT 0,
+    test_run TEXT DEFAULT NULL, -- marker for test notes
+    status_apple TEXT DEFAULT 'pending_apple', -- pending_apple, processed_apple
+    processed_at_apple DATETIME
 );
 CREATE TABLE processed_notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,6 +98,9 @@ CREATE INDEX idx_raw_notes_status ON raw_notes(status);
 CREATE INDEX idx_raw_notes_content_hash ON raw_notes(content_hash);
 CREATE INDEX idx_raw_notes_created_at ON raw_notes(created_at);
 CREATE INDEX idx_raw_notes_exported ON raw_notes(exported_to_obsidian);
+CREATE INDEX idx_raw_notes_source_uuid ON raw_notes(source_uuid);
+CREATE INDEX idx_raw_notes_test_run ON raw_notes(test_run);
+CREATE INDEX idx_raw_notes_status_apple ON raw_notes(status_apple);
 CREATE INDEX idx_processed_notes_raw_id ON processed_notes(raw_note_id);
 CREATE INDEX idx_processed_notes_sentiment ON processed_notes(sentiment_analyzed);
 CREATE INDEX idx_sentiment_history_note_ids ON sentiment_history(processed_note_id, raw_note_id);

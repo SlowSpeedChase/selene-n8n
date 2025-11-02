@@ -50,7 +50,8 @@ function buildPayload() {
     title: draft.title || "Untitled",
     content: draft.content,
     created_at: draft.createdAt.toISOString(),
-    source_type: "drafts"
+    source_type: "drafts",
+    source_uuid: draft.uuid  // UUID tracking for edit detection
   };
 
   // Add test marker if in test mode

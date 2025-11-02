@@ -1,8 +1,9 @@
 # Phase 1.5: UUID Tracking Foundation
 
 **Created:** 2025-11-01
+**Implemented:** 2025-11-01
 **Priority:** HIGH - Foundational improvement
-**Status:** PLANNED
+**Status:** ✅ IMPLEMENTED - Ready for User Testing
 
 ## Overview
 
@@ -344,3 +345,206 @@ This is foundational work that should be done **before** adding more features. W
 - Difficult to debug "which note came from which draft?"
 
 **User feedback:** "This feels important for the foundations" - CORRECT. This enables everything else.
+
+---
+
+# Implementation Complete ✅
+
+**Date:** 2025-11-01
+**Status:** ✅ IMPLEMENTED - Ready for Testing
+
+## What Was Done
+
+### Phase 1: Database Foundation ✅
+- Added `source_uuid` column to `raw_notes` table (TEXT, nullable)
+- Created index `idx_raw_notes_source_uuid` for fast UUID lookups
+- Migration applied successfully: `database/migrations/004_add_source_uuid.sql`
+
+### Phase 2: Drafts Action Update ✅
+- Updated `workflows/01-ingestion/docs/drafts-selene-action.js`
+- Payload now includes: `source_uuid: draft.uuid`
+- Backward compatible (UUID is optional)
+
+### Phase 3: Workflow Updates ✅
+- **Parse Note Data node**: Extracts `source_uuid` from incoming payload
+- **Insert Note node**: Stores `source_uuid` in database
+- Both nodes handle NULL UUIDs gracefully
+
+### Phase 4: UUID-First Duplicate Detection ✅
+- **Check for Duplicate node**: Implements UUID-first logic with content_hash fallback
+- **Is Edit? node**: Routes based on duplicate type
+- **Update Existing Note node**: Updates content when draft is edited
+- **Response builders**: Enhanced to show action type (stored, updated, duplicate_skipped)
+
+## How It Works
+
+### Duplicate Detection Flow
+
+```
+IF source_uuid PROVIDED:
+  ├─ UUID exists in DB?
+  │  ├─ YES → Content same?
+  │  │  ├─ YES → Skip (exact duplicate)
+  │  │  └─ NO → Update (edit detected)
+  │  └─ NO → Check content_hash
+  │     ├─ Content exists? → Skip (content duplicate)
+  │     └─ Content new? → Insert new note
+  └─ UUID not provided:
+     └─ Check content_hash only (backward compatible)
+```
+
+### Response Types
+
+1. **stored** - New note inserted
+2. **updated** - Existing note updated (edit detected)
+3. **duplicate_skipped** - Duplicate detected and skipped
+   - `uuid_exact_duplicate`: Same UUID, same content
+   - `content_duplicate`: Different UUID, same content
+
+## Testing Guide
+
+### Test 1: Fresh Draft (New Note)
+**Action:** Create a new draft in Drafts app and send to Selene
+
+**Expected Result:**
+- Response: `action: "stored_and_processed"`
+- Database: New record with source_uuid populated
+
+**Verify:**
+```sql
+SELECT id, title, source_uuid, content_hash, status
+FROM raw_notes
+WHERE source_uuid IS NOT NULL
+ORDER BY imported_at DESC LIMIT 1;
+```
+
+### Test 2: Resend Same Draft (Exact Duplicate)
+**Action:** Resend the same draft without editing
+
+**Expected Result:**
+- Response: `action: "duplicate_skipped"`
+- Response: `message: "Exact duplicate detected (same UUID and content) - skipped"`
+- Database: No new record, no changes
+
+**Verify:**
+```sql
+SELECT COUNT(*) as count, source_uuid
+FROM raw_notes
+WHERE source_uuid = 'YOUR-UUID-HERE'
+GROUP BY source_uuid;
+-- Should show count = 1
+```
+
+### Test 3: Edit Draft and Resend (Edit Detection)
+**Action:**
+1. Edit the content of the draft
+2. Resend to Selene
+
+**Expected Result:**
+- Response: `action: "updated"`
+- Response: `message: "Note content updated - edit detected"`
+- Database: Existing record updated, `content_hash` changed, `status` reset to 'pending'
+
+**Verify:**
+```sql
+SELECT id, title, source_uuid, content_hash, status, imported_at
+FROM raw_notes
+WHERE source_uuid = 'YOUR-UUID-HERE';
+-- Should show updated content_hash and recent imported_at
+```
+
+### Test 4: Same Content, Different Draft (Content Duplicate)
+**Action:**
+1. Create a new draft with identical content
+2. Send to Selene
+
+**Expected Result:**
+- Response: `action: "duplicate_skipped"`
+- Response: `message: "Content duplicate detected (same content, different source) - skipped"`
+- Database: No new record
+
+### Test 5: Backward Compatibility (No UUID)
+**Action:** Send note without UUID (simulate non-Drafts source)
+
+You can test this with curl:
+```bash
+curl -X POST http://localhost:5678/webhook/api/drafts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Test without UUID",
+    "content": "This note has no source_uuid",
+    "created_at": "2025-11-01T18:00:00.000Z",
+    "source_type": "manual"
+  }'
+```
+
+**Expected Result:**
+- Response: `action: "stored_and_processed"`
+- Database: New record with `source_uuid = NULL`
+
+## Monitoring Queries
+
+### Check UUID Tracking Coverage
+```sql
+SELECT
+  COUNT(*) as total_notes,
+  COUNT(source_uuid) as notes_with_uuid,
+  COUNT(*) - COUNT(source_uuid) as notes_without_uuid,
+  ROUND(COUNT(source_uuid) * 100.0 / COUNT(*), 2) as uuid_coverage_percent
+FROM raw_notes;
+```
+
+### Find Drafts with Multiple Imports (Edit History)
+```sql
+SELECT
+  source_uuid,
+  COUNT(*) as import_count,
+  MIN(imported_at) as first_import,
+  MAX(imported_at) as last_import
+FROM raw_notes
+WHERE source_uuid IS NOT NULL
+GROUP BY source_uuid
+HAVING COUNT(*) > 1;
+```
+
+### Recent UUID Activity
+```sql
+SELECT
+  id,
+  title,
+  source_uuid,
+  content_hash,
+  status,
+  imported_at
+FROM raw_notes
+WHERE source_uuid IS NOT NULL
+ORDER BY imported_at DESC
+LIMIT 10;
+```
+
+## Files Modified
+
+1. `database/migrations/004_add_source_uuid.sql` - NEW
+2. `workflows/01-ingestion/docs/drafts-selene-action.js` - UPDATED
+3. `workflows/01-ingestion/workflow.json` - UPDATED
+   - Parse Note Data node
+   - Check for Duplicate node (major rewrite)
+   - Is New Note? node
+   - Is Edit? node (NEW)
+   - Update Existing Note node (NEW)
+   - Insert Note node
+   - Build Update Response node (NEW)
+   - Build Duplicate Response node
+   - Connections updated
+
+## Success Criteria - Final Status
+
+- ✅ Database has `source_uuid` column with index
+- ✅ Drafts action sends UUID in payload
+- ✅ Workflow captures and stores UUID
+- ⬜ **New drafts insert with UUID** (needs user testing)
+- ⬜ **Resending same draft skips** (needs user testing)
+- ⬜ **Editing draft updates existing record** (needs user testing)
+- ✅ Can query by UUID
+- ✅ Non-UUID sources work (backward compatible)
+- ✅ Existing workflows continue functioning

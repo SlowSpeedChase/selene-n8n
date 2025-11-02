@@ -73,41 +73,50 @@ SELECT AVG(confidence_score) FROM processed_notes;  # ~0.82 (good quality)
 
 ---
 
-## In-Progress Phases
+## Completed Phases
 
-### 🔨 Phase 1.5: UUID Tracking Foundation
+### ✅ Phase 1.5: UUID Tracking Foundation
 
-**Status:** PLANNED (Starting 2025-11-01)
+**Status:** COMPLETE
+**Completed:** November 1, 2025
 **Priority:** HIGH - Foundational improvement
 **Goal:** Add source UUID tracking for draft identification and edit detection
 
-#### Overview
+#### What Was Built
 
-Add `source_uuid` field to track individual drafts by their UUID. This enables:
-- Precise draft identification ("did draft X get processed?")
-- Edit detection (update existing record when draft is modified)
-- Foundation for version tracking and edit history
-- Link database records back to original drafts
+1. **Database Foundation** ✅
+   - Added `source_uuid` column to `raw_notes` table
+   - Created index `idx_raw_notes_source_uuid`
+   - Migration: `database/migrations/004_add_source_uuid.sql`
 
-#### Implementation Phases
+2. **Drafts Action Update** ✅
+   - Updated Drafts script to send `draft.uuid`
+   - Payload now includes `source_uuid` field
 
-1. **Phase 1: Database Foundation** - Add `source_uuid` column and index
-2. **Phase 2: Capture UUIDs** - Update Drafts action to send UUID
-3. **Phase 3: Store UUIDs** - Update workflow to store UUID
-4. **Phase 4: UUID-First Logic** - Implement UUID-based duplicate detection with edit support
-5. **Phase 5: Integration Testing** - Verify new draft, duplicate, and edit scenarios
+3. **Workflow Updates** ✅
+   - Parse Note Data node extracts UUID
+   - Insert Note node stores UUID
+   - Update Existing Note node created (for edits)
 
-#### Strategy: UUID-First with Override
+4. **UUID-First Duplicate Logic** ✅
+   - Check for Duplicate node rewritten with UUID-first strategy
+   - Is Edit? routing node added
+   - Three action types: insert, update, skip
+   - Response messages indicate action taken
 
-- If UUID exists in DB → Check if content changed
-  - Content same → Skip (duplicate)
-  - Content different → Update existing record (edit detected)
-- If UUID is new → Check content_hash for accidental duplicates
-  - Content exists → Skip
-  - Content new → Insert new record
-- If no UUID provided → Fall back to content_hash (backward compatible)
+#### How It Works
 
-**Time Estimate:** 4-5 hours (incremental over 1-2 days)
+- **UUID exists + content same** → Skip (exact duplicate)
+- **UUID exists + content different** → Update (edit detected)
+- **UUID new + content exists** → Skip (content duplicate)
+- **UUID new + content new** → Insert (new note)
+- **No UUID** → Content-hash only (backward compatible)
+
+#### Testing Status
+
+- Implementation complete, ready for user testing
+- See `UUID_IMPLEMENTATION_SUMMARY.md` for test guide
+- 5 test scenarios documented
 
 See [09-UUID-TRACKING-FOUNDATION.md](./09-UUID-TRACKING-FOUNDATION.md) for complete plan.
 
@@ -212,7 +221,17 @@ SELECT theme, COUNT(*) FROM (
 
 ## Recent Changes
 
-### 2025-11-01
+### 2025-11-01 (Evening)
+- **Phase 1.5 COMPLETED!** ✅
+- Implemented UUID tracking foundation
+- Added `source_uuid` column to database
+- Updated Drafts action script to send draft UUID
+- Rewrote duplicate detection with UUID-first logic
+- Added edit detection and update workflow path
+- Created comprehensive test guide (UUID_IMPLEMENTATION_SUMMARY.md)
+- System ready for user testing
+
+### 2025-11-01 (Morning)
 - Added Phase 1.5: UUID Tracking Foundation
 - Created comprehensive plan for draft UUID tracking
 - Planned UUID-first duplicate detection with edit support
@@ -240,25 +259,28 @@ SELECT theme, COUNT(*) FROM (
 
 ## Next Actions
 
+### For Testing Phase 1.5
+
+1. **Test UUID Tracking** - PRIORITY
+   - Read `UUID_IMPLEMENTATION_SUMMARY.md` for detailed test guide
+   - Test 1: Send new draft, verify UUID stored
+   - Test 2: Resend same draft, verify duplicate skipped
+   - Test 3: Edit draft and resend, verify content updated
+   - Test 4: Send duplicate content from different draft
+   - Test 5: Send note without UUID (backward compat)
+   - Monitor database with provided SQL queries
+
 ### For Development
 
-1. **Start Phase 1.5** (UUID Tracking Foundation) - PRIORITY
-   - Read [09-UUID-TRACKING-FOUNDATION.md](./09-UUID-TRACKING-FOUNDATION.md)
-   - Phase 1: Add `source_uuid` column to database
-   - Phase 2: Update Drafts action to send UUID
-   - Phase 3: Update workflow to store UUID
-   - Phase 4: Implement UUID-first duplicate logic
-   - Phase 5: Test new draft, duplicate, and edit scenarios
-
-2. **Start Phase 2** (Obsidian Export) - After Phase 1.5
+1. **Start Phase 2** (Obsidian Export) - After testing Phase 1.5
    - Read [04-PHASE-2-OBSIDIAN.md](./04-PHASE-2-OBSIDIAN.md)
    - Create vault directory structure
    - Build export workflow
 
-2. **Test Current System**
-   - Send 5 more notes through pipeline
-   - Verify all processing still works
-   - Check database for anomalies
+2. **Monitor UUID System**
+   - Check UUID coverage in database
+   - Verify edit detection working as expected
+   - Look for performance issues with UUID queries
 
 3. **Consider Phase 6** (Event-Driven)
    - Current cron-based approach works but inefficient

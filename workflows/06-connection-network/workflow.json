@@ -21,21 +21,13 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "-- Get all processed notes with their concepts and themes\nSELECT\n  pn.id as processed_id,\n  pn.raw_note_id,\n  rn.title,\n  rn.created_at,\n  pn.concepts,\n  pn.primary_theme,\n  pn.secondary_themes\nFROM processed_notes pn\nJOIN raw_notes rn ON pn.raw_note_id = rn.id\nWHERE rn.status = 'processed'\nORDER BY rn.created_at DESC\nLIMIT 100;",
-        "options": {}
+        "functionCode": "const Database = require('better-sqlite3');\n\ntry {\n  const db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  const query = `SELECT\n    pn.id as processed_id,\n    pn.raw_note_id,\n    rn.title,\n    rn.created_at,\n    pn.concepts,\n    pn.primary_theme,\n    pn.secondary_themes\n  FROM processed_notes pn\n  JOIN raw_notes rn ON pn.raw_note_id = rn.id\n  WHERE rn.status = 'processed'\n  ORDER BY rn.created_at DESC\n  LIMIT 100`;\n  \n  const stmt = db.prepare(query);\n  const results = stmt.all();\n  \n  db.close();\n  \n  return results.map(row => ({ json: row }));\n  \n} catch (error) {\n  console.error('SQLite Query Error:', error);\n  throw new Error('Database query failed: ' + error.message);\n}"
       },
       "id": "sqlite-get-all-notes",
       "name": "Get Recent Notes",
-      "type": "n8n-nodes-sqlite.sqlite",
+      "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [450, 300],
-      "credentials": {
-        "sqlite": {
-          "id": "1",
-          "name": "Selene SQLite"
-        }
-      }
+      "position": [450, 300]
     },
     {
       "parameters": {
@@ -59,21 +51,13 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "-- Insert or replace connection\nINSERT OR REPLACE INTO note_connections (\n  source_note_id, target_note_id,\n  connection_strength, connection_type,\n  shared_concepts, shared_themes,\n  concept_overlap_score, theme_overlap_score,\n  temporal_score, days_between,\n  discovered_at, is_active\n) VALUES (\n  {{ $json.sourceNoteId }},\n  {{ $json.targetNoteId }},\n  {{ $json.connectionStrength }},\n  '{{ $json.connectionType }}',\n  '{{ JSON.stringify($json.sharedConcepts).replace(/'/g, \"''\") }}',\n  '{{ JSON.stringify($json.sharedThemes).replace(/'/g, \"''\") }}',\n  {{ $json.conceptOverlapScore }},\n  {{ $json.themeOverlapScore }},\n  {{ $json.temporalScore }},\n  {{ $json.daysBetween }},\n  '{{ $json.analyzedAt }}',\n  1\n);",
-        "options": {}
+        "functionCode": "const Database = require('better-sqlite3');\n\ntry {\n  const db = new Database('/selene/data/selene.db');\n  \n  const insertQuery = `INSERT OR REPLACE INTO note_connections (\n    source_note_id, target_note_id,\n    connection_strength, connection_type,\n    shared_concepts, shared_themes,\n    concept_overlap_score, theme_overlap_score,\n    temporal_score, days_between,\n    discovered_at, is_active\n  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;\n  \n  const stmt = db.prepare(insertQuery);\n  stmt.run(\n    $json.sourceNoteId,\n    $json.targetNoteId,\n    $json.connectionStrength,\n    $json.connectionType,\n    JSON.stringify($json.sharedConcepts),\n    JSON.stringify($json.sharedThemes),\n    $json.conceptOverlapScore,\n    $json.themeOverlapScore,\n    $json.temporalScore,\n    $json.daysBetween,\n    $json.analyzedAt,\n    1\n  );\n  \n  db.close();\n  \n  return { json: { success: true } };\n  \n} catch (error) {\n  console.error('SQLite Insert Error:', error);\n  throw new Error('Database insert failed: ' + error.message);\n}"
       },
       "id": "sqlite-store-connection",
       "name": "Store Connection",
-      "type": "n8n-nodes-sqlite.sqlite",
+      "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1050, 300],
-      "credentials": {
-        "sqlite": {
-          "id": "1",
-          "name": "Selene SQLite"
-        }
-      }
+      "position": [1050, 300]
     },
     {
       "parameters": {
@@ -87,21 +71,13 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO network_analysis_history (\n  analysis_id, total_notes, total_connections,\n  avg_connection_strength, concept_based_count, theme_based_count,\n  network_stats, analyzed_at\n) VALUES (\n  '{{ \"network_\" + Date.now() }}',\n  {{ $json.networkStats.totalNotes }},\n  {{ $json.networkStats.totalConnections }},\n  {{ $json.networkStats.averageConnectionStrength }},\n  {{ $json.networkStats.conceptBasedConnections }},\n  {{ $json.networkStats.themeBasedConnections }},\n  '{{ JSON.stringify($json.networkStats).replace(/'/g, \"''\") }}',\n  '{{ $json.networkStats.analyzedAt }}'\n);",
-        "options": {}
+        "functionCode": "const Database = require('better-sqlite3');\n\ntry {\n  const db = new Database('/selene/data/selene.db');\n  \n  const analysisId = 'network_' + Date.now();\n  \n  const insertQuery = `INSERT INTO network_analysis_history (\n    analysis_id, total_notes, total_connections,\n    avg_connection_strength, concept_based_count, theme_based_count,\n    network_stats, analyzed_at\n  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;\n  \n  const stmt = db.prepare(insertQuery);\n  stmt.run(\n    analysisId,\n    $json.networkStats.totalNotes,\n    $json.networkStats.totalConnections,\n    $json.networkStats.averageConnectionStrength,\n    $json.networkStats.conceptBasedConnections,\n    $json.networkStats.themeBasedConnections,\n    JSON.stringify($json.networkStats),\n    $json.networkStats.analyzedAt\n  );\n  \n  db.close();\n  \n  return {\n    json: {\n      success: true,\n      analysisId: analysisId,\n      totalConnections: $json.networkStats.totalConnections,\n      message: 'Network analysis completed and stored successfully'\n    }\n  };\n  \n} catch (error) {\n  console.error('SQLite Insert Error:', error);\n  throw new Error('Database insert failed: ' + error.message);\n}"
       },
       "id": "sqlite-store-network-stats",
       "name": "Store Network Statistics",
-      "type": "n8n-nodes-sqlite.sqlite",
+      "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1450, 300],
-      "credentials": {
-        "sqlite": {
-          "id": "1",
-          "name": "Selene SQLite"
-        }
-      }
+      "position": [1450, 300]
     }
   ],
   "connections": {
