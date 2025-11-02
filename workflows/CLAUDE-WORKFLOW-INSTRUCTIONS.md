@@ -212,6 +212,52 @@ Then modify `workflow-test.json` to use test webhook paths.
 - **VERIFY** webhook paths are correct (test vs production)
 - **DOCUMENT** all changes in commit messages and status files
 
+#### Enforcement & Best Practices
+
+**TodoWrite Pattern for Workflow Changes:**
+
+Every workflow modification MUST start with a TodoWrite checklist:
+
+```
+- Check if workflow-test.json exists
+- Make changes to workflow-test.json FIRST
+- Test the changes thoroughly
+- Wait for user approval ("deploy to production")
+- Apply changes to workflow.json (only after approval)
+```
+
+**Enforcement Mechanisms:**
+
+1. **Git Pre-Commit Hook** (`.git/hooks/pre-commit`)
+   - Warns when modifying `workflow.json` files
+   - Prompts for confirmation before allowing commit
+   - References this documentation
+
+2. **Slash Command** (`.claude/commands/edit-workflow.md`)
+   - Use `/edit-workflow` to see the workflow modification protocol
+   - Provides checklist and examples
+   - Reminds of the test-first approach
+
+3. **Protocol Documentation** (`.claude/WORKFLOW-PROTOCOL.md`)
+   - Quick reference for the workflow modification rules
+   - Links to this detailed documentation
+   - Explains why the protocol matters
+
+**Quick Check Before Modifying Workflows:**
+
+```bash
+# 1. Verify test file exists
+ls workflows/[workflow-name]/workflow-test.json
+
+# 2. If missing, create it (with user approval)
+cp workflows/[workflow-name]/workflow.json \
+   workflows/[workflow-name]/workflow-test.json
+
+# 3. Make changes to TEST file only
+# 4. Wait for user approval
+# 5. Then update production file
+```
+
 ### Workflow Deployment via CLI
 
 **n8n provides a powerful CLI for deploying and managing workflows programmatically:**
