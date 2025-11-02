@@ -130,6 +130,88 @@ Create this when the integration is **complete and tested**.
 
 ## n8n Workflow Standards
 
+### Test/Production Workflow Process
+
+**CRITICAL:** Always work in test workflows first. Only deploy to production after explicit user approval.
+
+#### Development Workflow
+
+**Phase 1: Development (TEST)**
+1. Make all changes in `workflow-test.json` files
+2. Use test webhook paths: `/webhook-test/api/[endpoint]`
+3. Configure Drafts action or other sources to use test endpoints
+4. Test thoroughly with test data
+
+**Phase 2: User Testing**
+1. User tests with real data on test endpoint
+2. User validates functionality
+3. User provides explicit approval: "Looks good, deploy to production"
+
+**Phase 3: Deployment (PROD)**
+```bash
+# Step 1: Copy test workflow to production
+cp workflows/XX-workflow-name/workflow-test.json \
+   workflows/XX-workflow-name/workflow.json
+
+# Step 2: Update webhook paths in production workflow
+# Change /webhook-test/ to /webhook/ in workflow.json
+
+# Step 3: Deploy to n8n via CLI
+docker exec selene-n8n n8n import:workflow \
+  --input=/workflows/workflows/XX-workflow-name/workflow.json
+
+# Step 4: Activate workflow (via UI or database)
+docker exec selene-n8n sqlite3 /home/node/.n8n/database.sqlite \
+  "UPDATE workflow_entity SET active = 1 WHERE name = 'Workflow Name';"
+
+# Step 5: Restart n8n
+docker-compose restart n8n
+
+# Step 6: Verify deployment
+docker-compose logs n8n | grep "Activated workflow"
+```
+
+**Phase 4: Validation**
+1. Test production endpoint with real data
+2. Verify database records
+3. Confirm all functionality working
+4. Update status documents
+
+#### File Structure
+
+Each workflow should have both test and production versions:
+
+```
+workflows/XX-workflow-name/
+├── workflow.json          # Production workflow (activated)
+├── workflow-test.json     # Test workflow (for development)
+├── docs/
+│   ├── SETUP.md
+│   ├── REFERENCE.md
+│   └── [source]-action.js
+└── README.md
+```
+
+#### When Test Doesn't Exist
+
+If starting a new workflow or if test workflow doesn't exist:
+
+```bash
+# Create test workflow from production (if needed)
+cp workflows/XX-workflow-name/workflow.json \
+   workflows/XX-workflow-name/workflow-test.json
+```
+
+Then modify `workflow-test.json` to use test webhook paths.
+
+#### Important Notes
+
+- **NEVER modify production workflows directly** during development
+- **ALWAYS get explicit user approval** before deploying to production
+- **TEST thoroughly** before requesting approval
+- **VERIFY** webhook paths are correct (test vs production)
+- **DOCUMENT** all changes in commit messages and status files
+
 ### Workflow Deployment via CLI
 
 **n8n provides a powerful CLI for deploying and managing workflows programmatically:**
