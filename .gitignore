@@ -4,6 +4,9 @@ vault/
 # Data folder (including database)
 data/
 
+# Git worktrees
+.worktrees/
+
 # Node modules
 node_modules/
 
