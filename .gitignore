@@ -26,3 +26,4 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
+test_persistence.swift
