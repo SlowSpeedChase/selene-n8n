@@ -13,7 +13,9 @@ class ChatViewModel: ObservableObject {
 
     init() {
         self.currentSession = ChatSession()
-        loadSessions()
+        Task {
+            await loadSessions()
+        }
     }
 
     func sendMessage(_ content: String) async {
@@ -62,7 +64,7 @@ class ChatViewModel: ObservableObject {
             currentSession.addMessage(assistantMessage)
 
             // Save session
-            saveSession()
+            await saveSession()
 
         } catch {
             self.error = error.localizedDescription
@@ -210,44 +212,58 @@ class ChatViewModel: ObservableObject {
     }
 
     func newSession() {
-        saveSession()
+        Task {
+            await saveSession()
+        }
         currentSession = ChatSession()
     }
 
     func loadSession(_ session: ChatSession) {
+        Task {
+            await saveSession()  // Save current session before loading new one
+        }
         currentSession = session
     }
 
     func deleteSession(_ session: ChatSession) {
         sessions.removeAll { $0.id == session.id }
-        saveSessions()
+
+        Task {
+            try? await databaseService.deleteSession(session)
+        }
 
         if currentSession.id == session.id {
             newSession()
         }
     }
 
-    private func saveSession() {
-        // Update or add current session
+    private func saveSession() async {
+        // Skip saving empty sessions (no messages)
+        guard !currentSession.messages.isEmpty else { return }
+
+        // Update in-memory sessions list
         if let index = sessions.firstIndex(where: { $0.id == currentSession.id }) {
             sessions[index] = currentSession
         } else {
             sessions.append(currentSession)
         }
 
-        saveSessions()
-    }
-
-    private func saveSessions() {
-        if let encoded = try? JSONEncoder().encode(sessions) {
-            UserDefaults.standard.set(encoded, forKey: "chatSessions")
+        // Persist to database
+        do {
+            try await databaseService.saveSession(currentSession)
+        } catch {
+            print("⚠️ Failed to save session: \(error.localizedDescription)")
+            // Don't crash - graceful degradation
         }
     }
 
-    private func loadSessions() {
-        if let data = UserDefaults.standard.data(forKey: "chatSessions"),
-           let decoded = try? JSONDecoder().decode([ChatSession].self, from: data) {
-            sessions = decoded
+    private func loadSessions() async {
+        do {
+            sessions = try await databaseService.loadSessions()
+        } catch {
+            print("⚠️ Failed to load sessions: \(error.localizedDescription)")
+            // Fall back to empty list - graceful degradation
+            sessions = []
         }
     }
 }
