@@ -85,6 +85,13 @@ struct ChatView: View {
                 .onSubmit {
                     sendMessage()
                 }
+                .onAppear {
+                    // Set focus when view appears
+                    // Delay required due to known SwiftUI macOS bug
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isInputFocused = true
+                    }
+                }
 
             Button(action: sendMessage) {
                 Image(systemName: "arrow.up.circle.fill")
