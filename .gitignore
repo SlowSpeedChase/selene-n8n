@@ -29,3 +29,6 @@ npm-debug.log*
 
 # Obsidian workspace
 vault/.obsidian/workspace.json
+
+# Test files
+test_persistence.swift

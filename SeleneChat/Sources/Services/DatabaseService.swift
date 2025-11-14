@@ -18,6 +18,7 @@ class DatabaseService: ObservableObject {
     private let rawNotes = Table("raw_notes")
     private let processedNotes = Table("processed_notes")
     private let sentimentHistory = Table("sentiment_history")
+    private let chatSessions = Table("chat_sessions")
 
     // raw_notes columns
     private let id = Expression<Int64>("id")
@@ -49,6 +50,18 @@ class DatabaseService: ObservableObject {
     private let emotionalTone = Expression<String?>("emotional_tone")
     private let energyLevel = Expression<String?>("energy_level")
 
+    // chat_sessions columns
+    private let sessionId = Expression<String>("id")
+    private let sessionTitle = Expression<String>("title")
+    private let sessionCreatedAt = Expression<String>("created_at")
+    private let sessionUpdatedAt = Expression<String>("updated_at")
+    private let messageCount = Expression<Int64>("message_count")
+    private let isPinned = Expression<Int64>("is_pinned")
+    private let compressionState = Expression<String>("compression_state")
+    private let compressedAt = Expression<String?>("compressed_at")
+    private let fullMessagesJson = Expression<String?>("full_messages_json")
+    private let summaryText = Expression<String?>("summary_text")
+
     init() {
         // Try to load saved path, otherwise use default
         let defaultPath = "/Users/chaseeasterling/selene-n8n/data/selene.db"
@@ -58,13 +71,40 @@ class DatabaseService: ObservableObject {
 
     private func connect() {
         do {
-            db = try Connection(databasePath, readonly: true)
+            // Open database with write access for chat sessions
+            db = try Connection(databasePath)
             isConnected = true
             print("✅ Connected to database at: \(databasePath)")
+
+            // Run migration if chat_sessions table doesn't exist
+            try? createChatSessionsTable()
         } catch {
             isConnected = false
             print("❌ Failed to connect to database: \(error)")
         }
+    }
+
+    private func createChatSessionsTable() throws {
+        guard let db = db else { return }
+
+        try db.run(chatSessions.create(ifNotExists: true) { t in
+            t.column(sessionId, primaryKey: true)
+            t.column(sessionTitle)
+            t.column(sessionCreatedAt)
+            t.column(sessionUpdatedAt)
+            t.column(messageCount)
+            t.column(isPinned, defaultValue: 0)
+            t.column(compressionState, defaultValue: "full")
+            t.column(compressedAt)
+            t.column(fullMessagesJson)
+            t.column(summaryText)
+        })
+
+        try db.run(chatSessions.createIndex(sessionUpdatedAt, ifNotExists: true))
+        // Composite index for compression queries
+        try db.run("CREATE INDEX IF NOT EXISTS idx_chat_sessions_compression ON chat_sessions(compression_state, created_at)")
+
+        print("✅ Chat sessions table ready")
     }
 
     func getAllNotes(limit: Int = 100) async throws -> [Note] {
@@ -272,6 +312,127 @@ class DatabaseService: ObservableObject {
             energyLevel: try? row.get(processedNotes[energyLevel])
         )
     }
+
+    // MARK: - Chat Session Persistence
+
+    func saveSession(_ session: ChatSession) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateFormatter = ISO8601DateFormatter()
+
+        // Serialize messages to JSON
+        let messagesData = try JSONEncoder().encode(session.messages)
+        guard let messagesJson = String(data: messagesData, encoding: .utf8) else {
+            throw DatabaseError.queryFailed("Failed to encode messages")
+        }
+
+        // Check if session exists
+        let existingSession = chatSessions.filter(sessionId == session.id.uuidString)
+        let exists = try db.pluck(existingSession) != nil
+
+        if exists {
+            // Update existing session
+            try db.run(existingSession.update(
+                sessionTitle <- session.title,
+                sessionUpdatedAt <- dateFormatter.string(from: session.updatedAt),
+                messageCount <- Int64(session.messages.count),
+                isPinned <- session.isPinned ? 1 : 0,
+                compressionState <- session.compressionState.rawValue,
+                compressedAt <- session.compressedAt.map { dateFormatter.string(from: $0) },
+                fullMessagesJson <- (session.compressionState == .full ? messagesJson : nil),
+                summaryText <- session.summaryText
+            ))
+        } else {
+            // Insert new session
+            try db.run(chatSessions.insert(
+                sessionId <- session.id.uuidString,
+                sessionTitle <- session.title,
+                sessionCreatedAt <- dateFormatter.string(from: session.createdAt),
+                sessionUpdatedAt <- dateFormatter.string(from: session.updatedAt),
+                messageCount <- Int64(session.messages.count),
+                isPinned <- session.isPinned ? 1 : 0,
+                compressionState <- session.compressionState.rawValue,
+                compressedAt <- session.compressedAt.map { dateFormatter.string(from: $0) },
+                fullMessagesJson <- (session.compressionState == .full ? messagesJson : nil),
+                summaryText <- session.summaryText
+            ))
+        }
+
+        print("✅ Saved chat session: \(session.title)")
+    }
+
+    func loadSessions() async throws -> [ChatSession] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateFormatter = ISO8601DateFormatter()
+        var sessions: [ChatSession] = []
+
+        // Query all sessions, ordered by updated_at descending
+        let query = chatSessions.order(sessionUpdatedAt.desc)
+
+        for row in try db.prepare(query) {
+            let id = UUID(uuidString: try row.get(sessionId)) ?? UUID()
+            let title = try row.get(sessionTitle)
+            let createdAt = dateFormatter.date(from: try row.get(sessionCreatedAt)) ?? Date()
+            let updatedAt = dateFormatter.date(from: try row.get(sessionUpdatedAt)) ?? Date()
+            let isPinnedValue = try row.get(isPinned) == 1
+            let compressionStateValue = ChatSession.CompressionState(rawValue: try row.get(compressionState)) ?? .full
+            let compressedAtValue = (try? row.get(compressedAt)).flatMap { dateFormatter.date(from: $0) }
+            let summaryTextValue = try? row.get(summaryText)
+
+            // Deserialize messages if available
+            var messages: [Message] = []
+            if let messagesJson = try? row.get(fullMessagesJson),
+               let messagesData = messagesJson.data(using: .utf8) {
+                messages = (try? JSONDecoder().decode([Message].self, from: messagesData)) ?? []
+            }
+
+            let session = ChatSession(
+                id: id,
+                messages: messages,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                title: title,
+                isPinned: isPinnedValue,
+                compressionState: compressionStateValue,
+                compressedAt: compressedAtValue,
+                summaryText: summaryTextValue
+            )
+
+            sessions.append(session)
+        }
+
+        print("✅ Loaded \(sessions.count) chat sessions")
+        return sessions
+    }
+
+    func deleteSession(_ session: ChatSession) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let sessionToDelete = chatSessions.filter(sessionId == session.id.uuidString)
+        try db.run(sessionToDelete.delete())
+
+        print("✅ Deleted chat session: \(session.title)")
+    }
+
+    func updateSessionPin(sessionId: UUID, isPinned pinnedValue: Bool) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let sessionToUpdate = chatSessions.filter(self.sessionId == sessionId.uuidString)
+        try db.run(sessionToUpdate.update(isPinned <- pinnedValue ? 1 : 0))
+
+        print("✅ Updated pin status for session: \(sessionId)")
+    }
+
+    // MARK: - Error Types
 
     enum DatabaseError: Error, LocalizedError {
         case notConnected
