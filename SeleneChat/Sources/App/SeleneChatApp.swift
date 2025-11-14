@@ -1,4 +1,6 @@
 import SwiftUI
+import SeleneChatLib
+import AppKit
 
 @main
 struct SeleneChatApp: App {
