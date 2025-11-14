@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # n8n Workflow Automation
   n8n:
@@ -12,9 +10,8 @@ services:
       - "5678:5678"     # n8n web interface
     environment:
       # Basic Configuration
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-selene_n8n_2025}
+      # Note: Authentication is mandatory in n8n v1.x+
+      # You must create an owner account on first startup via the web UI
 
       # Host Configuration
       - N8N_HOST=0.0.0.0
@@ -38,6 +35,12 @@ services:
       # Performance
       - N8N_PAYLOAD_SIZE_MAX=16
       - N8N_METRICS=false
+
+      # Database Configuration (recommended settings)
+      - DB_SQLITE_POOL_SIZE=5
+
+      # Task Runners (recommended for future compatibility)
+      - N8N_RUNNERS_ENABLED=true
 
       # Disable telemetry for privacy
       - N8N_DIAGNOSTICS_ENABLED=false

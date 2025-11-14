@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Selene/Timeline/2025/07/2025-07-18-i-need-to-look-up-the-first-step-in-sent-training-.md",
+                "file": "Selene/Timeline/2025/01/2025-01-15-date-test-note.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2025-07-18-i-need-to-look-up-the-first-step-in-sent-training-"
+              "title": "2025-01-15-date-test-note"
             }
           }
         ]
@@ -53,7 +53,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "adhd",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -74,7 +74,8 @@
               "title": "Bookmarks"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
@@ -169,43 +170,43 @@
       "bases:Create new base": false
     }
   },
-  "active": "c35b299789132173",
+  "active": "26921550a8963c03",
   "lastOpenFiles": [
-    "Selene/Concepts/Emotions Identification.md",
-    "Selene/Concepts/Adherence Management Tool.md",
-    "Selene/Concepts/Procrastination Management System.md",
-    "Selene/By-Energy/medium/2025-07-17-need-to-develop-a-procrastination-management-syste.md",
-    "Selene/By-Theme/project/2025-07-17-need-to-develop-a-procrastination-management-syste.md",
-    "Selene/By-Concept/Procrastination Management System/2025-07-17-need-to-develop-a-procrastination-management-syste.md",
+    "Selene/Concepts/recipes.md",
+    "Selene/Concepts/meal planning system.md",
+    "Selene/Concepts/grocery.md",
+    "Selene/Concepts/smoothies.md",
+    "Selene/By-Energy/medium/2025-10-24-how-selene-should-work-example.md",
+    "Selene/By-Theme/technical/2025-10-24-how-selene-should-work-example.md",
+    "Selene/By-Concept/Selene/2025-10-24-how-selene-should-work-example.md",
+    "Selene/Timeline/2025/10/2025-10-24-how-selene-should-work-example.md",
+    "Selene/Concepts/Treat Ideas.md",
+    "Selene/Concepts/15 Minutes.md",
+    "Selene/Concepts/Before Work.md",
+    "Selene/Concepts/Training Plan.md",
+    "Selene/By-Energy/medium/2025-11-02-i-need-a-before-work-training-plan-for-leo-that-we.md",
+    "Selene/By-Theme/planning/2025-11-02-i-need-a-before-work-training-plan-for-leo-that-we.md",
+    "Selene/By-Concept/Training Plan/2025-11-02-i-need-a-before-work-training-plan-for-leo-that-we.md",
+    "Selene/By-Concept/Training Plan",
+    "Selene/Timeline/2025/11/2025-11-02-i-need-a-before-work-training-plan-for-leo-that-we.md",
+    "Selene/Concepts/Personal assistant.md",
+    "Selene/Concepts/Leo (product manager).md",
+    "Selene/Concepts/Nutrition management.md",
+    "Selene/Concepts/Kitchen recipe meal.md",
+    "Selene/Concepts/Selene future features.md",
+    "Selene/By-Energy/medium/2025-11-02-selene-future-features.md",
+    "Selene/By-Theme/planning/2025-11-02-selene-future-features.md",
+    "Selene/By-Concept/Selene future features/2025-11-02-selene-future-features.md",
+    "Selene/By-Concept/Selene future features",
+    "Selene/Timeline/2025/11/2025-11-02-selene-future-features.md",
+    "Selene/Concepts/making work visible book.md",
+    "Selene/By-Concept/Selene's project management system",
+    "Selene/By-Concept/MCP",
     "Selene/By-Concept/Procrastination Management System",
-    "Selene/Timeline/2025/07/2025-07-17-need-to-develop-a-procrastination-management-syste.md",
-    "Selene/Concepts/dependence.md",
-    "Selene/Concepts/kibble.md",
-    "Selene/Concepts/Leo's diet.md",
-    "Selene/Concepts/raw foods.md",
-    "Selene/By-Energy/medium/2025-07-15-add-more-raw-foods-to-leos-diet-in-addition-to-his.md",
-    "Selene/By-Theme/diet/2025-07-15-add-more-raw-foods-to-leos-diet-in-addition-to-his.md",
-    "Selene/By-Concept/raw foods/2025-07-15-add-more-raw-foods-to-leos-diet-in-addition-to-his.md",
     "Selene/By-Concept/raw foods",
-    "Selene/Timeline/2025/07/2025-07-15-add-more-raw-foods-to-leos-diet-in-addition-to-his.md",
-    "Selene/Concepts/Assertive.md",
-    "Selene/Concepts/Passionate.md",
-    "Selene/Concepts/Experienced.md",
-    "Selene/Concepts/Patient.md",
-    "Selene/Concepts/Romantic Partner.md",
-    "Selene/By-Energy/high/2025-07-10-ideal-romantic-partner.md",
-    "Selene/By-Theme/personal/2025-07-10-ideal-romantic-partner.md",
-    "Selene/By-Concept/Romantic Partner/2025-07-10-ideal-romantic-partner.md",
     "Selene/By-Concept/Romantic Partner",
-    "Selene/Timeline/2025/07/2025-07-10-ideal-romantic-partner.md",
-    "Selene/Concepts/Nationalism.md",
-    "Selene/Concepts/Authoritarianism.md",
     "Selene/By-Concept/Self reflection",
     "Selene/By-Concept/family",
-    "Selene/By-Concept/Personal AI",
-    "Selene/Timeline/2025/06",
-    "Selene/By-Concept/Shame",
-    "Selene/Timeline/2025/05",
-    "Selene/By-Theme/collaboration"
+    "Selene/By-Concept/Personal AI"
   ]
 }
