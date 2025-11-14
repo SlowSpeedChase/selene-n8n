@@ -6,6 +6,7 @@ struct ChatView: View {
     @State private var messageText = ""
     @State private var showingSessionHistory = false
     @FocusState private var isInputFocused: Bool
+    @Namespace private var focusNamespace
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,6 +40,7 @@ struct ChatView: View {
             // Input area
             chatInput
         }
+        .focusScope(focusNamespace)
         .sheet(isPresented: $showingSessionHistory) {
             SessionHistoryView()
                 .environmentObject(chatViewModel)
@@ -80,17 +82,11 @@ struct ChatView: View {
             TextField("Ask about your notes...", text: $messageText, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .focused($isInputFocused)
+                .prefersDefaultFocus(in: focusNamespace)
                 .lineLimit(1...5)
                 .disabled(chatViewModel.isProcessing)
                 .onSubmit {
                     sendMessage()
-                }
-                .onAppear {
-                    // Set focus when view appears
-                    // Delay required due to known SwiftUI macOS bug
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isInputFocused = true
-                    }
                 }
 
             Button(action: sendMessage) {

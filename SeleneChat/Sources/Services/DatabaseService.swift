@@ -100,9 +100,15 @@ class DatabaseService: ObservableObject {
 
         var notes: [Note] = []
 
-        for row in try db.prepare(searchQuery) {
-            let note = try parseNote(from: row)
-            notes.append(note)
+        do {
+            for row in try db.prepare(searchQuery) {
+                let note = try parseNote(from: row)
+                notes.append(note)
+            }
+        } catch {
+            print("❌ Error in searchNotes query: \(error)")
+            print("   Query: \(query)")
+            throw DatabaseError.queryFailed("Search failed: \(error.localizedDescription)")
         }
 
         return notes
@@ -214,56 +220,56 @@ class DatabaseService: ObservableObject {
     private func parseNote(from row: Row) throws -> Note {
         let dateFormatter = ISO8601DateFormatter()
 
-        // Parse tags JSON
+        // Parse tags JSON from raw_notes
         var tagsArray: [String]? = nil
-        if let tagsStr = try? row.get(tags), let data = tagsStr.data(using: .utf8) {
+        if let tagsStr = try? row.get(rawNotes[tags]), let data = tagsStr.data(using: .utf8) {
             tagsArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
-        // Parse concepts JSON
+        // Parse concepts JSON from processed_notes (may be NULL if no processed_notes entry)
         var conceptsArray: [String]? = nil
-        if let conceptsStr = try? row.get(concepts), let data = conceptsStr.data(using: .utf8) {
+        if let conceptsStr = try? row.get(processedNotes[concepts]), let data = conceptsStr.data(using: .utf8) {
             conceptsArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
-        // Parse concept confidence JSON
+        // Parse concept confidence JSON from processed_notes (may be NULL)
         var conceptConfidenceDict: [String: Double]? = nil
-        if let confStr = try? row.get(conceptConfidence), let data = confStr.data(using: .utf8) {
+        if let confStr = try? row.get(processedNotes[conceptConfidence]), let data = confStr.data(using: .utf8) {
             conceptConfidenceDict = try? JSONDecoder().decode([String: Double].self, from: data)
         }
 
-        // Parse secondary themes JSON
+        // Parse secondary themes JSON from processed_notes (may be NULL)
         var secondaryThemesArray: [String]? = nil
-        if let themesStr = try? row.get(secondaryThemes), let data = themesStr.data(using: .utf8) {
+        if let themesStr = try? row.get(processedNotes[secondaryThemes]), let data = themesStr.data(using: .utf8) {
             secondaryThemesArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
         return Note(
-            id: Int(try row.get(id)),
-            title: try row.get(title),
-            content: try row.get(content),
-            contentHash: try row.get(contentHash),
-            sourceType: try row.get(sourceType),
-            wordCount: Int(try row.get(wordCount)),
-            characterCount: Int(try row.get(characterCount)),
+            id: Int(try row.get(rawNotes[id])),
+            title: try row.get(rawNotes[title]),
+            content: try row.get(rawNotes[content]),
+            contentHash: try row.get(rawNotes[contentHash]),
+            sourceType: try row.get(rawNotes[sourceType]),
+            wordCount: Int(try row.get(rawNotes[wordCount])),
+            characterCount: Int(try row.get(rawNotes[characterCount])),
             tags: tagsArray,
-            createdAt: dateFormatter.date(from: try row.get(createdAt)) ?? Date(),
-            importedAt: dateFormatter.date(from: try row.get(importedAt)) ?? Date(),
-            processedAt: (try? row.get(processedAt)).flatMap { dateFormatter.date(from: $0) },
-            exportedAt: (try? row.get(exportedAt)).flatMap { dateFormatter.date(from: $0) },
-            status: try row.get(status),
-            exportedToObsidian: try row.get(exportedToObsidian) == 1,
-            sourceUUID: try? row.get(sourceUUID),
-            testRun: try? row.get(testRun),
+            createdAt: dateFormatter.date(from: try row.get(rawNotes[createdAt])) ?? Date(),
+            importedAt: dateFormatter.date(from: try row.get(rawNotes[importedAt])) ?? Date(),
+            processedAt: (try? row.get(rawNotes[processedAt])).flatMap { dateFormatter.date(from: $0) },
+            exportedAt: (try? row.get(rawNotes[exportedAt])).flatMap { dateFormatter.date(from: $0) },
+            status: try row.get(rawNotes[status]),
+            exportedToObsidian: try row.get(rawNotes[exportedToObsidian]) == 1,
+            sourceUUID: try? row.get(rawNotes[sourceUUID]),
+            testRun: try? row.get(rawNotes[testRun]),
             concepts: conceptsArray,
             conceptConfidence: conceptConfidenceDict,
-            primaryTheme: try? row.get(primaryTheme),
+            primaryTheme: try? row.get(processedNotes[primaryTheme]),
             secondaryThemes: secondaryThemesArray,
-            themeConfidence: try? row.get(themeConfidence),
-            overallSentiment: try? row.get(overallSentiment),
-            sentimentScore: try? row.get(sentimentScore),
-            emotionalTone: try? row.get(emotionalTone),
-            energyLevel: try? row.get(energyLevel)
+            themeConfidence: try? row.get(processedNotes[themeConfidence]),
+            overallSentiment: try? row.get(processedNotes[overallSentiment]),
+            sentimentScore: try? row.get(processedNotes[sentimentScore]),
+            emotionalTone: try? row.get(processedNotes[emotionalTone]),
+            energyLevel: try? row.get(processedNotes[energyLevel])
         )
     }
 
