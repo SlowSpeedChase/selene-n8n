@@ -22,6 +22,11 @@ let package = Package(
                 .product(name: "SQLite", package: "SQLite.swift")
             ],
             path: "Sources"
+        ),
+        .executableTarget(
+            name: "SeleneChatTests",
+            dependencies: [],
+            path: "Tests/SeleneChatTests"
         )
     ]
 )

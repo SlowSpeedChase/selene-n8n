@@ -1,7 +1,7 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2025-10-31
+**Last Updated:** 2025-11-13
 **Status:** Phase 1 Complete ✅
 
 ---
@@ -132,6 +132,11 @@ Task: Mark tasks complete, update metrics
 - Implement edit detection (UUID-first duplicate logic)
 - Foundation for version tracking and edit history
 
+**⬜ SeleneChat Enhancements** (Planning)
+- Chat session summaries to database
+- Query pattern tracking for ADHD memory support
+- Integration with Selene database for conversation history
+
 **⬜ Phase 2 Next** (Obsidian Export - After Phase 1.5)
 - Export processed notes to markdown
 - Create Obsidian vault structure
@@ -254,6 +259,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2025-11-13**: Added SeleneChat Enhancements phase - Chat session summaries to database
 - **2025-11-01**: Added Phase 1.5 (UUID Tracking Foundation) - Draft identification and edit detection
 - **2025-10-31**: Reorganized into modular documentation structure
 - **2025-10-30**: Phase 1 completed (10 notes processed, all features working)

@@ -78,12 +78,10 @@ struct ChatView: View {
     private var chatInput: some View {
         HStack(alignment: .bottom, spacing: 12) {
             TextField("Ask about your notes...", text: $messageText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(8)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
+                .textFieldStyle(.roundedBorder)
                 .focused($isInputFocused)
                 .lineLimit(1...5)
+                .disabled(chatViewModel.isProcessing)
                 .onSubmit {
                     sendMessage()
                 }

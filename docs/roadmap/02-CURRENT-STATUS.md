@@ -1,6 +1,6 @@
 # Selene n8n - Current Status
 
-**Last Updated:** 2025-10-31
+**Last Updated:** 2025-11-13
 
 ## Summary
 
@@ -235,6 +235,20 @@ See [06-PHASE-4-POLISH.md](./06-PHASE-4-POLISH.md)
 
 See [07-PHASE-5-ADHD.md](./07-PHASE-5-ADHD.md)
 
+### ⬜ SeleneChat Enhancements
+
+**Status:** PLANNING
+**Goal:** Enhance SeleneChat app with database integration
+
+#### Planned Features
+
+1. **Chat Session Summaries to Database**
+   - Store chat conversation history in Selene database
+   - Track user queries and interaction patterns
+   - Enable pattern detection on chat behavior
+   - Support ADHD memory - "what did I search for before?"
+   - New database table: `chat_sessions` with session metadata and summaries
+
 ### ⬜ Phase 6: Event-Driven Architecture
 
 **Status:** NOT STARTED
@@ -291,6 +305,14 @@ SELECT theme, COUNT(*) FROM (
 ---
 
 ## Recent Changes
+
+### 2025-11-13 (SeleneChat Planning)
+- **Added SeleneChat Enhancements Phase** 📋
+- Planned chat session summaries to database feature
+- Track user query patterns for ADHD memory support
+- Enable conversation history and pattern analysis
+- Will require new `chat_sessions` database table
+- Added to both main roadmap and SeleneChat README
 
 ### 2025-11-02 (Phase 3 Implementation)
 - **Phase 3: Pattern Detection - READY FOR TESTING!** 🔄

@@ -179,6 +179,7 @@ The app reads from Selene's SQLite database:
 - Visual tier indicators
 
 ### 🎯 Phase 4: Advanced Features (Future)
+- **Chat session summaries to database** - Save chat conversations for history tracking and pattern analysis
 - Pattern detection visualization
 - Project management assistance
 - Siri integration
