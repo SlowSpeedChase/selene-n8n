@@ -114,6 +114,8 @@ struct ChatView: View {
 
 struct MessageBubble: View {
     let message: Message
+    @State private var selectedNote: Note?
+    @EnvironmentObject var databaseService: DatabaseService
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -124,13 +126,26 @@ struct MessageBubble: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                // Message content
-                Text(message.content)
+                // Message content with clickable citations for assistant
+                if message.role == .assistant,
+                   let citedNotes = message.relatedNotes,
+                   !citedNotes.isEmpty {
+                    CitationTextViewClickable(
+                        content: message.content,
+                        citedNoteIds: citedNotes,
+                        selectedNote: $selectedNote
+                    )
                     .padding(12)
                     .background(backgroundColor)
-                    .foregroundColor(textColor)
                     .cornerRadius(12)
-                    .textSelection(.enabled)
+                } else {
+                    Text(message.content)
+                        .padding(12)
+                        .background(backgroundColor)
+                        .foregroundColor(textColor)
+                        .cornerRadius(12)
+                        .textSelection(.enabled)
+                }
 
                 // Metadata
                 HStack(spacing: 8) {
@@ -159,6 +174,9 @@ struct MessageBubble: View {
             } else {
                 Spacer()
             }
+        }
+        .sheet(item: $selectedNote) { note in
+            NoteDetailView(note: note)
         }
     }
 

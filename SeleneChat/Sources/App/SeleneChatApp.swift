@@ -6,6 +6,14 @@ struct SeleneChatApp: App {
     @StateObject private var databaseService = DatabaseService.shared
     @StateObject private var chatViewModel = ChatViewModel()
 
+    init() {
+        // Activate the app so it appears in the foreground
+        NSApplication.shared.setActivationPolicy(.regular)
+        DispatchQueue.main.async {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

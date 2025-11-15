@@ -311,6 +311,10 @@ struct NoteRow: View {
 
 struct NoteDetailView: View {
     let note: Note
+    @State private var obsidianFilePath: String?
+    @State private var isLookingUpFile = true
+    @State private var lookupFailed = false
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         ScrollView {
@@ -325,6 +329,25 @@ struct NoteDetailView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
+                            // Open in Obsidian button
+                            if isLookingUpFile {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else if obsidianFilePath != nil {
+                                Button {
+                                    Task {
+                                        let success = await ObsidianService.shared.openInObsidian(note: note)
+                                        if !success {
+                                            lookupFailed = true
+                                        }
+                                    }
+                                } label: {
+                                    Label("Open in Obsidian", systemImage: "link")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.bordered)
+                            }
+
                             Text(note.energyEmoji)
                             Text(note.moodEmoji)
                         }
@@ -334,6 +357,17 @@ struct NoteDetailView: View {
                     Text(note.formattedDate)
                         .font(.caption)
                         .foregroundColor(.secondary)
+
+                    // File not found message
+                    if lookupFailed && !isLookingUpFile {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundColor(.orange)
+                            Text("Note file not found in vault")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
 
                 Divider()
@@ -393,6 +427,15 @@ struct NoteDetailView: View {
             .padding()
         }
         .background(Color(NSColor.controlBackgroundColor))
+        .task {
+            // Look up file path when view appears
+            if let fileURL = await ObsidianService.shared.findMarkdownFile(for: note) {
+                obsidianFilePath = fileURL.path
+            } else {
+                lookupFailed = true
+            }
+            isLookingUpFile = false
+        }
     }
 
     private func metadataRow(label: String, value: String) -> some View {
