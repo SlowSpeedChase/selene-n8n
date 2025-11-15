@@ -246,7 +246,7 @@ class ChatViewModel: ObservableObject {
             print("⚠️ Ollama unavailable, falling back to simple response")
             // Extract notes from context to pass to fallback
             // For now, just indicate fallback is happening
-            throw OllamaError.serviceUnavailable
+            throw OllamaService.OllamaError.serviceUnavailable
         }
 
         // Build full prompt with system instructions
@@ -270,15 +270,6 @@ class ChatViewModel: ObservableObject {
         } catch {
             print("⚠️ Ollama generation failed: \(error.localizedDescription)")
             throw error
-        }
-    }
-
-    // Define OllamaError locally for easy throwing
-    private enum OllamaError: Error, LocalizedError {
-        case serviceUnavailable
-
-        var errorDescription: String? {
-            "Ollama service is unavailable"
         }
     }
 
