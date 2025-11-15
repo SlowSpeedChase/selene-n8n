@@ -1,5 +1,19 @@
 import Foundation
 
+// MARK: - Request/Response Models
+
+private struct GenerateRequest: Codable {
+    let model: String
+    let prompt: String
+    let stream: Bool
+}
+
+private struct GenerateResponse: Codable {
+    let model: String
+    let response: String
+    let done: Bool
+}
+
 class OllamaService {
     static let shared = OllamaService()
 
@@ -49,6 +63,55 @@ class OllamaService {
         } catch {
             print("⚠️ Ollama health check failed: \(error.localizedDescription)")
             return false
+        }
+    }
+
+    /// Generate text completion from Ollama
+    /// - Parameters:
+    ///   - prompt: The full prompt including system instructions and context
+    ///   - model: The model to use (default: mistral:7b)
+    /// - Returns: Generated text response
+    func generate(prompt: String, model: String = "mistral:7b") async throws -> String {
+        guard let url = URL(string: "\(baseURL)/api/generate") else {
+            throw OllamaError.invalidResponse
+        }
+
+        // Build request body
+        let requestBody = GenerateRequest(
+            model: model,
+            prompt: prompt,
+            stream: false
+        )
+
+        // Create URLRequest
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        request.timeoutInterval = 30.0  // 30 second timeout
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw OllamaError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                print("⚠️ Ollama returned status \(httpResponse.statusCode)")
+                throw OllamaError.serviceUnavailable
+            }
+
+            // Decode response
+            let generateResponse = try JSONDecoder().decode(GenerateResponse.self, from: data)
+
+            return generateResponse.response
+
+        } catch let error as OllamaError {
+            throw error
+        } catch {
+            print("⚠️ Ollama generate error: \(error.localizedDescription)")
+            throw OllamaError.networkError(error)
         }
     }
 }
