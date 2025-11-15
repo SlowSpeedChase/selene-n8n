@@ -54,10 +54,27 @@ class ChatViewModel: ObservableObject {
 
             case .local:
                 // Use Ollama
-                response = try await handleOllamaQuery(context: context)
+                let (ollamaResponse, citedNotes, contextNotes, queryType) = try await handleOllamaQuery(context: context)
+                response = ollamaResponse
+
+                // Add assistant message with citation data
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: routingDecision.tier,
+                    relatedNotes: relatedNotes.map(\.id),
+                    citedNotes: citedNotes,
+                    contextNotes: contextNotes,
+                    queryType: queryType
+                )
+                currentSession.addMessage(assistantMessage)
+
+                // Save session
+                await saveSession()
+                return // Early return for local tier
             }
 
-            // Add assistant message
+            // Add assistant message (for non-local tiers)
             let assistantMessage = Message(
                 role: .assistant,
                 content: response,
@@ -209,14 +226,15 @@ class ChatViewModel: ObservableObject {
         """
     }
 
-    private func handleOllamaQuery(context: String) async throws -> String {
+    private func handleOllamaQuery(context: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
         // Check Ollama availability
         let isAvailable = await ollamaService.isAvailable()
 
         guard isAvailable else {
             // Fallback to local query if Ollama not available
             let notes = try await findRelatedNotes(for: context)
-            return try await handleLocalQuery(context: context, notes: notes)
+            let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
+            return (fallbackResponse, notes, notes, "fallback")
         }
 
         // NEW: Use QueryAnalyzer to determine query type
@@ -232,7 +250,8 @@ class ChatViewModel: ObservableObject {
         )
 
         guard !notes.isEmpty else {
-            return "I don't have any notes matching that query yet. Try asking about something else or capture more notes first."
+            let emptyResponse = "I don't have any notes matching that query yet. Try asking about something else or capture more notes first."
+            return (emptyResponse, [], [], String(describing: analysis.queryType))
         }
 
         // NEW: Build adaptive context
@@ -254,10 +273,12 @@ class ChatViewModel: ObservableObject {
         // Generate response
         do {
             let response = try await ollamaService.generate(prompt: fullPrompt)
-            return response
+            // Return response with citation data
+            return (response, notes, notes, String(describing: analysis.queryType))
         } catch {
             // On error, fall back to simple local query
-            return try await handleLocalQuery(context: context, notes: notes)
+            let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
+            return (fallbackResponse, notes, notes, "error-fallback")
         }
     }
 
