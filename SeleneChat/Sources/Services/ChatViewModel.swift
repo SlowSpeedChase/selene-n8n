@@ -11,6 +11,8 @@ class ChatViewModel: ObservableObject {
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
     private let ollamaService = OllamaService()
+    private let queryAnalyzer = QueryAnalyzer()
+    private let contextBuilder = ContextBuilder()
 
     init() {
         self.currentSession = ChatSession()
@@ -217,14 +219,36 @@ class ChatViewModel: ObservableObject {
             return try await handleLocalQuery(context: context, notes: notes)
         }
 
-        // Build full prompt with system instructions
-        let systemPrompt = buildSystemPrompt()
+        // NEW: Use QueryAnalyzer to determine query type
+        let analysis = queryAnalyzer.analyze(context)
+
+        // NEW: Retrieve notes using hybrid strategy
+        let limit = limitFor(queryType: analysis.queryType)
+        let notes = try await databaseService.retrieveNotesFor(
+            queryType: analysis.queryType,
+            keywords: analysis.keywords,
+            timeScope: analysis.timeScope,
+            limit: limit
+        )
+
+        guard !notes.isEmpty else {
+            return "I don't have any notes matching that query yet. Try asking about something else or capture more notes first."
+        }
+
+        // NEW: Build adaptive context
+        let noteContext = contextBuilder.buildContext(notes: notes, queryType: analysis.queryType)
+
+        // Build system prompt with citation instructions
+        let systemPrompt = buildSystemPrompt(for: analysis.queryType)
+
+        // Build full prompt
         let fullPrompt = """
         \(systemPrompt)
 
-        \(context)
+        Notes:
+        \(noteContext)
 
-        Provide an actionable, insightful response based on these notes.
+        Question: \(context)
         """
 
         // Generate response
@@ -233,13 +257,21 @@ class ChatViewModel: ObservableObject {
             return response
         } catch {
             // On error, fall back to simple local query
-            let notes = try await findRelatedNotes(for: context)
             return try await handleLocalQuery(context: context, notes: notes)
         }
     }
 
-    private func buildSystemPrompt() -> String {
-        return """
+    private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
+        switch queryType {
+        case .pattern: return 100
+        case .search: return 50
+        case .knowledge: return 15
+        case .general: return 30
+        }
+    }
+
+    private func buildSystemPrompt(for queryType: QueryAnalyzer.QueryType) -> String {
+        let basePrompt = """
         You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
 
         Your role:
@@ -248,15 +280,40 @@ class ChatViewModel: ObservableObject {
         - Be conversational and supportive
         - Focus on insights that lead to action
 
+        IMPORTANT - Citations:
+        - When referencing specific notes, ALWAYS cite them as: [Note: 'Title' - Date]
+        - Example: "You mentioned feeling productive in the morning [Note: 'Morning Routine' - Nov 14]"
+        - Place citations immediately after the relevant statement
+        - Use exact note titles and dates provided in the context
+
         Guidelines:
         - Keep responses concise but insightful
         - Highlight patterns and correlations when they exist
         - Suggest concrete next steps
-        - Reference specific notes when relevant
         - Be empathetic about ADHD challenges
 
         The user's notes contain timestamps, energy levels, sentiment, themes, and concepts extracted by AI.
         """
+
+        // Add query-specific instructions
+        let querySpecific: String
+        switch queryType {
+        case .pattern:
+            querySpecific = "\n\nAnalyze these notes for trends and patterns. Look for patterns in energy, themes, sentiment, and timing. Be specific and cite notes as evidence."
+        case .search:
+            querySpecific = "\n\nSummarize what these notes say about the topic. Highlight key points and cite relevant notes."
+        case .knowledge:
+            querySpecific = "\n\nAnswer this question based on the note content. Cite specific notes that contain the answer."
+        case .general:
+            querySpecific = "\n\nProvide insights based on recent notes. Highlight interesting patterns and cite specific examples."
+        }
+
+        return basePrompt + querySpecific
+    }
+
+    // Legacy method for compatibility - routes to local tier
+    private func buildSystemPrompt() -> String {
+        return buildSystemPrompt(for: .general)
     }
 
     func newSession() {
