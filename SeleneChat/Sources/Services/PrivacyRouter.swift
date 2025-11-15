@@ -35,68 +35,29 @@ class PrivacyRouter {
         case onDevice(reason: String)
         case privateCloud(reason: String)
         case external(reason: String)
+        case local(reason: String)
 
         var tier: Message.LLMTier {
             switch self {
             case .onDevice: return .onDevice
             case .privateCloud: return .privateCloud
             case .external: return .external
+            case .local: return .local
             }
         }
 
         var reason: String {
             switch self {
-            case .onDevice(let r), .privateCloud(let r), .external(let r):
+            case .onDevice(let r), .privateCloud(let r), .external(let r), .local(let r):
                 return r
             }
         }
     }
 
     func routeQuery(_ query: String, relatedNotes: [Note] = []) -> RoutingDecision {
-        let lowercaseQuery = query.lowercased()
-
-        // Rule 1: If query references note content, always use on-device
-        if containsNoteReference(lowercaseQuery) {
-            return .onDevice(reason: "Query references note content")
-        }
-
-        // Rule 2: If related notes are provided, assume sensitive
-        if !relatedNotes.isEmpty {
-            // Check if notes contain sensitive data
-            let notesContainSensitive = relatedNotes.contains { note in
-                containsSensitiveContent(note.content)
-            }
-
-            if notesContainSensitive {
-                return .onDevice(reason: "Related notes contain sensitive information")
-            }
-        }
-
-        // Rule 3: Check for sensitive keywords in query
-        let containsSensitive = sensitiveKeywords.contains { keyword in
-            lowercaseQuery.contains(keyword)
-        }
-
-        if containsSensitive {
-            return .onDevice(reason: "Query contains sensitive keywords")
-        }
-
-        // Rule 4: Check for project/planning keywords (non-sensitive)
-        let containsProject = projectKeywords.contains { keyword in
-            lowercaseQuery.contains(keyword)
-        }
-
-        if containsProject {
-            return .external(reason: "General project planning query (non-sensitive)")
-        }
-
-        // Rule 5: General questions about methodology, best practices, etc.
-        if isGeneralQuestion(lowercaseQuery) {
-            return .external(reason: "General knowledge query (non-sensitive)")
-        }
-
-        // Default: use on-device for safety
-        return .onDevice(reason: "Default routing for privacy")
+        // Phase 2: All queries route to local Ollama for maximum insight
+        // Future: Add complex routing when Claude API integration is needed
+        return .local(reason: "Local LLM processing with Ollama for actionable insights")
     }
 
     private func containsNoteReference(_ query: String) -> Bool {
