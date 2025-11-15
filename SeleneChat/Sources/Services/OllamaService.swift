@@ -14,7 +14,7 @@ private struct GenerateResponse: Codable {
     let done: Bool
 }
 
-class OllamaService {
+actor OllamaService {
     static let shared = OllamaService()
 
     private let baseURL = "http://localhost:11434"
