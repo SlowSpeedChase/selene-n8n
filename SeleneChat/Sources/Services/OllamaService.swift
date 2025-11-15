@@ -20,6 +20,10 @@ class OllamaService {
     private let baseURL = "http://localhost:11434"
     private let session = URLSession.shared
 
+    private var lastAvailabilityCheck: Date?
+    private var cachedAvailability: Bool = false
+    private let cacheTimeout: TimeInterval = 60  // Cache for 60 seconds
+
     private init() {}
 
     enum OllamaError: Error, LocalizedError {
@@ -42,8 +46,15 @@ class OllamaService {
         }
     }
 
-    /// Check if Ollama service is running and available
+    /// Check if Ollama service is running and available (cached for 60s)
     func isAvailable() async -> Bool {
+        // Return cached result if fresh
+        if let lastCheck = lastAvailabilityCheck,
+           Date().timeIntervalSince(lastCheck) < cacheTimeout {
+            return cachedAvailability
+        }
+
+        // Perform actual health check
         guard let url = URL(string: "\(baseURL)/api/tags") else {
             return false
         }
@@ -53,15 +64,22 @@ class OllamaService {
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
+                cachedAvailability = false
+                lastAvailabilityCheck = Date()
                 return false
             }
 
             // Try to decode response to verify it's valid JSON
             _ = try JSONSerialization.jsonObject(with: data)
+
+            cachedAvailability = true
+            lastAvailabilityCheck = Date()
             return true
 
         } catch {
             print("⚠️ Ollama health check failed: \(error.localizedDescription)")
+            cachedAvailability = false
+            lastAvailabilityCheck = Date()
             return false
         }
     }
