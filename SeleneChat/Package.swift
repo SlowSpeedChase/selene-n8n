@@ -26,10 +26,10 @@ let package = Package(
                 .process("Resources")
             ]
         ),
-        .executableTarget(
+        .testTarget(
             name: "SeleneChatTests",
-            dependencies: [],
-            path: "Tests/SeleneChatTests"
+            dependencies: ["SeleneChat"],
+            path: "Tests"
         )
     ]
 )

@@ -1,6 +1,6 @@
 import XCTest
 import Foundation
-@testable import SeleneChatLib
+@testable import SeleneChat
 
 final class ChatSessionPersistenceTests: XCTestCase {
     var databaseService: DatabaseService!
