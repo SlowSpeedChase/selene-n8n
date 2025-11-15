@@ -23,6 +23,16 @@ struct ChatView: View {
                             MessageBubble(message: message)
                                 .id(message.id)
                         }
+
+                        // Show thinking indicator when processing
+                        if chatViewModel.isProcessing {
+                            HStack {
+                                ThinkingIndicator()
+                                    .transition(.scale.combined(with: .opacity))
+                                Spacer()
+                            }
+                            .id("thinking-indicator")
+                        }
                     }
                     .padding()
                 }
@@ -30,6 +40,14 @@ struct ChatView: View {
                     if let lastMessage = chatViewModel.currentSession.messages.last {
                         withAnimation {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: chatViewModel.isProcessing) {
+                    // Scroll to thinking indicator when it appears
+                    if chatViewModel.isProcessing {
+                        withAnimation {
+                            proxy.scrollTo("thinking-indicator", anchor: .bottom)
                         }
                     }
                 }
