@@ -32,50 +32,34 @@ if [ -d "Sources/Resources/Assets.xcassets" ]; then
     cp -R "Sources/Resources/Assets.xcassets" "$APP_DIR/Contents/Resources/"
 fi
 
-# Generate a simple app icon using SF Symbols-inspired design
+# Copy app icon from Assets.xcassets
 echo "🎨 Creating app icon..."
-ICON_DIR="$APP_DIR/Contents/Resources/AppIcon.appiconset"
-mkdir -p "$ICON_DIR"
+ICON_SOURCE="Sources/Resources/Assets.xcassets/AppIcon.appiconset"
 
-# Check if ImageMagick is available to create icons
-if command -v convert &> /dev/null; then
-    # Create simple gradient icons at different sizes
-    for size in 16 32 128 256 512; do
-        convert -size ${size}x${size} \
-            xc:"#5E5CE6" \
-            -gravity center \
-            -pointsize $((size/2)) \
-            -fill white \
-            -annotate +0+0 "S" \
-            "$ICON_DIR/icon_${size}x${size}.png"
+if [ -d "$ICON_SOURCE" ]; then
+    # Create .iconset directory for iconutil
+    ICONSET_DIR="$APP_DIR/Contents/Resources/AppIcon.iconset"
+    mkdir -p "$ICONSET_DIR"
 
-        # Create @2x versions
-        size2x=$((size*2))
-        convert -size ${size2x}x${size2x} \
-            xc:"#5E5CE6" \
-            -gravity center \
-            -pointsize $((size2x/2)) \
-            -fill white \
-            -annotate +0+0 "S" \
-            "$ICON_DIR/icon_${size}x${size}@2x.png"
-    done
+    # Copy all icon files to iconset directory
+    cp "$ICON_SOURCE/icon_16x16.png" "$ICONSET_DIR/icon_16x16.png"
+    cp "$ICON_SOURCE/icon_16x16@2x.png" "$ICONSET_DIR/icon_16x16@2x.png"
+    cp "$ICON_SOURCE/icon_32x32.png" "$ICONSET_DIR/icon_32x32.png"
+    cp "$ICON_SOURCE/icon_32x32@2x.png" "$ICONSET_DIR/icon_32x32@2x.png"
+    cp "$ICON_SOURCE/icon_128x128.png" "$ICONSET_DIR/icon_128x128.png"
+    cp "$ICON_SOURCE/icon_128x128@2x.png" "$ICONSET_DIR/icon_128x128@2x.png"
+    cp "$ICON_SOURCE/icon_256x256.png" "$ICONSET_DIR/icon_256x256.png"
+    cp "$ICON_SOURCE/icon_256x256@2x.png" "$ICONSET_DIR/icon_256x256@2x.png"
+    cp "$ICON_SOURCE/icon_512x512.png" "$ICONSET_DIR/icon_512x512.png"
+    cp "$ICON_SOURCE/icon_512x512@2x.png" "$ICONSET_DIR/icon_512x512@2x.png"
 
-    cp "Sources/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json" "$ICON_DIR/"
+    # Create .icns file from iconset
+    iconutil -c icns "$ICONSET_DIR" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
+    rm -rf "$ICONSET_DIR"
 
-    # Create the .icns file from the 512x512 icon
-    mkdir -p "$APP_DIR/Contents/Resources/AppIcon.iconset"
-    for size in 16 32 128 256 512; do
-        cp "$ICON_DIR/icon_${size}x${size}.png" "$APP_DIR/Contents/Resources/AppIcon.iconset/icon_${size}x${size}.png"
-        cp "$ICON_DIR/icon_${size}x${size}@2x.png" "$APP_DIR/Contents/Resources/AppIcon.iconset/icon_${size}x${size}@2x.png"
-    done
-
-    iconutil -c icns "$APP_DIR/Contents/Resources/AppIcon.iconset"
-    rm -rf "$APP_DIR/Contents/Resources/AppIcon.iconset"
-
-    echo "✅ App icon created"
+    echo "✅ App icon created from Assets.xcassets"
 else
-    echo "⚠️  ImageMagick not found - skipping icon generation"
-    echo "   Install with: brew install imagemagick"
+    echo "⚠️  App icon assets not found at $ICON_SOURCE"
 fi
 
 # Make executable
