@@ -250,6 +250,162 @@ final class ChatSessionPersistenceTests: XCTestCase {
         XCTAssertEqual(loadedSessions[0].compressionState, .full, "Should allow transition back to full")
     }
 
+    func testUpdateSessionPin() async throws {
+        // Create a test session (default isPinned = false)
+        let session = ChatSession(
+            id: UUID(),
+            messages: [createTestMessage()],
+            createdAt: Date(),
+            updatedAt: Date(),
+            title: "Pin Test Session"
+        )
+        try await databaseService.saveSession(session)
+
+        // Verify initial pin state is false
+        var loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1)
+        XCTAssertFalse(loadedSessions[0].isPinned, "Default isPinned should be false")
+
+        // Pin the session
+        try await databaseService.updateSessionPin(sessionId: session.id, isPinned: true)
+
+        loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1)
+        XCTAssertTrue(loadedSessions[0].isPinned, "Session should be pinned")
+
+        // Unpin the session
+        try await databaseService.updateSessionPin(sessionId: session.id, isPinned: false)
+
+        loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1)
+        XCTAssertFalse(loadedSessions[0].isPinned, "Session should be unpinned")
+    }
+
+    func testDeleteSession() async throws {
+        // Create two test sessions
+        let session1 = ChatSession(
+            id: UUID(),
+            messages: [createTestMessage()],
+            createdAt: Date(),
+            updatedAt: Date(),
+            title: "Session to Keep"
+        )
+        let session2 = ChatSession(
+            id: UUID(),
+            messages: [createTestMessage()],
+            createdAt: Date(),
+            updatedAt: Date(),
+            title: "Session to Delete"
+        )
+
+        try await databaseService.saveSession(session1)
+        try await databaseService.saveSession(session2)
+
+        // Verify both sessions exist
+        var loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 2, "Should have 2 sessions")
+
+        // Delete session2
+        try await databaseService.deleteSession(session2)
+
+        // Verify only session1 remains
+        loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1, "Should have 1 session after deletion")
+        XCTAssertEqual(loadedSessions[0].id, session1.id, "Remaining session should be session1")
+        XCTAssertEqual(loadedSessions[0].title, "Session to Keep")
+
+        // Delete session1
+        try await databaseService.deleteSession(session1)
+
+        // Verify no sessions remain
+        loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 0, "Should have 0 sessions after deleting all")
+    }
+
+    func testSaveEmptySession() async throws {
+        // Create a session with zero messages
+        let emptySession = ChatSession(
+            id: UUID(),
+            messages: [],
+            createdAt: Date(),
+            updatedAt: Date(),
+            title: "Empty Session"
+        )
+
+        // Save the empty session
+        try await databaseService.saveSession(emptySession)
+
+        // Load and verify
+        let loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1, "Should save empty session")
+
+        guard let loadedSession = loadedSessions.first else {
+            XCTFail("Failed to load empty session")
+            return
+        }
+
+        XCTAssertEqual(loadedSession.id, emptySession.id)
+        XCTAssertEqual(loadedSession.title, "Empty Session")
+        XCTAssertEqual(loadedSession.messages.count, 0, "Should have zero messages")
+        XCTAssertEqual(loadedSession.compressionState, .full, "Empty session should be in full state")
+    }
+
+    func testSessionWithNoUserMessages() async throws {
+        // Create a session with only assistant messages (edge case)
+        let thirtyOneDaysAgo = Calendar.current.date(byAdding: .day, value: -31, to: Date())!
+
+        let assistantOnlySession = ChatSession(
+            id: UUID(),
+            messages: [
+                Message(
+                    id: UUID(),
+                    role: .assistant,
+                    content: "Hello! How can I help you?",
+                    timestamp: Date(),
+                    llmTier: .onDevice,
+                    relatedNotes: nil
+                ),
+                Message(
+                    id: UUID(),
+                    role: .assistant,
+                    content: "I'm here to assist with your notes.",
+                    timestamp: Date(),
+                    llmTier: .onDevice,
+                    relatedNotes: nil
+                )
+            ],
+            createdAt: thirtyOneDaysAgo,
+            updatedAt: thirtyOneDaysAgo,
+            title: "Assistant-Only Session"
+        )
+
+        // Save the session
+        try await databaseService.saveSession(assistantOnlySession)
+
+        // Verify it can be loaded
+        var loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1)
+        XCTAssertEqual(loadedSessions[0].messages.count, 2)
+        XCTAssertEqual(loadedSessions[0].messages[0].role, .assistant)
+        XCTAssertEqual(loadedSessions[0].messages[1].role, .assistant)
+
+        // Verify it appears in compression candidates (old, unpinned, full state)
+        let compressionCandidates = try await databaseService.getSessionsReadyForCompression()
+        XCTAssertEqual(compressionCandidates.count, 1, "Assistant-only session should be eligible for compression")
+        XCTAssertEqual(compressionCandidates[0].id, assistantOnlySession.id)
+
+        // Compress the assistant-only session
+        let summary = "Session with only assistant messages. No user queries recorded."
+        try await databaseService.compressSession(sessionId: assistantOnlySession.id, summary: summary)
+
+        // Verify compression worked
+        loadedSessions = try await databaseService.loadSessions()
+        XCTAssertEqual(loadedSessions.count, 1)
+        XCTAssertEqual(loadedSessions[0].compressionState, .compressed)
+        XCTAssertEqual(loadedSessions[0].summaryText, summary)
+        XCTAssertEqual(loadedSessions[0].messages.count, 0, "Messages should be cleared after compression")
+    }
+
     // MARK: - Helper Methods
 
     private func createTestMessage() -> Message {
