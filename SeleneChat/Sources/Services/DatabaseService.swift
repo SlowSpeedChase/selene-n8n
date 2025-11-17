@@ -64,7 +64,9 @@ class DatabaseService: ObservableObject {
 
     init() {
         // Try to load saved path, otherwise use default
-        let defaultPath = "/Users/chaseeasterling/selene-n8n/data/selene.db"
+        let defaultPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("selene-n8n/data/selene.db")
+            .path
         self.databasePath = UserDefaults.standard.string(forKey: "databasePath") ?? defaultPath
         connect()
     }
