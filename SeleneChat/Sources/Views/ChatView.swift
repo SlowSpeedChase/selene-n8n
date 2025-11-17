@@ -246,38 +246,42 @@ struct SessionHistoryView: View {
     @EnvironmentObject var chatViewModel: ChatViewModel
     @Environment(\.dismiss) var dismiss
 
+    var sortedSessions: [ChatSession] {
+        chatViewModel.sessions.sorted { session1, session2 in
+            // Pinned sessions first
+            if session1.isPinned != session2.isPinned {
+                return session1.isPinned
+            }
+            // Then by most recent update
+            return session1.updatedAt > session2.updatedAt
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                ForEach(chatViewModel.sessions.sorted(by: { $0.updatedAt > $1.updatedAt })) { session in
-                    Button(action: {
-                        chatViewModel.loadSession(session)
-                        dismiss()
-                    }) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(session.title)
-                                .font(.headline)
-
-                            HStack {
-                                Text(session.formattedDate)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                Spacer()
-
-                                Text("\(session.messages.count) messages")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                ForEach(sortedSessions) { session in
+                    SessionRow(session: session)
+                        .onTapGesture {
+                            chatViewModel.loadSession(session)
+                            dismiss()
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button {
+                                chatViewModel.togglePin(session)
+                            } label: {
+                                Label(session.isPinned ? "Unpin" : "Pin",
+                                      systemImage: session.isPinned ? "pin.slash" : "pin")
+                            }
+                            .tint(session.isPinned ? .orange : .blue)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                chatViewModel.deleteSession(session)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .onDelete { indexSet in
-                    let sortedSessions = chatViewModel.sessions.sorted(by: { $0.updatedAt > $1.updatedAt })
-                    indexSet.forEach { index in
-                        chatViewModel.deleteSession(sortedSessions[index])
-                    }
                 }
             }
             .navigationTitle("Chat History")
@@ -289,6 +293,86 @@ struct SessionHistoryView: View {
                 }
             }
         }
-        .frame(width: 400, height: 500)
+        .frame(width: 450, height: 550)
+    }
+}
+
+struct SessionRow: View {
+    let session: ChatSession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Title with pin indicator
+            HStack(spacing: 6) {
+                if session.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+
+                Text(session.title)
+                    .font(.headline)
+                    .lineLimit(2)
+
+                Spacer()
+
+                compressionBadge
+            }
+
+            // Metadata row
+            HStack {
+                Text(session.formattedDate)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text("\(session.messages.count) messages")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Summary text for compressed sessions
+            if session.compressionState == .compressed, let summary = session.summaryText {
+                Text(summary)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var compressionBadge: some View {
+        switch session.compressionState {
+        case .full:
+            Text("Full")
+                .font(.caption2)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.green.opacity(0.2))
+                .foregroundColor(.green)
+                .cornerRadius(4)
+
+        case .processing:
+            Text("Processing")
+                .font(.caption2)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.orange.opacity(0.2))
+                .foregroundColor(.orange)
+                .cornerRadius(4)
+
+        case .compressed:
+            Text("Summary")
+                .font(.caption2)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.blue.opacity(0.2))
+                .foregroundColor(.blue)
+                .cornerRadius(4)
+        }
     }
 }
