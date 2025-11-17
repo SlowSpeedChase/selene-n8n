@@ -20,20 +20,33 @@ class CompressionService: ObservableObject {
     }
 
     private func compressSession(_ session: ChatSession) async {
-        // Mark as processing
-        try? await databaseService.updateCompressionState(
-            sessionId: session.id,
-            state: .processing
-        )
+        do {
+            // Mark as processing
+            try await databaseService.updateCompressionState(
+                sessionId: session.id,
+                state: .processing
+            )
 
-        // Generate summary
-        let summary = await generateSummary(for: session)
+            // Generate summary
+            let summary = await generateSummary(for: session)
 
-        // Save compressed version
-        try? await databaseService.compressSession(
-            sessionId: session.id,
-            summary: summary
-        )
+            // Compress
+            try await databaseService.compressSession(
+                sessionId: session.id,
+                summary: summary
+            )
+
+            print("✅ Successfully compressed session: \(session.title)")
+        } catch {
+            print("❌ Compression failed for session \(session.id): \(error)")
+
+            // Recovery: revert to full state
+            try? await databaseService.updateCompressionState(
+                sessionId: session.id,
+                state: .full
+            )
+            print("🔄 Reverted session \(session.id) back to full state")
+        }
     }
 
     func generateSummary(for session: ChatSession) async -> String {
