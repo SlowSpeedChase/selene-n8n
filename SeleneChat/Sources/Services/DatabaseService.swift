@@ -64,7 +64,9 @@ class DatabaseService: ObservableObject {
 
     init() {
         // Try to load saved path, otherwise use default
-        let defaultPath = "/Users/chaseeasterling/selene-n8n/data/selene.db"
+        let defaultPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("selene-n8n/data/selene.db")
+            .path
         self.databasePath = UserDefaults.standard.string(forKey: "databasePath") ?? defaultPath
         connect()
     }
@@ -430,6 +432,99 @@ class DatabaseService: ObservableObject {
         try db.run(sessionToUpdate.update(isPinned <- pinnedValue ? 1 : 0))
 
         print("✅ Updated pin status for session: \(sessionId)")
+    }
+
+    // MARK: - Compression Methods
+
+    func getSessionsReadyForCompression() async throws -> [ChatSession] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateFormatter = ISO8601DateFormatter()
+        let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        let thirtyDaysAgoStr = dateFormatter.string(from: thirtyDaysAgo)
+
+        var sessions: [ChatSession] = []
+
+        // Query sessions that are:
+        // 1. Created more than 30 days ago
+        // 2. Not pinned (is_pinned = 0)
+        // 3. In 'full' compression state
+        let query = chatSessions
+            .filter(sessionCreatedAt < thirtyDaysAgoStr)
+            .filter(isPinned == 0)
+            .filter(compressionState == "full")
+            .order(sessionCreatedAt.asc)
+
+        for row in try db.prepare(query) {
+            let id = UUID(uuidString: try row.get(sessionId)) ?? UUID()
+            let title = try row.get(sessionTitle)
+            let createdAt = dateFormatter.date(from: try row.get(sessionCreatedAt)) ?? Date()
+            let updatedAt = dateFormatter.date(from: try row.get(sessionUpdatedAt)) ?? Date()
+            let isPinnedValue = try row.get(isPinned) == 1
+            let compressionStateValue = ChatSession.CompressionState(rawValue: try row.get(compressionState)) ?? .full
+            let compressedAtValue = (try? row.get(compressedAt)).flatMap { dateFormatter.date(from: $0) }
+            let summaryTextValue = try? row.get(summaryText)
+
+            // Deserialize messages if available
+            var messages: [Message] = []
+            if let messagesJson = try? row.get(fullMessagesJson),
+               let messagesData = messagesJson.data(using: .utf8) {
+                messages = (try? JSONDecoder().decode([Message].self, from: messagesData)) ?? []
+            }
+
+            let session = ChatSession(
+                id: id,
+                messages: messages,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                title: title,
+                isPinned: isPinnedValue,
+                compressionState: compressionStateValue,
+                compressedAt: compressedAtValue,
+                summaryText: summaryTextValue
+            )
+
+            sessions.append(session)
+        }
+
+        print("✅ Found \(sessions.count) sessions ready for compression")
+        return sessions
+    }
+
+    func compressSession(sessionId: UUID, summary: String) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateFormatter = ISO8601DateFormatter()
+        let now = dateFormatter.string(from: Date())
+
+        // Update the session to compressed state
+        let sessionToCompress = chatSessions.filter(self.sessionId == sessionId.uuidString)
+        try db.run(sessionToCompress.update(
+            compressionState <- "compressed",
+            summaryText <- summary,
+            compressedAt <- now,
+            fullMessagesJson <- nil  // Clear the full messages
+        ))
+
+        print("✅ Compressed session: \(sessionId)")
+    }
+
+    func updateCompressionState(sessionId: UUID, state: ChatSession.CompressionState) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Update only the compression state
+        let sessionToUpdate = chatSessions.filter(self.sessionId == sessionId.uuidString)
+        try db.run(sessionToUpdate.update(
+            compressionState <- state.rawValue
+        ))
+
+        print("✅ Updated compression state to '\(state.rawValue)' for session: \(sessionId)")
     }
 
     // MARK: - Error Types

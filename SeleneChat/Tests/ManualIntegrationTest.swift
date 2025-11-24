@@ -50,5 +50,4 @@ func runIntegrationTest() async {
 
 // Note: This file documents the manual test procedure
 // Actual automated tests would use XCTest framework
-print("📖 Manual Integration Test Documentation")
-print("   See implementation above for test procedure")
+// To run: call runIntegrationTest() from your code

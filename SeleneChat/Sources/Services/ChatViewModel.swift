@@ -285,6 +285,26 @@ class ChatViewModel: ObservableObject {
         }
     }
 
+    func togglePin(_ session: ChatSession) {
+        // Update in-memory session
+        if let index = sessions.firstIndex(where: { $0.id == session.id }) {
+            sessions[index].isPinned.toggle()
+
+            // If this is the current session, update it too
+            if currentSession.id == session.id {
+                currentSession.isPinned = sessions[index].isPinned
+            }
+
+            Task {
+                do {
+                    try await databaseService.updateSessionPin(sessionId: session.id, isPinned: sessions[index].isPinned)
+                } catch {
+                    print("⚠️ Failed to update pin status: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     private func saveSession() async {
         // Skip saving empty sessions (no messages)
         guard !currentSession.messages.isEmpty else { return }
