@@ -1,8 +1,8 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2025-11-13
-**Status:** Phase 1 Complete ✅
+**Last Updated:** 2025-11-24
+**Status:** Phase 1-2 Complete ✅ | Phase 7 Planning Complete 📋
 
 ---
 
@@ -23,12 +23,12 @@ This roadmap has been reorganized into focused, modular documents to make it eas
 Work on specific features:
 
 - **[Phase 1: Core System](./docs/roadmap/03-PHASE-1-CORE.md)** ✅ COMPLETE - Drafts → Ollama → SQLite
-- **[Phase 1.5: UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** 🔨 IN PROGRESS - Draft UUID tracking & edit detection
-- **[Phase 2: Obsidian Export](./docs/roadmap/04-PHASE-2-OBSIDIAN.md)** ⬜ Next up
-- **[Phase 3: Pattern Detection](./docs/roadmap/05-PHASE-3-PATTERNS.md)** ⬜ Future
+- **[Phase 1.5: UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** ✅ COMPLETE - Draft UUID tracking & edit detection
+- **[Phase 2: Obsidian Export](./docs/roadmap/04-PHASE-2-OBSIDIAN.md)** ✅ COMPLETE - ADHD-optimized export with visual indicators
+- **[Phase 3: Pattern Detection](./docs/roadmap/05-PHASE-3-PATTERNS.md)** 🔄 Ready for testing
 - **[Phase 4: Polish & Enhancements](./docs/roadmap/06-PHASE-4-POLISH.md)** ⬜ Future
-- **[Phase 5: ADHD Executive Function](./docs/roadmap/07-PHASE-5-ADHD.md)** ⬜ Future
-- **[Phase 6: Event-Driven Architecture](./docs/roadmap/08-PHASE-6-EVENT-DRIVEN.md)** ⚡ PARTIAL - Workflows 01 & 02 complete
+- **[Phase 6: Event-Driven Architecture](./docs/roadmap/08-PHASE-6-EVENT-DRIVEN.md)** ⚡ PARTIAL - Workflows 01-05 complete
+- **[Phase 7: Things Integration](./docs/roadmap/16-PHASE-7-THINGS.md)** 📋 PLANNING COMPLETE - Task extraction via MCP (ready to implement)
 
 ### 🔧 **Technical Reference**
 
@@ -46,6 +46,16 @@ Integration details and specifications:
 Infrastructure and architectural enhancements:
 
 - **[UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** - Draft identification and edit detection
+
+### 🎯 **Phase 7: Things Integration (Planning Complete)**
+
+Complete integration package ready for implementation:
+
+- **[📋 Integration Summary](./docs/THINGS-INTEGRATION-SUMMARY.md)** - START HERE: Overview and next steps
+- **[🏛️ Architecture](./docs/architecture/things-integration.md)** - Technical design and system architecture
+- **[👤 User Stories](./docs/user-stories/things-integration-stories.md)** - User scenarios and acceptance criteria
+- **[🧠 ADHD Features Deep Dive](./docs/planning/adhd-features-integration.md)** - For planning future phases (8+)
+- **[🛠️ Phase 7.1 Implementation Spec](./docs/plans/auto-create-tasks-from-notes.md)** - Step-by-step build guide
 
 ### 🛠️ **Setup & Maintenance**
 
