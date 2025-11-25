@@ -1,7 +1,7 @@
 # Selene n8n Roadmap - Index
 
 **Created:** 2025-10-18
-**Last Updated:** 2025-10-31
+**Last Updated:** 2025-11-24
 **Purpose:** Master index for modular roadmap documentation
 
 ## Overview
@@ -26,7 +26,7 @@ For implementation work, read in this order:
 - **[04-PHASE-2-OBSIDIAN.md](./04-PHASE-2-OBSIDIAN.md)** - Export processed notes to Obsidian vault
 - **[05-PHASE-3-PATTERNS.md](./05-PHASE-3-PATTERNS.md)** - Pattern detection and theme trends
 - **[06-PHASE-4-POLISH.md](./06-PHASE-4-POLISH.md)** - Error handling and enhancements
-- **[07-PHASE-5-ADHD.md](./07-PHASE-5-ADHD.md)** - Executive function features
+- **[16-PHASE-7-THINGS.md](./16-PHASE-7-THINGS.md)** - Things 3 integration via MCP (task extraction, projects, ADHD features)
 - **[08-PHASE-6-EVENT-DRIVEN.md](./08-PHASE-6-EVENT-DRIVEN.md)** - Event-driven workflow architecture
 
 ### Technical Reference
@@ -41,6 +41,13 @@ For implementation work, read in this order:
 - **[20-SETUP-INSTRUCTIONS.md](./20-SETUP-INSTRUCTIONS.md)** - Initial setup from scratch
 - **[21-MIGRATION-GUIDE.md](./21-MIGRATION-GUIDE.md)** - Migrating from Python version
 - **[22-TROUBLESHOOTING.md](./22-TROUBLESHOOTING.md)** - Common issues and solutions
+
+### Phase 7 Supporting Documents
+- **[../THINGS-INTEGRATION-SUMMARY.md](../THINGS-INTEGRATION-SUMMARY.md)** - Complete integration overview and next steps
+- **[../architecture/things-integration.md](../architecture/things-integration.md)** - Technical architecture and design
+- **[../user-stories/things-integration-stories.md](../user-stories/things-integration-stories.md)** - User scenarios and acceptance criteria
+- **[../planning/adhd-features-integration.md](../planning/adhd-features-integration.md)** - Deep dive into ADHD features (for future sessions)
+- **[../plans/auto-create-tasks-from-notes.md](../plans/auto-create-tasks-from-notes.md)** - Phase 7.1 implementation spec
 
 ## How to Use This Documentation
 
@@ -89,6 +96,15 @@ For implementation work, read in this order:
 /selene-n8n/
 ├── ROADMAP.md                    # Main entry point (links to this index)
 ├── docs/
+│   ├── THINGS-INTEGRATION-SUMMARY.md   # Phase 7 overview and next steps
+│   ├── architecture/
+│   │   └── things-integration.md       # Phase 7 technical architecture
+│   ├── user-stories/
+│   │   └── things-integration-stories.md  # Phase 7 user scenarios
+│   ├── planning/
+│   │   └── adhd-features-integration.md   # ADHD features deep dive
+│   ├── plans/
+│   │   └── auto-create-tasks-from-notes.md  # Phase 7.1 implementation spec
 │   └── roadmap/                  # This directory
 │       ├── 00-INDEX.md          # This file
 │       ├── 01-OVERVIEW.md
@@ -97,7 +113,6 @@ For implementation work, read in this order:
 │       ├── 04-PHASE-2-OBSIDIAN.md
 │       ├── 05-PHASE-3-PATTERNS.md
 │       ├── 06-PHASE-4-POLISH.md
-│       ├── 07-PHASE-5-ADHD.md
 │       ├── 08-PHASE-6-EVENT-DRIVEN.md
 │       ├── 10-DATABASE-SCHEMA.md
 │       ├── 11-OLLAMA-INTEGRATION.md
@@ -105,6 +120,7 @@ For implementation work, read in this order:
 │       ├── 13-N8N-WORKFLOW-SPECS.md
 │       ├── 14-CONFIGURATION.md
 │       ├── 15-TESTING.md
+│       ├── 16-PHASE-7-THINGS.md         # NEW: Things integration
 │       ├── 20-SETUP-INSTRUCTIONS.md
 │       ├── 21-MIGRATION-GUIDE.md
 │       └── 22-TROUBLESHOOTING.md
