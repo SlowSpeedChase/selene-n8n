@@ -1,8 +1,23 @@
-# Personal vault files
-vault/
+# ==============================================================================
+# SECURITY: Files with personal/sensitive information
+# ==============================================================================
 
-# Data folder (including database)
+# Personal vault files (all Obsidian data)
+vault/
+vault-test/
+*.md.backup
+
+# Data folders (including databases)
 data/
+data-test/
+
+# Database files (SQLite)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 
 # Git worktrees
 .worktrees/
@@ -10,9 +25,10 @@ data/
 # Node modules
 node_modules/
 
-# Environment variables
+# Environment variables (ALL variants)
 .env
-.env.local
+.env.*
+!.env.example
 
 # OS files
 .DS_Store
@@ -22,10 +38,14 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Logs
+# Logs and backups
 logs/
 *.log
 npm-debug.log*
+*.backup
+*.bak
+*.tmp
+*.swp
 
 # Obsidian workspace
 vault/.obsidian/workspace.json
