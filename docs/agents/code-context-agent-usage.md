@@ -6,6 +6,48 @@ The **code-context-agent** maintains CLAUDE.md files and minimal inline comments
 
 ## Quick Start
 
+### ✨ Automatic Updates (Git Hook)
+
+**The code-context-agent now runs automatically on every commit!**
+
+When you commit changes, the git hook will:
+1. ✅ Detect if your staged files require CLAUDE.md updates
+2. 💬 Prompt you to update if needed
+3. ⏸️ Pause the commit so you can run `/update-context`
+4. 📦 Include the updates in the same commit
+
+**Example workflow:**
+```bash
+# 1. Make changes to code
+vim workflows/01-ingestion/workflow.json
+
+# 2. Stage and commit
+git add workflows/01-ingestion/workflow.json
+git commit -m "feat: Add new validation node"
+
+# 3. Hook detects change and prompts:
+#    "CLAUDE.md Updates Recommended"
+#    "Update CLAUDE.md files? [y/n/c]:"
+
+# 4. Choose [y], then:
+/update-context
+
+# 5. Review changes, stage CLAUDE.md, retry commit
+git add workflows/01-ingestion/CLAUDE.md
+git commit -m "feat: Add new validation node"
+```
+
+**Trigger Files** (auto-detected):
+- `workflows/*/workflow.json` → Updates workflow CLAUDE.md
+- `database/schema.sql` → Updates database/CLAUDE.md
+- `SeleneChat/Package.swift` → Updates SeleneChat/CLAUDE.md
+- `SeleneChat/Sources/*/*.swift` → Updates respective CLAUDE.md
+- `docker-compose.yml`, `.env.example` → Updates root CLAUDE.md
+- New workflow directories → Proposes new CLAUDE.md
+- `test-with-markers.sh`, `cleanup-tests.sh` → Updates component CLAUDE.md
+
+**You can skip updates** by choosing `[n]` if you're in a hurry - just remember to run `/update-context` later!
+
 ### Initial Setup
 
 The agent has already generated 14 CLAUDE.md files across the codebase:
