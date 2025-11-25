@@ -1,39 +1,63 @@
 # Things Integration: Complete Planning Package
 
 **Created:** 2025-11-24
-**Status:** Ready for Implementation
-**Purpose:** Integration plan for Selene + Things 3 + ADHD Task Management
+**Updated:** 2025-11-25
+**Status:** ✅ Phase 7.1 Design Complete - Ready for Implementation
+**Purpose:** Integration plan for Selene + Things 3 + ADHD Task Management with Gatekeeping
 
 ---
 
 ## What Was Created
 
+**UPDATED 2025-11-25:** Design revised based on brainstorming session to add **gatekeeping** - tasks are reviewed and approved before reaching Things (prevents slop).
+
 This planning session produced a comprehensive set of documents that integrate:
 1. The ADHD Task Management specification ([ADHD_Principles.md](../.claude/ADHD_Principles.md))
 2. The working Selene production system (note processing + Obsidian)
 3. Things 3 task manager via MCP server
+4. **NEW: Conversational gatekeeping** in SeleneChat for task review/approval
 
-**All documents are ready for implementation.**
+**Key Change from Original Plan:**
+- ❌ OLD: Auto-create tasks in Things (could create "slop")
+- ✅ NEW: Extract → Review in SeleneChat → Approve → Then create in Things
+
+**All documents updated and ready for implementation.**
 
 ---
 
 ## Document Overview
 
-### 1. Architecture Document
+### 0. Complete Design Document (NEW - START HERE)
+**File:** [`docs/plans/2025-11-25-phase-7-1-gatekeeping-design.md`](./plans/2025-11-25-phase-7-1-gatekeeping-design.md)
+
+**What it contains:**
+- **Complete Phase 7.1 specification with gatekeeping workflow**
+- User flow (Capture → Review → Approve → Things)
+- Database schema (extracted_tasks + projects tables)
+- Workflow 07 specification (extract but DON'T auto-create)
+- SeleneChat integration (TaskReviewView, approval buttons)
+- Testing strategy (TDD approach, 45 automated tests)
+- Migration plan (incremental rollout, rollback procedures)
+
+**Use this for:** Implementation of Phase 7.1. This is the primary spec.
+
+### 1. Architecture Document (UPDATED)
 **File:** [`docs/architecture/things-integration.md`](./architecture/things-integration.md)
 
 **What it contains:**
-- Complete system architecture diagram
+- System architecture (now includes gatekeeping layer)
 - MCP server selection rationale (hildersantos/things-mcp)
-- Database schema for task_metadata and project_metadata tables
-- n8n workflow specifications (07, 08, 09)
-- SeleneChat integration patterns (SwiftUI code examples)
-- Data flow examples (Note → Task → Completion)
-- ADHD optimization principles mapped to implementation
-- Security and privacy considerations
-- Success metrics for each phase
+- Database schema (updated: extracted_tasks not task_metadata)
+- n8n workflow specifications (07: extract only, 08-09: future phases)
+- SeleneChat integration patterns (review/approval UI)
+- Data flow examples (Note → Extract → Review → Approve → Things)
+- ADHD optimization principles
+- Privacy considerations (local AI in 7.1, cloud AI in 7.5)
+- Success metrics
 
-**Use this for:** Understanding the complete technical architecture and design decisions.
+**Note:** Some sections may reference old auto-creation approach - refer to design doc for latest.
+
+**Use this for:** Understanding overall architecture and design rationale.
 
 ---
 
@@ -64,25 +88,23 @@ This planning session produced a comprehensive set of documents that integrate:
 
 ---
 
-### 3. Phase 7 Roadmap
+### 3. Phase 7 Roadmap (UPDATED)
 **File:** [`docs/roadmap/16-PHASE-7-THINGS.md`](./roadmap/16-PHASE-7-THINGS.md)
 
 **What it contains:**
-- 4 sub-phases with detailed specifications:
-  - **7.1:** Task Extraction Foundation (Weeks 1-2)
-  - **7.2:** Project Detection (Weeks 3-4)
-  - **7.3:** SeleneChat Display (Weeks 5-6)
-  - **7.4:** Status Sync & Pattern Analysis (Weeks 7-8)
-- Complete database schema with migration SQL
-- n8n workflow node-by-node specifications
-- Ollama prompts for task extraction and project detection
-- SeleneChat SwiftUI code examples
-- Testing strategy (unit, integration, UAT)
-- Success metrics for each phase
+- **UPDATED Phase 7.1:** Task Extraction with Gatekeeping (NOT auto-creation)
+- Phases 7.2-7.4: Project Detection, SeleneChat Display, Bidirectional Sync
+- **NEW Phase 7.5:** Cloud AI Refinement (privacy-aware, opt-in)
+- Complete database schema (extracted_tasks + projects tables)
+- n8n workflow specifications (extract → pending_review, NO auto-create)
+- Ollama prompts for task extraction with confidence filtering
+- SeleneChat integration (TaskReviewView with approval buttons)
+- Testing strategy (TDD, 45 automated tests)
+- Success metrics (approval rate, daily review time, user trust)
 - Rollback plan
-- Future enhancements (Phase 8+)
+- Future enhancements (Phase 8+: proactive intelligence, visual org, time visibility)
 
-**Use this for:** Implementation timeline and phase-by-phase execution plan.
+**Use this for:** Implementation timeline, understanding all phases of Things integration.
 
 ---
 
@@ -113,29 +135,31 @@ This planning session produced a comprehensive set of documents that integrate:
 
 ---
 
-### 5. Implementation Spec: Auto-Create Tasks
-**File:** [`docs/plans/auto-create-tasks-from-notes.md`](./plans/auto-create-tasks-from-notes.md)
+### 5. Implementation Spec: Task Extraction with Gatekeeping (UPDATED)
+**File:** [`docs/plans/2025-11-25-phase-7-1-gatekeeping-design.md`](./plans/2025-11-25-phase-7-1-gatekeeping-design.md)
 
 **What it contains:**
-- **Step-by-step implementation guide** for Phase 7.1
-- Prerequisites checklist
-- Installation instructions (Things 3, MCP server)
-- Database migration script with full SQL
-- Ollama prompt engineering (complete prompt template)
-- n8n workflow creation (9 nodes with full configuration)
-- Testing procedures (unit tests, integration tests, UAT)
-- Deployment checklist
-- Monitoring and metrics
-- Troubleshooting guide
-- Example task extraction results
+- **Step-by-step implementation guide** for Phase 7.1 with gatekeeping
+- Prerequisites checklist (Things 3, database backup)
+- Database migration script (extracted_tasks + projects tables)
+- Ollama prompt with confidence filtering
+- n8n workflow specification (extract to pending_review, NO auto-create)
+- SeleneChat integration (TaskReviewView, approval flow)
+- Testing procedures (TDD approach, 45 tests total)
+- Migration plan (incremental rollout, observation → partial → full)
+- Monitoring and metrics (approval rate, review time)
+- Rollback procedures (soft disable, hard rollback, restore backup)
 
-**Use this for:** Actual implementation - this is the "how to build it" document.
+**Use this for:** Actual implementation - this is the PRIMARY "how to build it" document.
 
 **Ready-to-use artifacts:**
-- SQL migration: `007_task_metadata.sql`
-- Ollama prompt template (copy-paste ready)
-- n8n node configurations (JSON for each node)
-- Test cases with expected outputs
+- SQL migration: `007_task_extraction_gatekeeping.sql`
+- Ollama prompt template (with filtering rules)
+- n8n workflow nodes (complete specification)
+- SeleneChat Swift code (TaskReviewView, TaskReviewService)
+- Test scripts (bash-based, TDD approach)
+
+**NOTE:** Old file `auto-create-tasks-from-notes.md` describes auto-creation approach (outdated).
 
 ---
 

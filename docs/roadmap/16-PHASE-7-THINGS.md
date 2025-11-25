@@ -1,16 +1,21 @@
 # Phase 7: Things Integration
 
-**Status:** 📋 PLANNING
+**Status:** 📋 READY FOR IMPLEMENTATION (Phase 7.1 Design Complete)
 **Started:** 2025-11-24
-**Goal:** Integrate Selene with Things 3 task manager via MCP for automatic task creation and ADHD-optimized task management
+**Design Updated:** 2025-11-25
+**Goal:** Integrate Selene with Things 3 via conversational gatekeeping - YOU decide what's real work vs noise before tasks reach Things
 
 ---
 
 ## Overview
 
-Phase 7 brings Selene's note processing intelligence into task management by integrating with Things 3 via Model Context Protocol (MCP). This phase transforms Selene from a passive note analyzer into an active executive function assistant that automatically extracts tasks, organizes them into projects, and provides ADHD-optimized enrichment.
+Phase 7 brings Selene's note processing intelligence into task management via **conversational gatekeeping**. Selene extracts potential tasks using local AI, but YOU decide what's real work before anything reaches Things. This prevents "task slop" while maintaining ADHD-optimized enrichment.
 
-**Key Innovation:** Things remains the source of truth for tasks, while Selene provides the intelligence layer (energy analysis, concept grouping, pattern detection) - a clean separation of concerns.
+**Key Innovation:**
+- **Gatekeeping:** Tasks staged for review before creation in Things (prevents clutter)
+- **Conversational approval:** Review tasks one-at-a-time in SeleneChat
+- **Three-bucket system:** Approved → Things, Someday → queryable later, Archived → hidden
+- **Local AI first:** Phase 7.1 uses only local Ollama (private), cloud AI added in Phase 7.5+
 
 ---
 
@@ -74,42 +79,80 @@ Phase 7 brings Selene's note processing intelligence into task management by int
 
 ## Sub-Phases
 
-### Phase 7.1: Task Extraction Foundation (Weeks 1-2)
+### Phase 7.1: Task Extraction with Gatekeeping (Weeks 1-2)
 
-**Goal:** Auto-create tasks in Things from processed notes
+**Goal:** Extract tasks for user review - only approved tasks reach Things
+
+**🎯 CRITICAL CHANGE:** Tasks are NOT auto-created in Things. They go to a review queue where YOU decide what's real.
+
+**Design Document:** See `docs/plans/2025-11-25-phase-7-1-gatekeeping-design.md` for complete specification.
 
 **Database Changes:**
 
 ```sql
--- New table: task_metadata
-CREATE TABLE task_metadata (
+-- New table: extracted_tasks (NOT task_metadata)
+-- Key difference: Tasks exist here BEFORE Things, not after
+CREATE TABLE extracted_tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     raw_note_id INTEGER NOT NULL,
-    things_task_id TEXT NOT NULL UNIQUE,
-    things_project_id TEXT,
+
+    -- Task content (stored here, not just metadata)
+    task_text TEXT NOT NULL,
+
+    -- ADHD enrichment
     energy_required TEXT CHECK(energy_required IN ('high', 'medium', 'low')),
-    estimated_minutes INTEGER,
-    related_concepts TEXT, -- JSON array
-    related_themes TEXT, -- JSON array
+    estimated_minutes INTEGER CHECK(estimated_minutes IN (5,15,30,60,120,240)),
     overwhelm_factor INTEGER CHECK(overwhelm_factor BETWEEN 1 AND 10),
-    task_type TEXT, -- 'action', 'decision', 'research', 'communication'
-    context_tags TEXT, -- JSON array
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    synced_at TEXT,
-    completed_at TEXT,
-    FOREIGN KEY (raw_note_id) REFERENCES raw_notes(id) ON DELETE CASCADE
+    task_type TEXT CHECK(task_type IN ('action','decision','research','communication','learning','planning')),
+    context_tags TEXT,
+    related_concepts TEXT,
+    related_themes TEXT,
+
+    -- GATEKEEPING: Review workflow status
+    review_status TEXT DEFAULT 'pending_review'
+        CHECK(review_status IN ('pending_review','approved','someday','archived')),
+    review_notes TEXT,
+
+    -- Things integration (NULL until approved)
+    things_task_id TEXT UNIQUE,
+    synced_to_things_at DATETIME,
+
+    -- Project linkage
+    project_id INTEGER,
+
+    -- Timestamps
+    extracted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at DATETIME,
+    completed_at DATETIME,
+
+    FOREIGN KEY (raw_note_id) REFERENCES raw_notes(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_task_metadata_note ON task_metadata(raw_note_id);
-CREATE INDEX idx_task_metadata_things_id ON task_metadata(things_task_id);
-CREATE INDEX idx_task_metadata_energy ON task_metadata(energy_required);
+-- New table: projects (for "It's a project" button)
+CREATE TABLE projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_name TEXT NOT NULL,
+    project_description TEXT,
+    source_note_id INTEGER,
+    status TEXT DEFAULT 'someday'
+        CHECK(status IN ('someday','active','completed','archived')),
+    things_project_id TEXT UNIQUE,
+    synced_to_things_at DATETIME,
+    estimated_total_hours INTEGER,
+    energy_type TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    activated_at DATETIME,
+    completed_at DATETIME,
+    FOREIGN KEY (source_note_id) REFERENCES raw_notes(id) ON DELETE SET NULL
+);
 
 -- Extend existing tables
 ALTER TABLE raw_notes ADD COLUMN tasks_extracted BOOLEAN DEFAULT 0;
-ALTER TABLE raw_notes ADD COLUMN tasks_extracted_at TEXT;
+ALTER TABLE raw_notes ADD COLUMN tasks_extracted_at DATETIME;
 
-ALTER TABLE processed_notes ADD COLUMN things_integration_status TEXT
-    CHECK(things_integration_status IN ('pending', 'tasks_created', 'no_tasks', 'error'))
+ALTER TABLE processed_notes ADD COLUMN task_extraction_status TEXT
+    CHECK(task_extraction_status IN ('pending','extracted','no_tasks','error'))
     DEFAULT 'pending';
 ```
 
@@ -117,18 +160,22 @@ ALTER TABLE processed_notes ADD COLUMN things_integration_status TEXT
 
 Location: `/workflows/07-task-extraction/`
 
-**Trigger:** Event-driven (after sentiment analysis completes)
+**Trigger:** Schedule (every 2 minutes) - Phase 7.1 simple approach, event-driven in Phase 7.2
+
+**Critical Behavior:** ❌ DOES NOT create tasks in Things automatically!
 
 **Nodes:**
-1. **Webhook Trigger**: Receives event from workflow 05 (sentiment analysis)
-2. **Database Read**: Fetch processed_note data (concepts, themes, energy, content)
+1. **Schedule Trigger**: Every 2 minutes
+2. **Query Pending Notes**: WHERE task_extraction_status='pending'
 3. **Ollama Task Extraction**: LLM analyzes note for actionable tasks
-   - Prompt: Extract tasks with energy, time estimates, overwhelm factor
-   - Output: JSON array of tasks
-4. **Loop Each Task**: For each extracted task
-   - **Things MCP Create**: Use MCP to create task in Things inbox
-   - **Database Insert**: Store task_metadata with Things task ID
-5. **Update Status**: Set processed_notes.things_integration_status = 'tasks_created'
+   - Prompt: Extract ONLY clear action items (filters vague thoughts)
+   - Output: JSON array with confidence scores
+   - Filter: Only keep tasks with confidence >= 0.7
+4. **Check if Tasks Found**: Parse JSON, filter low-confidence
+5. **Loop Each Task**: For each extracted task
+   - **Insert to extracted_tasks**: Store with review_status='pending_review'
+   - **NO Things creation** - that happens in SeleneChat after approval
+6. **Update Note Status**: Set task_extraction_status = 'extracted' or 'no_tasks'
 
 **MCP Configuration:**
 
@@ -179,21 +226,46 @@ Example:
 ]
 ```
 
+**SeleneChat Integration (NEW):**
+
+User workflow:
+1. Open SeleneChat
+2. Ask: "What did I capture today?"
+3. SeleneChat shows TaskReviewView
+4. Review each task one-at-a-time:
+   - Shows: task_text, energy, time, overwhelm, source note
+   - Options: [✓ Approve] [⏰ Someday] [✗ Archive] [💬 It's a Project]
+5. When [✓ Approve] clicked:
+   - Create task in Things via MCP/URL scheme
+   - Update extracted_tasks: review_status='approved', things_task_id populated
+6. When [⏰ Someday] clicked:
+   - Update extracted_tasks: review_status='someday'
+   - Task stays in database, NOT in Things
+7. When [✗ Archive] clicked:
+   - Update extracted_tasks: review_status='archived'
+   - Task hidden, never goes to Things
+8. When [💬 It's a Project] clicked:
+   - Create project shell in projects table with status='someday'
+   - Link task to project
+   - Project activation happens in Phase 7.2
+
 **Testing Plan:**
-- [ ] Test with note containing 0 tasks (should return empty array)
-- [ ] Test with note containing 1 task
-- [ ] Test with note containing 3+ tasks
-- [ ] Verify Things task created with correct title
-- [ ] Verify task_metadata inserted with Things UUID
-- [ ] Verify no duplicate tasks created
-- [ ] Test energy level assignment accuracy (80%+ user agreement)
-- [ ] Test time estimates (within 50% of reality initially)
+- [ ] Database migration creates tables correctly (7 tests, TDD approach)
+- [ ] Workflow extracts tasks and stores with pending_review (6 tests)
+- [ ] SeleneChat displays pending tasks (UI test)
+- [ ] Approval flow creates task in Things and updates database (integration test)
+- [ ] Someday flow keeps task out of Things (integration test)
+- [ ] Archive flow hides task (integration test)
+- [ ] Project creation flow works (integration test)
+- [ ] E2E: Drafts → Extract → Review → Things (1 test)
+- [ ] UAT: 5 real-world scenarios
 
 **Success Metrics:**
-- 80%+ of notes with action items → tasks created correctly
-- Energy assignments validated by user
-- Zero duplicate tasks
-- Workflow completes in <30 seconds
+- 70%+ approval rate (proves filtering is working, not too noisy)
+- <5% false negatives (missed real tasks)
+- Daily review takes <5 minutes
+- Things inbox stays clean
+- User trusts the system and uses it daily
 
 ---
 
@@ -632,6 +704,29 @@ return patterns;
 - ✅ Energy-aware task selection working
 - ✅ Planning fallacy reduced (realistic estimates)
 - ✅ Pattern analysis providing actionable insights
+
+---
+
+## Phase 7.5: Cloud AI Refinement (Future)
+
+**Goal:** Add cloud AI for task refinement and web research (opt-in, privacy-aware)
+
+**When:** After Phases 7.1-7.4 are stable and used daily (Month 2+)
+
+**Why Later:** Prove the gatekeeping workflow with local AI first, then enhance with cloud capabilities.
+
+**What This Adds:**
+
+Phase 7.1-7.4 use **only local Ollama** for privacy. Phase 7.5 adds **cloud AI as an optional enhancement**.
+
+See the complete design document for Phase 7.5 details including:
+- Privacy boundaries and filters
+- Conversational task refinement (Option B)
+- Web research for "how to do X"
+- User controls and opt-in requirements
+- Testing plan and success metrics
+
+**File:** `docs/plans/2025-11-25-phase-7-1-gatekeeping-design.md` (Section: Phase 7.5)
 
 ---
 
