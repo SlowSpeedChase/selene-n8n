@@ -23,6 +23,16 @@ struct ChatView: View {
                             MessageBubble(message: message)
                                 .id(message.id)
                         }
+
+                        // Show thinking indicator when processing
+                        if chatViewModel.isProcessing {
+                            HStack {
+                                ThinkingIndicator()
+                                    .transition(.scale.combined(with: .opacity))
+                                Spacer()
+                            }
+                            .id("thinking-indicator")
+                        }
                     }
                     .padding()
                 }
@@ -30,6 +40,14 @@ struct ChatView: View {
                     if let lastMessage = chatViewModel.currentSession.messages.last {
                         withAnimation {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: chatViewModel.isProcessing) {
+                    // Scroll to thinking indicator when it appears
+                    if chatViewModel.isProcessing {
+                        withAnimation {
+                            proxy.scrollTo("thinking-indicator", anchor: .bottom)
                         }
                     }
                 }
@@ -126,26 +144,25 @@ struct MessageBubble: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                // Message content with clickable citations for assistant
-                if message.role == .assistant,
-                   let citedNotes = message.relatedNotes,
-                   !citedNotes.isEmpty {
-                    CitationTextViewClickable(
-                        content: message.content,
-                        citedNoteIds: citedNotes,
-                        selectedNote: $selectedNote
-                    )
-                    .padding(12)
-                    .background(backgroundColor)
-                    .cornerRadius(12)
-                } else {
-                    Text(message.content)
-                        .padding(12)
-                        .background(backgroundColor)
-                        .foregroundColor(textColor)
-                        .cornerRadius(12)
-                        .textSelection(.enabled)
+                // Message content with citations
+                Group {
+                    if let attributedContent = message.attributedContent {
+                        // Use attributed text with clickable citations
+                        Text(attributedContent)
+                            .environment(\.openURL, OpenURLAction { url in
+                                handleCitationTap(url)
+                                return .handled
+                            })
+                    } else {
+                        // Fallback to plain text
+                        Text(message.content)
+                    }
                 }
+                .padding(12)
+                .background(backgroundColor)
+                .foregroundColor(textColor)
+                .cornerRadius(12)
+                .textSelection(.enabled)
 
                 // Metadata
                 HStack(spacing: 8) {
@@ -177,6 +194,20 @@ struct MessageBubble: View {
         }
         .sheet(item: $selectedNote) { note in
             NoteDetailView(note: note)
+        }
+    }
+
+    private func handleCitationTap(_ url: URL) {
+        // Extract citation from URL
+        guard let citation = CitationParser.extractCitation(from: url) else {
+            return
+        }
+
+        // Find the note in contextNotes
+        if let contextNotes = message.contextNotes {
+            if let note = CitationParser.findNote(for: citation, in: contextNotes) {
+                selectedNote = note
+            }
         }
     }
 

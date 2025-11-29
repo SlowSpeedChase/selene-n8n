@@ -527,6 +527,110 @@ class DatabaseService: ObservableObject {
         print("✅ Updated compression state to '\(state.rawValue)' for session: \(sessionId)")
     }
 
+    // MARK: - Hybrid Note Retrieval
+
+    /// Retrieve notes using hybrid strategy based on query type
+    func retrieveNotesFor(
+        queryType: QueryAnalyzer.QueryType,
+        keywords: [String],
+        timeScope: QueryAnalyzer.TimeScope,
+        limit: Int
+    ) async throws -> [Note] {
+        switch queryType {
+        case .pattern:
+            // Pattern queries: recent notes with processed data
+            return try await getRecentProcessedNotes(limit: limit, timeScope: timeScope)
+
+        case .search:
+            // Search queries: combine concept, theme, and content searches
+            return try await searchNotesByKeywords(keywords: keywords, limit: limit)
+
+        case .knowledge:
+            // Knowledge queries: keyword search + recent context
+            let keywordMatches = try await searchNotesByKeywords(keywords: keywords, limit: limit / 2)
+            let recentContext = try await getRecentProcessedNotes(limit: limit / 3, timeScope: .recent)
+            return Array(Set(keywordMatches + recentContext)).sorted { $0.createdAt > $1.createdAt }.prefix(limit).map { $0 }
+
+        case .general:
+            // General queries: recent notes with full context
+            return try await getRecentProcessedNotes(limit: limit, timeScope: .recent)
+        }
+    }
+
+    /// Get recent notes with processed data, filtered by time scope
+    private func getRecentProcessedNotes(limit: Int, timeScope: QueryAnalyzer.TimeScope) async throws -> [Note] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        var query = rawNotes
+            .join(.inner, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .order(rawNotes[createdAt].desc)
+
+        // Apply time scope filter
+        switch timeScope {
+        case .recent:
+            let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
+            let dateFormatter = ISO8601DateFormatter()
+            query = query.filter(rawNotes[createdAt] >= dateFormatter.string(from: sevenDaysAgo))
+
+        case .thisWeek:
+            let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: Date())!.start
+            let dateFormatter = ISO8601DateFormatter()
+            query = query.filter(rawNotes[createdAt] >= dateFormatter.string(from: startOfWeek))
+
+        case .thisMonth:
+            let startOfMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
+            let dateFormatter = ISO8601DateFormatter()
+            query = query.filter(rawNotes[createdAt] >= dateFormatter.string(from: startOfMonth))
+
+        case .custom(let from, let to):
+            let dateFormatter = ISO8601DateFormatter()
+            query = query.filter(
+                rawNotes[createdAt] >= dateFormatter.string(from: from) &&
+                rawNotes[createdAt] <= dateFormatter.string(from: to)
+            )
+
+        case .allTime:
+            // No filter
+            break
+        }
+
+        query = query.limit(limit)
+
+        var notes: [Note] = []
+        for row in try db.prepare(query) {
+            let note = try parseNote(from: row)
+            notes.append(note)
+        }
+
+        return notes
+    }
+
+    /// Search notes by keywords across concepts, themes, and content
+    private func searchNotesByKeywords(keywords: [String], limit: Int) async throws -> [Note] {
+        var allNotes: [Note] = []
+
+        for keyword in keywords {
+            // Search concepts
+            let conceptNotes = try await getNoteByConcept(keyword, limit: limit / keywords.count)
+            allNotes.append(contentsOf: conceptNotes)
+
+            // Search themes
+            let themeNotes = try await getNotesByTheme(keyword, limit: limit / keywords.count)
+            allNotes.append(contentsOf: themeNotes)
+
+            // Search content
+            let contentNotes = try await searchNotes(query: keyword, limit: limit / keywords.count)
+            allNotes.append(contentsOf: contentNotes)
+        }
+
+        // Deduplicate and sort by date
+        let uniqueNotes = Array(Set(allNotes)).sorted { $0.createdAt > $1.createdAt }
+
+        return Array(uniqueNotes.prefix(limit))
+    }
+
     // MARK: - Error Types
 
     enum DatabaseError: Error, LocalizedError {

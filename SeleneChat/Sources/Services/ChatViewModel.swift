@@ -11,6 +11,8 @@ class ChatViewModel: ObservableObject {
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
     private let ollamaService = OllamaService.shared
+    private let queryAnalyzer = QueryAnalyzer()
+    private let contextBuilder = ContextBuilder()
 
     init() {
         self.currentSession = ChatSession()
@@ -51,21 +53,28 @@ class ChatViewModel: ObservableObject {
                 response = try await handleExternalQuery(context: context)
 
             case .local:
-                // Use Ollama with fallback
-                do {
-                    response = try await handleOllamaQuery(context: context)
-                } catch {
-                    // Fallback to simple response if Ollama unavailable
-                    print("⚠️ Falling back to simple response: \(error.localizedDescription)")
-                    response = """
-                    I'm having trouble connecting to the local AI service. Here are the related notes I found:
+                // Use Ollama
+                let (ollamaResponse, citedNotes, contextNotes, queryType) = try await handleOllamaQuery(context: context)
+                response = ollamaResponse
 
-                    \(try await handleLocalQuery(context: context, notes: relatedNotes))
-                    """
-                }
+                // Add assistant message with citation data
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: routingDecision.tier,
+                    relatedNotes: relatedNotes.map(\.id),
+                    citedNotes: citedNotes,
+                    contextNotes: contextNotes,
+                    queryType: queryType
+                )
+                currentSession.addMessage(assistantMessage)
+
+                // Save session
+                await saveSession()
+                return // Early return for local tier
             }
 
-            // Add assistant message
+            // Add assistant message (for non-local tiers)
             let assistantMessage = Message(
                 role: .assistant,
                 content: response,
@@ -175,25 +184,9 @@ class ChatViewModel: ObservableObject {
         return context
     }
 
+    // Legacy method for compatibility - routes to local tier
     private func buildSystemPrompt() -> String {
-        """
-        You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
-
-        Your role:
-        - Analyze patterns in their notes (energy, mood, themes, concepts)
-        - Provide actionable recommendations
-        - Be conversational and supportive
-        - Focus on insights that lead to action
-
-        Guidelines:
-        - Keep responses concise but insightful
-        - Highlight patterns and correlations when they exist
-        - Suggest concrete next steps
-        - Reference specific notes when relevant
-        - Be empathetic about ADHD challenges
-
-        The user's notes contain timestamps, energy levels, sentiment, themes, and concepts extracted by AI.
-        """
+        return buildSystemPrompt(for: .general)
     }
 
     private func handleLocalQuery(context: String, notes: [Note]) async throws -> String {
@@ -238,23 +231,48 @@ class ChatViewModel: ObservableObject {
         """
     }
 
-    private func handleOllamaQuery(context: String) async throws -> String {
-        // Check if Ollama is available
-        let isOllamaAvailable = await ollamaService.isAvailable()
+    private func handleOllamaQuery(context: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
+        // Check Ollama availability
+        let isAvailable = await ollamaService.isAvailable()
 
-        guard isOllamaAvailable else {
-            print("⚠️ Ollama unavailable, falling back to simple response")
-            throw OllamaService.OllamaError.serviceUnavailable
+        guard isAvailable else {
+            // Fallback to local query if Ollama not available
+            let notes = try await findRelatedNotes(for: context)
+            let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
+            return (fallbackResponse, notes, notes, "fallback")
         }
 
-        // Build full prompt with system instructions
-        let systemPrompt = buildSystemPrompt()
+        // Use QueryAnalyzer to determine query type
+        let analysis = queryAnalyzer.analyze(context)
+
+        // Retrieve notes using hybrid strategy
+        let limit = limitFor(queryType: analysis.queryType)
+        let notes = try await databaseService.retrieveNotesFor(
+            queryType: analysis.queryType,
+            keywords: analysis.keywords,
+            timeScope: analysis.timeScope,
+            limit: limit
+        )
+
+        guard !notes.isEmpty else {
+            let emptyResponse = "I don't have any notes matching that query yet. Try asking about something else or capture more notes first."
+            return (emptyResponse, [], [], String(describing: analysis.queryType))
+        }
+
+        // Build adaptive context
+        let noteContext = contextBuilder.buildContext(notes: notes, queryType: analysis.queryType)
+
+        // Build system prompt with citation instructions
+        let systemPrompt = buildSystemPrompt(for: analysis.queryType)
+
+        // Build full prompt
         let fullPrompt = """
         \(systemPrompt)
 
-        \(context)
+        Notes:
+        \(noteContext)
 
-        Provide an actionable, insightful response based on these notes.
+        Question: \(context)
         """
 
         do {
@@ -262,11 +280,63 @@ class ChatViewModel: ObservableObject {
                 prompt: fullPrompt,
                 model: "mistral:7b"
             )
-            return response
+            // Return response with citation data
+            return (response, notes, notes, String(describing: analysis.queryType))
         } catch {
-            print("⚠️ Ollama generation failed: \(error.localizedDescription)")
-            throw error
+            // On error, fall back to simple local query
+            let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
+            return (fallbackResponse, notes, notes, "error-fallback")
         }
+    }
+
+    private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
+        switch queryType {
+        case .pattern: return 100
+        case .search: return 50
+        case .knowledge: return 15
+        case .general: return 30
+        }
+    }
+
+    private func buildSystemPrompt(for queryType: QueryAnalyzer.QueryType) -> String {
+        let basePrompt = """
+        You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
+
+        Your role:
+        - Analyze patterns in their notes (energy, mood, themes, concepts)
+        - Provide actionable recommendations
+        - Be conversational and supportive
+        - Focus on insights that lead to action
+
+        IMPORTANT - Citations:
+        - When referencing specific notes, ALWAYS cite them as: [Note: 'Title' - Date]
+        - Example: "You mentioned feeling productive in the morning [Note: 'Morning Routine' - Nov 14]"
+        - Place citations immediately after the relevant statement
+        - Use exact note titles and dates provided in the context
+
+        Guidelines:
+        - Keep responses concise but insightful
+        - Highlight patterns and correlations when they exist
+        - Suggest concrete next steps
+        - Be empathetic about ADHD challenges
+
+        The user's notes contain timestamps, energy levels, sentiment, themes, and concepts extracted by AI.
+        """
+
+        // Add query-specific instructions
+        let querySpecific: String
+        switch queryType {
+        case .pattern:
+            querySpecific = "\n\nAnalyze these notes for trends and patterns. Look for patterns in energy, themes, sentiment, and timing. Be specific and cite notes as evidence."
+        case .search:
+            querySpecific = "\n\nSummarize what these notes say about the topic. Highlight key points and cite relevant notes."
+        case .knowledge:
+            querySpecific = "\n\nAnswer this question based on the note content. Cite specific notes that contain the answer."
+        case .general:
+            querySpecific = "\n\nProvide insights based on recent notes. Highlight interesting patterns and cite specific examples."
+        }
+
+        return basePrompt + querySpecific
     }
 
     func newSession() {
