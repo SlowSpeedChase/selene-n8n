@@ -10,7 +10,7 @@ class ChatViewModel: ObservableObject {
     private let databaseService = DatabaseService.shared
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
-    private let ollamaService = OllamaService()
+    private let ollamaService = OllamaService.shared
 
     init() {
         self.currentSession = ChatSession()
@@ -51,8 +51,18 @@ class ChatViewModel: ObservableObject {
                 response = try await handleExternalQuery(context: context)
 
             case .local:
-                // Use Ollama
-                response = try await handleOllamaQuery(context: context)
+                // Use Ollama with fallback
+                do {
+                    response = try await handleOllamaQuery(context: context)
+                } catch {
+                    // Fallback to simple response if Ollama unavailable
+                    print("⚠️ Falling back to simple response: \(error.localizedDescription)")
+                    response = """
+                    I'm having trouble connecting to the local AI service. Here are the related notes I found:
+
+                    \(try await handleLocalQuery(context: context, notes: relatedNotes))
+                    """
+                }
             }
 
             // Add assistant message
@@ -165,6 +175,27 @@ class ChatViewModel: ObservableObject {
         return context
     }
 
+    private func buildSystemPrompt() -> String {
+        """
+        You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
+
+        Your role:
+        - Analyze patterns in their notes (energy, mood, themes, concepts)
+        - Provide actionable recommendations
+        - Be conversational and supportive
+        - Focus on insights that lead to action
+
+        Guidelines:
+        - Keep responses concise but insightful
+        - Highlight patterns and correlations when they exist
+        - Suggest concrete next steps
+        - Reference specific notes when relevant
+        - Be empathetic about ADHD challenges
+
+        The user's notes contain timestamps, energy levels, sentiment, themes, and concepts extracted by AI.
+        """
+    }
+
     private func handleLocalQuery(context: String, notes: [Note]) async throws -> String {
         // Phase 1: Simple response based on notes
         // Phase 2: Will integrate Apple Intelligence
@@ -208,13 +239,12 @@ class ChatViewModel: ObservableObject {
     }
 
     private func handleOllamaQuery(context: String) async throws -> String {
-        // Check Ollama availability
-        let isAvailable = await ollamaService.isAvailable()
+        // Check if Ollama is available
+        let isOllamaAvailable = await ollamaService.isAvailable()
 
-        guard isAvailable else {
-            // Fallback to local query if Ollama not available
-            let notes = try await findRelatedNotes(for: context)
-            return try await handleLocalQuery(context: context, notes: notes)
+        guard isOllamaAvailable else {
+            print("⚠️ Ollama unavailable, falling back to simple response")
+            throw OllamaService.OllamaError.serviceUnavailable
         }
 
         // Build full prompt with system instructions
@@ -227,36 +257,16 @@ class ChatViewModel: ObservableObject {
         Provide an actionable, insightful response based on these notes.
         """
 
-        // Generate response
         do {
-            let response = try await ollamaService.generate(prompt: fullPrompt)
+            let response = try await ollamaService.generate(
+                prompt: fullPrompt,
+                model: "mistral:7b"
+            )
             return response
         } catch {
-            // On error, fall back to simple local query
-            let notes = try await findRelatedNotes(for: context)
-            return try await handleLocalQuery(context: context, notes: notes)
+            print("⚠️ Ollama generation failed: \(error.localizedDescription)")
+            throw error
         }
-    }
-
-    private func buildSystemPrompt() -> String {
-        return """
-        You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
-
-        Your role:
-        - Analyze patterns in their notes (energy, mood, themes, concepts)
-        - Provide actionable recommendations
-        - Be conversational and supportive
-        - Focus on insights that lead to action
-
-        Guidelines:
-        - Keep responses concise but insightful
-        - Highlight patterns and correlations when they exist
-        - Suggest concrete next steps
-        - Reference specific notes when relevant
-        - Be empathetic about ADHD challenges
-
-        The user's notes contain timestamps, energy levels, sentiment, themes, and concepts extracted by AI.
-        """
     }
 
     func newSession() {

@@ -55,11 +55,9 @@ class PrivacyRouter {
     }
 
     func routeQuery(_ query: String, relatedNotes: [Note] = []) -> RoutingDecision {
-        // Phase 2: Simple routing - everything goes to local Ollama
-        // This provides maximum insight with complete privacy
-        // Future: Add complex routing when Claude API integration is needed (Phase 3)
-
-        return .local(reason: "Local LLM processing with Ollama - maximum insight with complete privacy")
+        // Phase 2: All queries route to local Ollama for maximum insight
+        // Future: Add complex routing when Claude API integration is needed
+        return .local(reason: "Local LLM processing with Ollama for actionable insights")
     }
 
     private func containsNoteReference(_ query: String) -> Bool {

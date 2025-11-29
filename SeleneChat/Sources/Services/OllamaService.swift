@@ -1,129 +1,135 @@
 import Foundation
 
-/// Service for communicating with local Ollama LLM server
-class OllamaService {
-    private let baseURL: String
-    private let defaultModel: String
-    private let session: URLSession
+// MARK: - Request/Response Models
 
-    init(baseURL: String = "http://localhost:11434", defaultModel: String = "mistral:7b") {
-        self.baseURL = baseURL
-        self.defaultModel = defaultModel
+private struct GenerateRequest: Codable {
+    let model: String
+    let prompt: String
+    let stream: Bool
+}
 
-        // Configure URL session with appropriate timeouts
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30.0
-        config.timeoutIntervalForResource = 60.0
-        self.session = URLSession(configuration: config)
+private struct GenerateResponse: Codable {
+    let model: String
+    let response: String
+    let done: Bool
+}
+
+actor OllamaService {
+    static let shared = OllamaService()
+
+    private let baseURL = "http://localhost:11434"
+    private let session = URLSession.shared
+
+    private var lastAvailabilityCheck: Date?
+    private var cachedAvailability: Bool = false
+    private let cacheTimeout: TimeInterval = 60  // Cache for 60 seconds
+
+    private init() {}
+
+    enum OllamaError: Error, LocalizedError {
+        case serviceUnavailable
+        case invalidResponse
+        case decodingError
+        case networkError(Error)
+
+        var errorDescription: String? {
+            switch self {
+            case .serviceUnavailable:
+                return "Ollama service is not running at localhost:11434"
+            case .invalidResponse:
+                return "Invalid response from Ollama service"
+            case .decodingError:
+                return "Failed to decode response from Ollama"
+            case .networkError(let error):
+                return "Network error: \(error.localizedDescription)"
+            }
+        }
     }
 
-    /// Check if Ollama service is available
+    /// Check if Ollama service is running and available (cached for 60s)
     func isAvailable() async -> Bool {
+        // Return cached result if fresh
+        if let lastCheck = lastAvailabilityCheck,
+           Date().timeIntervalSince(lastCheck) < cacheTimeout {
+            return cachedAvailability
+        }
+
+        // Perform actual health check
         guard let url = URL(string: "\(baseURL)/api/tags") else {
             return false
         }
 
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 5.0
-
         do {
-            let (_, response) = try await session.data(for: request)
-            if let httpResponse = response as? HTTPURLResponse {
-                return httpResponse.statusCode == 200
+            let (data, response) = try await session.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                cachedAvailability = false
+                lastAvailabilityCheck = Date()
+                return false
             }
-            return false
+
+            // Try to decode response to verify it's valid JSON
+            _ = try JSONSerialization.jsonObject(with: data)
+
+            cachedAvailability = true
+            lastAvailabilityCheck = Date()
+            return true
+
         } catch {
+            print("⚠️ Ollama health check failed: \(error.localizedDescription)")
+            cachedAvailability = false
+            lastAvailabilityCheck = Date()
             return false
         }
     }
 
-    /// Generate text completion from prompt
-    func generate(prompt: String, model: String? = nil) async throws -> String {
-        // Validate prompt
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw OllamaError.emptyPrompt
-        }
-
+    /// Generate text completion from Ollama
+    /// - Parameters:
+    ///   - prompt: The full prompt including system instructions and context
+    ///   - model: The model to use (default: mistral:7b)
+    /// - Returns: Generated text response
+    func generate(prompt: String, model: String = "mistral:7b") async throws -> String {
         guard let url = URL(string: "\(baseURL)/api/generate") else {
-            throw OllamaError.invalidURL
+            throw OllamaError.invalidResponse
         }
 
-        // Build request
+        // Build request body
+        let requestBody = GenerateRequest(
+            model: model,
+            prompt: prompt,
+            stream: false
+        )
+
+        // Create URLRequest
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 60.0
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        request.timeoutInterval = 30.0  // 30 second timeout
 
-        // Build payload
-        let modelToUse = model ?? defaultModel
-        let payload: [String: Any] = [
-            "model": modelToUse,
-            "prompt": prompt,
-            "stream": false,
-            "options": [
-                "temperature": 0.3
-            ]
-        ]
-
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-
-        // Make request
         do {
             let (data, response) = try await session.data(for: request)
 
-            // Check HTTP response
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw OllamaError.invalidResponse
             }
 
             guard httpResponse.statusCode == 200 else {
-                throw OllamaError.connectionFailed
+                print("⚠️ Ollama returned status \(httpResponse.statusCode)")
+                throw OllamaError.serviceUnavailable
             }
 
-            // Parse response
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let responseText = json["response"] as? String else {
-                throw OllamaError.invalidResponse
-            }
+            // Decode response
+            let generateResponse = try JSONDecoder().decode(GenerateResponse.self, from: data)
 
-            return responseText
+            return generateResponse.response
 
         } catch let error as OllamaError {
             throw error
         } catch {
-            // Handle URLSession errors
-            if (error as NSError).code == NSURLErrorTimedOut {
-                throw OllamaError.timeout
-            }
-            throw OllamaError.connectionFailed
-        }
-    }
-}
-
-// MARK: - Errors
-
-enum OllamaError: Error, LocalizedError {
-    case notImplemented
-    case connectionFailed
-    case invalidResponse
-    case timeout
-    case emptyPrompt
-    case invalidURL
-
-    var errorDescription: String? {
-        switch self {
-        case .notImplemented:
-            return "Feature not implemented"
-        case .connectionFailed:
-            return "Failed to connect to Ollama service"
-        case .invalidResponse:
-            return "Invalid response from Ollama"
-        case .timeout:
-            return "Request timed out"
-        case .emptyPrompt:
-            return "Prompt cannot be empty"
-        case .invalidURL:
-            return "Invalid Ollama URL"
+            print("⚠️ Ollama generate error: \(error.localizedDescription)")
+            throw OllamaError.networkError(error)
         }
     }
 }
