@@ -9,6 +9,24 @@
 
 ---
 
+## Table of Contents
+
+1. [CRITICAL RULE: CLI-Only Workflow Modifications](#critical-rule-cli-only-workflow-modifications)
+2. [Workflow Modification Workflow](#workflow-modification-workflow)
+3. [Workflow JSON Structure](#workflow-json-structure)
+4. [Node Naming Conventions](#node-naming-conventions)
+5. [Error Handling Patterns](#error-handling-patterns)
+6. [Database Integration Patterns](#database-integration-patterns)
+7. [Testing Requirements](#testing-requirements)
+8. [Documentation Requirements](#documentation-requirements)
+9. [Common Workflow Patterns](#common-workflow-patterns)
+10. [Integration Testing](#integration-testing)
+11. [Performance Optimization](#performance-optimization)
+12. [Workflow Directory Structure](#workflow-directory-structure)
+13. [Related Context Files](#related-context-files)
+
+---
+
 ## CRITICAL RULE: CLI-Only Workflow Modifications
 
 **ALWAYS use command line tools to modify workflows. NEVER edit in n8n UI without exporting to JSON.**
@@ -245,12 +263,12 @@ return {json: $json};
 **For transient failures (network, timeouts):**
 
 ```javascript
-// In Function node
+// Retry logic in Function node
 const maxRetries = 3;
 const retryCount = $json.retry_count || 0;
 
 if (retryCount < maxRetries) {
-  // Increment retry counter
+  // Increment retry counter and try again
   return {
     json: {
       ...$json,
@@ -258,7 +276,7 @@ if (retryCount < maxRetries) {
     }
   };
 } else {
-  // Max retries reached, fail
+  // Max retries reached - fail permanently
   throw new Error('Max retries exceeded');
 }
 ```
@@ -278,7 +296,7 @@ const Database = require('better-sqlite3');
 const db = new Database('/selene/data/selene.db');
 
 try {
-  // Your database operations here
+  // Database operations here
   const result = db.prepare('SELECT * FROM raw_notes WHERE id = ?').get($json.id);
 
   return {json: result};
@@ -287,7 +305,8 @@ try {
   console.error('Database error:', error);
   throw error;
 } finally {
-  db.close();  // CRITICAL: Always close connection
+  // CRITICAL: Always close connection (prevents database locks)
+  db.close();
 }
 ```
 
@@ -326,6 +345,7 @@ db.prepare(`INSERT INTO raw_notes (title) VALUES ('${$json.title}')`).run();
 const Database = require('better-sqlite3');
 const db = new Database('/selene/data/selene.db');
 
+// Define transaction (runs all or nothing)
 const transaction = db.transaction(() => {
   // Step 1: Insert raw note
   const rawNoteResult = db.prepare(`
@@ -407,6 +427,14 @@ if (row === undefined) {
 set -e
 
 cd "$(dirname "$0")/.."
+
+# ============================================================================
+# CUSTOMIZE THESE VALUES FOR YOUR WORKFLOW:
+# - WEBHOOK_URL: Replace WORKFLOW_ENDPOINT with your actual webhook path
+#   (e.g., "api/drafts" for ingestion, "api/process" for LLM processing)
+# - Table name in verification queries (lines below)
+# - Sleep time based on workflow complexity (2-15 seconds typical)
+# ============================================================================
 
 TEST_RUN="test-run-$(date +%Y%m%d-%H%M%S)"
 WEBHOOK_URL="http://localhost:5678/webhook/api/WORKFLOW_ENDPOINT"
@@ -652,13 +680,15 @@ git commit -m "workflow: add sentiment extraction to ingestion
 
 ```javascript
 try {
-  // Your logic here
+  // Business logic here
   const result = processData($json);
   return {json: result};
 
 } catch (error) {
+  // Log error with context
   console.error('Function error:', error);
 
+  // Return error in workflow-compatible format
   return {
     json: {
       error: error.message,
@@ -678,6 +708,86 @@ try {
 - `better-sqlite3` - Database
 - `crypto` - Hashing
 - Standard library (fs, path, etc.)
+
+### Pattern 4b: Complete Database + Function Error Handling
+
+**When combining database operations with function logic, use nested try/catch with finally:**
+
+```javascript
+const Database = require('better-sqlite3');
+let db;
+
+try {
+  // Outer try: Catches all errors (database + logic)
+  db = new Database('/selene/data/selene.db');
+
+  try {
+    // Inner try: Your business logic
+    const noteId = $json.id;
+
+    // Database operations
+    const note = db.prepare('SELECT * FROM raw_notes WHERE id = ?').get(noteId);
+
+    if (!note) {
+      throw new Error(`Note ${noteId} not found`);
+    }
+
+    // Additional processing
+    const concepts = extractConcepts(note.content);
+
+    // Update database
+    db.prepare(`
+      UPDATE processed_notes
+      SET concepts = ?, status = 'completed'
+      WHERE raw_note_id = ?
+    `).run(JSON.stringify(concepts), noteId);
+
+    return {
+      json: {
+        success: true,
+        noteId: noteId,
+        concepts: concepts
+      }
+    };
+
+  } finally {
+    // CRITICAL: Always close database, even on error
+    if (db) {
+      db.close();
+    }
+  }
+
+} catch (error) {
+  // Handle all errors (database connection, queries, or logic)
+  console.error('Function error:', {
+    message: error.message,
+    stack: error.stack,
+    input: $json
+  });
+
+  // Return error in workflow-compatible format
+  return {
+    json: {
+      error: error.message,
+      input: $json,
+      timestamp: new Date().toISOString()
+    }
+  };
+}
+```
+
+**Why this pattern:**
+- **Outer try/catch**: Catches ALL errors (connection, queries, logic)
+- **Inner try/finally**: Guarantees `db.close()` runs even on error
+- **Prevents database locks**: Connection always closes
+- **Clean error propagation**: Errors bubble up to outer catch
+- **Workflow compatibility**: Returns error object instead of throwing
+
+**When to use:**
+- Any Function node that uses better-sqlite3
+- Complex business logic with database operations
+- Operations that might fail partway through
+- Production workflows (not quick scripts)
 
 ### Pattern 5: Merge Node (Combine Data)
 
