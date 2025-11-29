@@ -386,3 +386,65 @@ cd workflows/01-ingestion
 ✅ Updated all documentation paths
 
 **Ready for:** Workflow 02 - LLM Processing
+
+---
+
+## Context Structure (2025-11-27)
+
+### Modular Documentation
+
+The codebase now uses modular context files optimized for Claude Code AI development:
+
+**Root Level:**
+- `CLAUDE.md` - High-level overview with navigation
+- `ROADMAP.md` - Project phases and planning
+
+**`.claude/` Directory:**
+- `README.md` - Context navigation guide (START HERE)
+- `DEVELOPMENT.md` - Architecture, patterns, decisions
+- `OPERATIONS.md` - Daily commands and procedures
+- `ADHD_Principles.md` - ADHD design framework
+- `PROJECT-STATUS.md` - Current state (this file)
+
+**`workflows/` Directory:**
+- `CLAUDE.md` - Workflow development patterns
+- `XX-name/workflow.json` - Source of truth for workflows
+- `XX-name/docs/STATUS.md` - Per-workflow test results
+
+**`scripts/` Directory:**
+- `CLAUDE.md` - Script utilities documentation
+- `manage-workflow.sh` - Workflow CLI tool
+
+### Why This Structure?
+
+**Single Responsibility:**
+- Each file serves one specific AI task
+- Development decisions separate from operations
+- Workflow patterns separate from architecture
+
+**Minimal Context Loading:**
+- Agents read only what's needed for current task
+- Faster context loading
+- Reduced token usage
+
+**DRY Principle:**
+- Information lives in one canonical location
+- Cross-references using @filename syntax
+- No duplication across files
+
+### Loading Patterns
+
+**For workflow modifications:**
+```
+@workflows/CLAUDE.md → @.claude/OPERATIONS.md → @scripts/CLAUDE.md
+```
+
+**For architectural decisions:**
+```
+@.claude/DEVELOPMENT.md → @.claude/ADHD_Principles.md → @ROADMAP.md
+```
+
+**For daily operations:**
+```
+@.claude/OPERATIONS.md → @.claude/PROJECT-STATUS.md
+```
