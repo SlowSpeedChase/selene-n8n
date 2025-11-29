@@ -1,184 +1,860 @@
-# n8n Workflows Context
+# Workflow Development Context
 
-## Purpose
+**Purpose:** n8n workflow implementation patterns, testing requirements, and modification procedures. Read this when working with any workflow.
 
-Six automated workflows for note processing: ingestion, LLM processing, pattern detection, Obsidian export, sentiment analysis, and connection network building. Each workflow operates independently on SQLite data.
+**Related Context:**
+- `@.claude/OPERATIONS.md` - Commands to manage workflows
+- `@.claude/DEVELOPMENT.md` - Architecture and design decisions
+- `@scripts/CLAUDE.md` - Script utilities (manage-workflow.sh)
 
-## Tech Stack
+---
 
-- **n8n** - Workflow automation engine
-- **better-sqlite3** - Node.js SQLite driver (embedded in n8n Function nodes)
-- **Ollama** - Local LLM integration (mistral:7b model)
-- **Webhook triggers** - For external integrations (Drafts, etc.)
-- **Cron scheduling** - For periodic workflows
+## CRITICAL RULE: CLI-Only Workflow Modifications
 
-## Key Files
+**ALWAYS use command line tools to modify workflows. NEVER edit in n8n UI without exporting to JSON.**
 
-- **01-ingestion/** - Webhook-triggered note capture (365 lines JSON)
-- **02-llm-processing/** - LLM concept extraction (293 lines JSON)
-- **03-pattern-detection/** - Theme trend analysis (144 lines JSON)
-- **04-obsidian-export/** - Markdown file generation (158 lines JSON)
-- **05-sentiment-analysis/** - Emotional tone tracking (249 lines JSON)
-- **06-connection-network/** - Note relationship mapping (169 lines JSON)
+**Why:**
+- UI changes don't persist in git
+- JSON files are source of truth
+- CLI workflow ensures testing and documentation
+- Version control requires committed JSON files
 
-## Workflow Structure
+**See:** `@.claude/OPERATIONS.md` (Workflow Modification Procedure)
 
-Each workflow follows this pattern:
-```
-workflows/XX-name/
-├── workflow.json          # Main workflow definition
-├── README.md             # Quick start, setup instructions
-├── docs/
-│   ├── STATUS.md         # Test results and current status
-│   ├── *-SETUP.md        # Detailed configuration guide
-│   └── *-REFERENCE.md    # Technical reference
-├── scripts/
-│   ├── test-with-markers.sh    # Automated testing
-│   └── cleanup-tests.sh         # Test data cleanup
-└── tests/                # Test data or scripts
-```
+---
 
-## Common Patterns
+## Workflow Modification Workflow
 
-### Node Naming Convention
-- Format: **"Verb + Object"** (e.g., "Parse Note Data", "Check for Duplicate", "Insert into Database")
-- Use title case
-- Be specific and descriptive
+### Standard Process (6 Steps)
 
-### Error Handling
-- **Every node** must connect to error handler
-- Error nodes log to console and optionally to database
-- Critical failures should set status = 'failed'
+**Step 1: Export Current Version**
 
-### Database Operations
-```javascript
-// In n8n Function nodes using better-sqlite3
-const db = require('better-sqlite3')('/data/selene.db');
-
-// Always use parameterized queries (prevents SQL injection)
-const stmt = db.prepare('INSERT INTO table (col1, col2) VALUES (?, ?)');
-stmt.run(value1, value2);
-
-// For test data, ALWAYS include test_run marker
-const testRun = $input.item.json.test_run || null;
-stmt.run(value1, value2, testRun);
-```
-
-### Test Data Isolation
-- All test records marked with `test_run` column
-- Format: `test-run-YYYYMMDD-HHMMSS`
-- Production data has `test_run = NULL`
-- Cleanup scripts filter by test_run value
-
-### Status Tracking
-- Use `status` column: 'pending', 'processing', 'completed', 'failed'
-- Update timestamps: `created_at`, `processed_at`, `updated_at`
-- Enable workflow resumption after failures
-
-## Testing
-
-### Running Tests
 ```bash
-# Test specific workflow
+./scripts/manage-workflow.sh export <workflow-id>
+```
+
+Creates timestamped backup automatically.
+
+**Step 2: Edit JSON File**
+
+```bash
+# Use Read/Edit tools on:
+workflows/XX-name/workflow.json
+```
+
+**Common modifications:**
+- Add new node
+- Change node parameters
+- Modify connections
+- Update error handling
+
+**Step 3: Import Updated Version**
+
+```bash
+./scripts/manage-workflow.sh update <workflow-id> /workflows/XX-name/workflow.json
+```
+
+**Step 4: Test Workflow**
+
+```bash
+cd workflows/XX-name
+./scripts/test-with-markers.sh
+```
+
+**Step 5: Update Documentation**
+
+```bash
+# REQUIRED updates:
+workflows/XX-name/docs/STATUS.md    # Test results
+workflows/XX-name/README.md         # If interface changed
+.claude/PROJECT-STATUS.md           # If workflow complete
+```
+
+**Step 6: Commit Changes**
+
+```bash
+git add workflows/XX-name/workflow.json
+git add workflows/XX-name/docs/STATUS.md
+git commit -m "workflow: description of changes"
+```
+
+---
+
+## Workflow JSON Structure
+
+### Top-Level Properties
+
+```json
+{
+  "name": "01-Ingestion Workflow",
+  "nodes": [...],
+  "connections": {...},
+  "settings": {...},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-27T10:00:00.000Z"
+}
+```
+
+### Node Structure
+
+```json
+{
+  "parameters": {
+    // Node-specific configuration
+  },
+  "id": "unique-uuid",
+  "name": "Verb + Object Format",
+  "type": "n8n-nodes-base.Function",
+  "typeVersion": 1,
+  "position": [x, y],
+  "onError": "continueErrorOutput"  // Error handling
+}
+```
+
+### Connection Structure
+
+```json
+{
+  "Node Name": {
+    "main": [
+      [
+        {
+          "node": "Next Node",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    ]
+  }
+}
+```
+
+---
+
+## Node Naming Conventions
+
+### Format: [Verb] + [Object]
+
+**Good Examples:**
+- ✅ "Parse Note Data"
+- ✅ "Check for Duplicate"
+- ✅ "Insert Raw Note"
+- ✅ "Extract Concepts"
+- ✅ "Send to Ollama"
+- ✅ "Update Note Status"
+- ✅ "Log Error Details"
+
+**Bad Examples:**
+- ❌ "Function" (what does it do?)
+- ❌ "Main Logic" (too vague)
+- ❌ "Process" (verb needs object)
+- ❌ "Node 1" (meaningless)
+- ❌ "TODO" (not descriptive)
+
+**Why:** ADHD brains scan visually. Clear names reduce cognitive load when debugging flow.
+
+### Verb Categories
+
+**Data Operations:**
+- Parse, Extract, Transform, Format, Validate
+
+**Database Operations:**
+- Insert, Update, Delete, Query, Check
+
+**External Services:**
+- Send, Receive, Fetch, Upload, Download
+
+**Control Flow:**
+- Route, Filter, Merge, Split, Aggregate
+
+**Error Handling:**
+- Log, Catch, Handle, Retry, Notify
+
+---
+
+## Error Handling Patterns
+
+### Pattern 1: Error Output on Every Node
+
+**Configuration:**
+
+```json
+{
+  "parameters": {...},
+  "onError": "continueErrorOutput"
+}
+```
+
+**Benefit:** Error path can handle failures without stopping workflow.
+
+### Pattern 2: Dedicated Error Handler
+
+**Structure:**
+
+```
+[Any Node] → [Success Path] → ...
+     ↓
+[Error Output] → [Log Error] → [Update Status to Failed] → [Stop]
+```
+
+**Log Error Node (Function):**
+
+```javascript
+const error = $input.item.json.error || 'Unknown error';
+const context = $input.item.json;
+
+console.error('Workflow Error:', {
+  error: error,
+  node: context.node,
+  timestamp: new Date().toISOString(),
+  data: context
+});
+
+return {
+  json: {
+    error: error,
+    logged_at: new Date().toISOString()
+  }
+};
+```
+
+**Update Status Node (SQLite):**
+
+```javascript
+const Database = require('better-sqlite3');
+const db = new Database('/selene/data/selene.db');
+
+const noteId = $json.raw_note_id || $json.id;
+
+db.prepare(`
+  UPDATE raw_notes
+  SET status = 'failed',
+      error_message = ?
+  WHERE id = ?
+`).run($json.error, noteId);
+
+db.close();
+
+return {json: $json};
+```
+
+### Pattern 3: Retry Logic
+
+**For transient failures (network, timeouts):**
+
+```javascript
+// In Function node
+const maxRetries = 3;
+const retryCount = $json.retry_count || 0;
+
+if (retryCount < maxRetries) {
+  // Increment retry counter
+  return {
+    json: {
+      ...$json,
+      retry_count: retryCount + 1
+    }
+  };
+} else {
+  // Max retries reached, fail
+  throw new Error('Max retries exceeded');
+}
+```
+
+**Connect back to original operation for retry.**
+
+---
+
+## Database Integration Patterns
+
+### Pattern 1: better-sqlite3 in Function Nodes
+
+**Always follow this structure:**
+
+```javascript
+const Database = require('better-sqlite3');
+const db = new Database('/selene/data/selene.db');
+
+try {
+  // Your database operations here
+  const result = db.prepare('SELECT * FROM raw_notes WHERE id = ?').get($json.id);
+
+  return {json: result};
+
+} catch (error) {
+  console.error('Database error:', error);
+  throw error;
+} finally {
+  db.close();  // CRITICAL: Always close connection
+}
+```
+
+**Why try/finally:**
+- Ensures connection closes even on error
+- Prevents database locks
+- Clean resource management
+
+### Pattern 2: Parameterized Queries (Prevent SQL Injection)
+
+**Good (Parameterized):**
+
+```javascript
+db.prepare('SELECT * FROM raw_notes WHERE id = ?').get($json.id);
+db.prepare('INSERT INTO raw_notes (title, content) VALUES (?, ?)').run($json.title, $json.content);
+```
+
+**Bad (String Concatenation - SQL Injection Risk):**
+
+```javascript
+// NEVER DO THIS
+db.prepare(`SELECT * FROM raw_notes WHERE id = ${$json.id}`).get();
+db.prepare(`INSERT INTO raw_notes (title) VALUES ('${$json.title}')`).run();
+```
+
+### Pattern 3: Transaction for Multi-Step Operations
+
+**Use transactions when:**
+- Multiple related inserts/updates
+- Need atomicity (all or nothing)
+- Rollback on error
+
+**Example:**
+
+```javascript
+const Database = require('better-sqlite3');
+const db = new Database('/selene/data/selene.db');
+
+const transaction = db.transaction(() => {
+  // Step 1: Insert raw note
+  const rawNoteResult = db.prepare(`
+    INSERT INTO raw_notes (title, content, status)
+    VALUES (?, ?, 'pending')
+  `).run($json.title, $json.content);
+
+  const rawNoteId = rawNoteResult.lastInsertRowid;
+
+  // Step 2: Insert processed note
+  db.prepare(`
+    INSERT INTO processed_notes (raw_note_id, concepts)
+    VALUES (?, ?)
+  `).run(rawNoteId, JSON.stringify($json.concepts));
+
+  return rawNoteId;
+});
+
+try {
+  const noteId = transaction();
+  db.close();
+  return {json: {id: noteId, success: true}};
+} catch (error) {
+  db.close();
+  throw error;
+}
+```
+
+**Benefits:**
+- Atomic: Both inserts succeed or both fail
+- Rollback: Error in step 2 undoes step 1
+- Performance: Single write to disk
+
+### Pattern 4: Handling NULL vs Undefined
+
+**Problem:** SQLite NULL vs JavaScript undefined/null
+
+**Solution: Explicit null checks**
+
+```javascript
+// Check for existence
+const row = db.prepare('SELECT id FROM raw_notes WHERE content_hash = ?').get($json.hash);
+
+if (row === undefined) {
+  // No match found
+  return {json: {exists: false}};
+} else {
+  // Match found
+  return {json: {exists: true, id: row.id}};
+}
+```
+
+**Common mistake:**
+
+```javascript
+// BAD: undefined != null in JavaScript
+if (row == null) {
+  // This catches both null and undefined, but confusing
+}
+
+// GOOD: Explicit
+if (row === undefined) {
+  // No row returned
+}
+```
+
+---
+
+## Testing Requirements
+
+### Every Workflow Must Have
+
+**1. Test Script:** `workflows/XX-name/scripts/test-with-markers.sh`
+
+**Template:**
+
+```bash
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")/.."
+
+TEST_RUN="test-run-$(date +%Y%m%d-%H%M%S)"
+WEBHOOK_URL="http://localhost:5678/webhook/api/WORKFLOW_ENDPOINT"
+
+echo "Testing XX-name workflow with marker: $TEST_RUN"
+
+# Test Case 1: Success path
+echo "Test 1: Normal operation"
+curl -X POST "$WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"test_data\": \"value\", \"test_run\": \"$TEST_RUN\"}"
+
+sleep 2  # Wait for processing
+
+# Test Case 2: Error condition
+echo "Test 2: Invalid input"
+curl -X POST "$WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"invalid\": true, \"test_run\": \"$TEST_RUN\"}"
+
+# Verify results
+PASS_COUNT=$(sqlite3 ../../data/selene.db "SELECT COUNT(*) FROM table WHERE test_run = '$TEST_RUN' AND status = 'completed';")
+FAIL_COUNT=$(sqlite3 ../../data/selene.db "SELECT COUNT(*) FROM table WHERE test_run = '$TEST_RUN' AND status = 'failed';")
+
+echo "Results: $PASS_COUNT passed, $FAIL_COUNT failed"
+
+# Cleanup prompt
+read -p "Cleanup test data? (y/n) " -n 1 -r
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    ../../scripts/cleanup-tests.sh "$TEST_RUN"
+fi
+```
+
+**2. Test Cases Coverage:**
+
+**Minimum required:**
+- ✅ Success path (normal operation)
+- ✅ Missing required fields
+- ✅ Invalid data format
+- ✅ Duplicate detection (if applicable)
+- ✅ Database constraints (unique, foreign key)
+
+**Nice to have:**
+- Large data (stress test)
+- Edge cases (empty strings, special characters)
+- Concurrent requests
+- Recovery from errors
+
+**3. STATUS.md:** `workflows/XX-name/docs/STATUS.md`
+
+**Template:**
+
+```markdown
+# XX-Name Workflow Status
+
+**Last Updated:** YYYY-MM-DD
+**Test Results:** X/Y passing
+
+---
+
+## Current Status
+
+**Production Ready:** ✅ Yes / ❌ No
+
+**Test Coverage:**
+- ✅ Success path
+- ✅ Error handling
+- ✅ Database integration
+- ❌ Edge cases (TODO)
+
+---
+
+## Test Results
+
+### Latest Run (YYYY-MM-DD)
+
+**Test Suite:** `./scripts/test-with-markers.sh`
+
+| Test Case | Status | Notes |
+|-----------|--------|-------|
+| Normal operation | ✅ PASS | |
+| Missing fields | ✅ PASS | Proper error message |
+| Invalid format | ✅ PASS | |
+| Duplicate | ✅ PASS | Rejected correctly |
+| Large data | ⚠️ SKIP | Not critical |
+
+**Overall:** 4/4 critical tests passing
+
+---
+
+## Known Issues
+
+1. **Issue:** Description
+   **Impact:** High/Medium/Low
+   **Workaround:** Temporary solution
+   **Status:** Open/In Progress/Fixed
+
+---
+
+## Recent Changes
+
+### YYYY-MM-DD
+- Added error handling for X
+- Fixed duplicate detection
+- Updated documentation
+
+### YYYY-MM-DD
+- Initial implementation
+- Basic test coverage
+```
+
+---
+
+## Documentation Requirements
+
+### When You Modify a Workflow
+
+**MUST update:**
+1. ✅ `workflows/XX-name/docs/STATUS.md` - Test results and changes
+2. ✅ `workflows/XX-name/README.md` - If interface/usage changed
+3. ✅ `.claude/PROJECT-STATUS.md` - If workflow complete or status changed
+
+**SHOULD update:**
+4. `workflows/XX-name/docs/*-REFERENCE.md` - If technical details changed
+5. `ROADMAP.md` - If phase complete
+
+**Example workflow:**
+
+```bash
+# 1. Modify workflow
+./scripts/manage-workflow.sh update 1 /workflows/01-ingestion/workflow.json
+
+# 2. Test
 cd workflows/01-ingestion
 ./scripts/test-with-markers.sh
 
-# List all test runs
-./scripts/cleanup-tests.sh --list
+# 3. Update STATUS.md
+# (Document test results, changes made)
 
-# Clean specific test run
-./scripts/cleanup-tests.sh test-run-20251124-120000
+# 4. Update README.md (if needed)
+# (Update usage examples if API changed)
+
+# 5. Update PROJECT-STATUS.md
+# (Mark workflow complete, note achievements)
+
+# 6. Commit all together
+git add workflows/01-ingestion/workflow.json
+git add workflows/01-ingestion/docs/STATUS.md
+git add .claude/PROJECT-STATUS.md
+git commit -m "workflow: add sentiment extraction to ingestion
+
+- Added sentiment analysis node
+- Extracts emotional tone
+- All 5/5 tests passing
+- Updated documentation"
 ```
 
-### Test Status Tracking
-Each workflow maintains `docs/STATUS.md` with:
-- Current test pass/fail count (e.g., "6/7 tests passing")
-- Last test run timestamp
-- Known issues or failing tests
-- Recent changes
+---
 
-## n8n-Specific Patterns
+## Common Workflow Patterns
 
-### Accessing Input Data
+### Pattern 1: Webhook Trigger
+
+**Configuration:**
+
+```json
+{
+  "parameters": {
+    "path": "api/drafts",
+    "responseMode": "onReceived",
+    "options": {}
+  },
+  "name": "Webhook Trigger",
+  "type": "n8n-nodes-base.Webhook"
+}
+```
+
+**Options:**
+- `responseMode: "onReceived"` - Return immediately, process async
+- `responseMode: "lastNode"` - Wait for workflow completion
+
+**ADHD Impact:** Use "onReceived" to reduce perceived latency (user doesn't wait).
+
+### Pattern 2: Schedule Trigger
+
+**Configuration:**
+
+```json
+{
+  "parameters": {
+    "rule": {
+      "interval": [
+        {
+          "field": "seconds",
+          "secondsInterval": 30
+        }
+      ]
+    }
+  },
+  "name": "Schedule Trigger",
+  "type": "n8n-nodes-base.Schedule"
+}
+```
+
+**Common intervals:**
+- Every 30 seconds: Processing loop
+- Every 5 minutes: Periodic checks
+- Daily at 6am: Batch operations
+
+**Phase 6 Note:** Event-driven triggers preferred over schedules (3x faster, 100% efficient).
+
+### Pattern 3: Conditional Routing (IF Node)
+
+**Configuration:**
+
+```json
+{
+  "parameters": {
+    "conditions": {
+      "string": [
+        {
+          "value1": "={{$json.status}}",
+          "operation": "equals",
+          "value2": "pending"
+        }
+      ]
+    }
+  },
+  "name": "Check Status",
+  "type": "n8n-nodes-base.If"
+}
+```
+
+**Outputs:**
+- `true` branch - Condition met
+- `false` branch - Condition not met
+
+**Common mistake:** Using Switch node with `notExists` for null checks (doesn't work). Use IF node with explicit null check.
+
+### Pattern 4: Function Node (JavaScript)
+
+**Always include error handling:**
+
 ```javascript
-// In Function nodes
-const items = $input.all();           // All input items
-const item = $input.item.json;        // Current item JSON
-const previousNode = $('NodeName').item.json;  // Output from specific node
+try {
+  // Your logic here
+  const result = processData($json);
+  return {json: result};
+
+} catch (error) {
+  console.error('Function error:', error);
+
+  return {
+    json: {
+      error: error.message,
+      input: $json
+    }
+  };
+}
 ```
 
-### Environment Variables
-```javascript
-// Access .env variables
-const webhookUrl = $env.WEBHOOK_URL;
-const ollamaHost = $env.OLLAMA_HOST;
+**Available globals:**
+- `$json` - Current item data
+- `$input` - All input items
+- `$env` - Environment variables
+- `require()` - Node.js modules (whitelisted)
+
+**Whitelisted modules:**
+- `better-sqlite3` - Database
+- `crypto` - Hashing
+- Standard library (fs, path, etc.)
+
+### Pattern 5: Merge Node (Combine Data)
+
+**Use when:**
+- Joining data from multiple sources
+- Adding enrichment data
+- Combining parallel branches
+
+**Configuration:**
+
+```json
+{
+  "parameters": {
+    "mode": "mergeByIndex",  // or "mergeByKey"
+    "options": {}
+  },
+  "name": "Merge Data",
+  "type": "n8n-nodes-base.Merge"
+}
 ```
 
-### JSON Storage
-```javascript
-// Store arrays/objects as JSON TEXT
-const concepts = ['concept1', 'concept2'];
-stmt.run(JSON.stringify(concepts));
+**Modes:**
+- `mergeByIndex` - Combine items at same position
+- `mergeByKey` - Join on matching field (like SQL JOIN)
 
-// Parse on retrieval
-const row = db.prepare('SELECT concepts FROM table WHERE id = ?').get(id);
-const conceptsArray = JSON.parse(row.concepts);
-```
+---
 
-## Workflow Dependencies
+## Integration Testing
 
-**Data Flow:**
-```
-01-ingestion → raw_notes table
-              ↓
-02-llm-processing → processed_notes table
-                   ↓
-03-pattern-detection → detected_patterns table
-05-sentiment-analysis → sentiment_history table
-06-connection-network → network_analysis_history table
-04-obsidian-export ← All tables (reads for export)
-```
+### Test Full Pipeline
 
-**Trigger Types:**
-- 01-ingestion: Webhook (on-demand from Drafts)
-- 02-06: Cron schedule or manual trigger
-
-## Common Commands
+**Example: Ingestion → Processing → Export**
 
 ```bash
-# Import workflow to n8n
-./scripts/import-workflows.sh
+#!/bin/bash
+set -e
 
-# Access n8n web interface
-open http://localhost:5678
+TEST_RUN="integration-$(date +%Y%m%d-%H%M%S)"
 
-# View n8n logs
-docker-compose logs -f n8n
+echo "=== Integration Test: Full Pipeline ==="
 
-# Restart n8n after changes
-docker-compose restart n8n
+# 1. Ingest note
+echo "Step 1: Ingesting note..."
+curl -X POST http://localhost:5678/webhook/api/drafts \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"title\": \"Integration Test Note\",
+    \"content\": \"This is a test of the full pipeline from ingestion through export.\",
+    \"test_run\": \"$TEST_RUN\"
+  }"
+
+echo "Waiting for processing..."
+sleep 15
+
+# 2. Verify ingestion
+echo "Step 2: Checking ingestion..."
+INGESTED=$(sqlite3 data/selene.db "SELECT COUNT(*) FROM raw_notes WHERE test_run = '$TEST_RUN';")
+echo "Ingested: $INGESTED (expected: 1)"
+
+# 3. Verify processing
+echo "Step 3: Checking LLM processing..."
+PROCESSED=$(sqlite3 data/selene.db "SELECT COUNT(*) FROM processed_notes WHERE test_run = '$TEST_RUN';")
+echo "Processed: $PROCESSED (expected: 1)"
+
+# 4. Verify sentiment
+echo "Step 4: Checking sentiment analysis..."
+SENTIMENT=$(sqlite3 data/selene.db "SELECT COUNT(*) FROM sentiment_history WHERE test_run = '$TEST_RUN';")
+echo "Sentiment: $SENTIMENT (expected: 1)"
+
+# 5. Verify export
+echo "Step 5: Checking Obsidian export..."
+if [ -f "vault/Selene/Integration Test Note.md" ]; then
+  echo "Exported: Yes"
+else
+  echo "Exported: No (check export workflow)"
+fi
+
+# Summary
+echo ""
+echo "=== Integration Test Summary ==="
+echo "Ingested: $INGESTED"
+echo "Processed: $PROCESSED"
+echo "Sentiment: $SENTIMENT"
+
+# Cleanup prompt
+read -p "Cleanup test data? (y/n) " -n 1 -r
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    ./scripts/cleanup-tests.sh "$TEST_RUN"
+    rm -f "vault/Selene/Integration Test Note.md"
+fi
 ```
 
-## Do NOT
+---
 
-- **NEVER skip error handling** - every node needs error path
-- **NEVER hardcode database paths** - use /data/selene.db (Docker mount)
-- **NEVER use string concatenation for SQL** - always use parameterized queries
-- **NEVER commit workflow.json without testing** - run tests first
-- **NEVER modify production data during testing** - use test_run markers
-- **NEVER delete nodes without checking dependencies** - other workflows may reference table structures
+## Performance Optimization
 
-## Workflow Editing Best Practices
+### Sequential vs Parallel Processing
 
-1. **Test in isolation** - Use test-with-markers.sh before committing
-2. **Update STATUS.md** - Document test results after changes
-3. **Maintain node naming** - Follow "Verb + Object" pattern
-4. **Version control** - Commit workflow.json with descriptive message
-5. **Document breaking changes** - Update README if API/schema changes
+**Current (Sequential):**
+- Process 1 note at a time
+- Wait for completion before next
+- Prevents Ollama overload
 
-## Related Context
+**Why not parallel:**
+- Ollama on M1 Mac handles 1 request well
+- Parallel requests cause slowdowns
+- ADHD users capture notes throughout day (not batches)
 
-@workflows/01-ingestion/README.md
-@workflows/02-llm-processing/README.md
-@database/schema.sql
-@README.md
+**When to consider parallel:**
+- Bulk import of existing notes
+- More powerful hardware
+- Cloud-hosted Ollama
+
+### Event-Driven vs Scheduled
+
+**Phase 6 Migration:**
+
+**Before (Scheduled):**
+```json
+{
+  "type": "n8n-nodes-base.Schedule",
+  "parameters": {
+    "rule": {"interval": [{"field": "seconds", "secondsInterval": 30}]}
+  }
+}
+```
+- Runs every 30 seconds
+- Wastes resources if no data
+- 20-25 second processing time
+
+**After (Event-Driven):**
+```json
+{
+  "type": "n8n-nodes-base.Trigger",
+  "parameters": {
+    "events": ["workflow:completed"]
+  }
+}
+```
+- Triggers only when previous workflow completes
+- Zero wasted executions
+- ~14 second processing time
+- 3x faster, 100% efficient
+
+**See:** `@docs/roadmap/08-PHASE-6-EVENT-DRIVEN.md`
+
+---
+
+## Workflow Directory Structure
+
+**Standard structure for each workflow:**
+
+```
+workflows/XX-name/
+├── workflow.json          # Main n8n workflow (source of truth)
+├── README.md             # Quick start guide
+├── docs/
+│   ├── STATUS.md         # Test results and current state
+│   ├── SETUP.md          # Configuration instructions
+│   └── REFERENCE.md      # Technical details
+├── scripts/
+│   ├── test-with-markers.sh   # Automated test suite
+│   └── cleanup-tests.sh       # Test data cleanup (optional)
+└── tests/                # Test data/fixtures (optional)
+```
+
+**Why this structure:**
+- `workflow.json` - Version controlled, single source of truth
+- `README.md` - Quick orientation (ADHD = needs fast context)
+- `STATUS.md` - Current state visible (ADHD = needs status visible)
+- `test-with-markers.sh` - Automated testing (prevents regressions)
+
+---
+
+## Related Context Files
+
+- **`@.claude/OPERATIONS.md`** - Commands to execute workflows
+- **`@.claude/DEVELOPMENT.md`** - Architecture and design patterns
+- **`@scripts/CLAUDE.md`** - Script utilities (manage-workflow.sh)
+- **`@.claude/PROJECT-STATUS.md`** - Current workflow status
