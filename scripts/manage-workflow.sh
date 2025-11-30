@@ -16,6 +16,10 @@ NC='\033[0m'  # No Color
 CONTAINER_NAME="selene-n8n"
 WORKFLOWS_DIR="./workflows"
 
+# Dev mode flag
+DEV_MODE=false
+DEV_CONTAINER_NAME="selene-n8n-dev"
+
 # Helper functions
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -189,6 +193,12 @@ ${YELLOW}Notes:${NC}
   - Backups are timestamped automatically
   - Always test workflows after importing changes
 
+${YELLOW}Dev Mode:${NC}
+  Add --dev flag to target development environment
+  $0 --dev list
+  $0 --dev export 1
+  $0 --dev update 1 /workflows/01-ingestion/workflow.json
+
 EOF
 }
 
@@ -245,6 +255,23 @@ main() {
             ;;
     esac
 }
+
+# Parse global flags
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dev)
+            DEV_MODE=true
+            CONTAINER_NAME="$DEV_CONTAINER_NAME"
+            shift
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+set -- "${ARGS[@]}"
 
 # Run main function
 main "$@"
