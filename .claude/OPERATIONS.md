@@ -33,6 +33,69 @@ docker-compose ps
 docker exec -it selene-n8n /bin/sh
 ```
 
+### Development Environment
+
+#### Starting Development
+
+```bash
+# Start dev environment (creates dev database if needed)
+./scripts/dev-start.sh
+
+# Verify dev is running
+docker ps | grep selene-n8n-dev
+
+# Check current environment
+cat .claude/CURRENT-ENV.md
+```
+
+#### Development Workflow
+
+```bash
+# 1. Start dev environment
+./scripts/dev-start.sh
+
+# 2. Edit workflow JSON files
+# (Use Read/Edit tools on workflows/XX-name/workflow.json)
+
+# 3. Import to dev
+./scripts/manage-workflow.sh --dev update <id> /workflows/XX-name/workflow.json
+
+# 4. Test with dev database
+./workflows/XX-name/scripts/test-with-markers.sh
+
+# 5. When ready, promote to production
+./scripts/promote-workflow.sh XX-name
+```
+
+#### Dev Database Management
+
+```bash
+# Seed with sample data
+./scripts/dev-seed-data.sh
+
+# Reset to clean state (careful!)
+./scripts/dev-reset-db.sh
+
+# Query dev database
+sqlite3 data/selene-dev.db "SELECT COUNT(*) FROM raw_notes;"
+```
+
+#### Stopping Development
+
+```bash
+# Stop dev environment
+./scripts/dev-stop.sh
+
+# Production remains running on port 5678
+```
+
+#### Environment Indicator
+
+Claude should always check `.claude/CURRENT-ENV.md` before making changes:
+
+- **PRODUCTION**: Do not modify workflows or test against production database
+- **DEVELOPMENT**: Free to modify workflows and test against dev database
+
 ### n8n Workflow Management
 
 **CRITICAL: Always use CLI commands. Never manual UI edits.**
