@@ -64,6 +64,7 @@ services:
 
       # Custom environment variables for workflows
       - SELENE_DB_PATH=/selene/data/selene.db
+      - SELENE_ENV=production
       - OBSIDIAN_VAULT_PATH=/obsidian
       - OLLAMA_BASE_URL=http://localhost:11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral:7b}
