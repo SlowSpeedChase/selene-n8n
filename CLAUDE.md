@@ -81,9 +81,23 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 ## Critical Rules (Do NOT)
 
 **Workflow Modifications:**
-- ❌ **NEVER edit workflows in n8n UI without exporting to JSON** - Changes won't persist in git
-- ❌ **NEVER modify workflows without using docker exec commands** - Use CLI for all changes
-- ✅ **ALWAYS use** `./scripts/manage-workflow.sh` for workflow operations
+- ❌ **NEVER edit workflows in the n8n UI, period** - ALL workflow modifications MUST be done via CLI
+- ❌ **NEVER suggest UI edits when debugging or adding features** - Use the CLI workflow process below
+- ✅ **ALWAYS use the mandatory 6-step CLI workflow process** for all workflow changes
+
+**MANDATORY Workflow Modification Process:**
+1. Export: `./scripts/manage-workflow.sh export <id>`
+2. Edit: Use Read/Edit tools on `workflows/XX-name/workflow.json`
+3. Update: `./scripts/manage-workflow.sh update <id> <file>`
+4. Test: `./workflows/XX-name/scripts/test-with-markers.sh`
+5. Document: Update `workflows/XX-name/docs/STATUS.md`
+6. Commit: Git add workflow.json and STATUS.md
+
+**Why this is mandatory:**
+- UI changes don't persist in git (breaks version control)
+- JSON files are the single source of truth
+- CLI workflow ensures testing and documentation happen
+- Professional n8n teams never use UI for version-controlled workflows
 
 **Testing:**
 - ❌ **NEVER use production database for testing** - Always use test_run markers

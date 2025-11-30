@@ -1,0 +1,22 @@
+{
+  "name": "selene-n8n",
+  "version": "1.0.0",
+  "description": "ADHD-focused knowledge management system using n8n workflows",
+  "private": true,
+  "scripts": {
+    "mcp-wrapper": "node scripts/things-mcp-wrapper.js",
+    "test-mcp": "node scripts/test-mcp-wrapper.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": [
+    "n8n",
+    "knowledge-management",
+    "adhd",
+    "things",
+    "mcp"
+  ],
+  "author": "Chase Easterling",
+  "license": "MIT"
+}

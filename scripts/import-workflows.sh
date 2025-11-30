@@ -26,19 +26,20 @@ docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/03-patte
 docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/04-obsidian-export/workflow.json
 docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/05-sentiment-analysis/workflow.json
 docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/06-connection-network/workflow.json
+docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/07-task-extraction/workflow.json
 echo -e "${GREEN}✓ Production workflows imported${NC}"
 
-# Import test workflows
+# Import test workflows (if they exist)
 echo -e "${YELLOW}Importing test workflows...${NC}"
-docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/01-ingestion/workflow-test.json
-docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/02-llm-processing/workflow-test.json
-docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/04-obsidian-export/workflow-test.json
-docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/05-sentiment-analysis/workflow-test.json
+docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/01-ingestion/workflow-test.json 2>/dev/null || true
+docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/02-llm-processing/workflow-test.json 2>/dev/null || true
+docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/04-obsidian-export/workflow-test.json 2>/dev/null || true
+docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/05-sentiment-analysis/workflow-test.json 2>/dev/null || true
 echo -e "${GREEN}✓ Test workflows imported${NC}"
 
-# Import Apple variant
+# Import Apple variant (if it exists)
 echo -e "${YELLOW}Importing Apple variant...${NC}"
-docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/02-llm-processing_apple/workflow.json
+docker exec selene-n8n n8n import:workflow --input=/workflows/workflows/02-llm-processing_apple/workflow.json 2>/dev/null || true
 echo -e "${GREEN}✓ Apple variant imported${NC}"
 
 # Activate production workflows
@@ -48,7 +49,8 @@ docker exec selene-n8n sqlite3 /home/node/.n8n/database.sqlite \
     '01-Note-Ingestion | Selene',
     '02-LLM-Processing | Selene',
     '04-Obsidian-Export | Selene',
-    '05-Sentiment-Analysis | Selene'
+    '05-Sentiment-Analysis | Selene',
+    '07-Task-Extraction'
   );"
 
 # Restart to activate
@@ -68,7 +70,11 @@ echo "Active workflows:"
 echo "  - 01-Note-Ingestion | Selene"
 echo "  - 02-LLM-Processing | Selene"
 echo "  - 04-Obsidian-Export | Selene"
-echo "  - 05-Sentiment-Analysis | Selene"
+echo "  - 05-Sentiment-Analysis | Selene (with Task Extraction trigger)"
+echo "  - 07-Task-Extraction (NEW)"
+echo ""
+echo "IMPORTANT: Start the Things wrapper before testing:"
+echo "  cd ~/selene-n8n && npm run mcp-wrapper"
 echo ""
 echo "Check your browser at: http://localhost:5678"
 echo ""

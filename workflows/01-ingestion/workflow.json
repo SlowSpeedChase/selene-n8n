@@ -142,8 +142,14 @@
         "method": "POST",
         "url": "http://localhost:5678/webhook/api/process-note",
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ { \"noteId\": $json.noteId } }}",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "noteId",
+              "value": "={{ $json.noteId }}"
+            }
+          ]
+        },
         "options": {
           "timeout": 120000,
           "redirect": {

@@ -29,13 +29,26 @@
 
 ## CRITICAL RULE: CLI-Only Workflow Modifications
 
-**ALWAYS use command line tools to modify workflows. NEVER edit in n8n UI without exporting to JSON.**
+**NEVER edit workflows in the n8n UI, period. ALL workflow modifications MUST be done via CLI.**
 
-**Why:**
-- UI changes don't persist in git
-- JSON files are source of truth
-- CLI workflow ensures testing and documentation
-- Version control requires committed JSON files
+**This applies to ALL scenarios:**
+- ✅ Debugging workflows → Use CLI workflow process
+- ✅ Adding new features → Use CLI workflow process
+- ✅ Fixing bugs → Use CLI workflow process
+- ✅ Adding new nodes → Use CLI workflow process
+- ❌ "Quick fixes" in UI → FORBIDDEN (breaks git sync)
+- ❌ "Just checking something" in UI editor → Use `show` command instead
+
+**Why this is absolute:**
+- UI changes don't persist in git (project becomes out of sync)
+- JSON files are the single source of truth
+- CLI workflow ensures testing and documentation happen
+- Professional n8n teams treat workflows as code (version-controlled, immutable)
+- Industry best practice: UI only for personal projects, CLI for production
+
+**When you think "I should edit this in the UI":**
+- STOP. Use the 6-step CLI workflow process below instead.
+- There are ZERO legitimate reasons to use the UI for version-controlled workflows.
 
 **See:** `@.claude/OPERATIONS.md` (Workflow Modification Procedure)
 
@@ -43,7 +56,16 @@
 
 ## Workflow Modification Workflow
 
-### Standard Process (6 Steps)
+**WHEN to use this process:**
+- User asks to debug a workflow
+- User asks to add features to a workflow
+- User asks to fix bugs in a workflow
+- You identify a workflow needs changes
+
+**HOW to use this process:**
+Always follow these 6 steps in order. Never skip steps.
+
+### Standard Process (6 Steps - MANDATORY)
 
 **Step 1: Export Current Version**
 

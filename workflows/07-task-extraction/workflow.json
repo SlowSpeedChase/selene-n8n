@@ -1,0 +1,172 @@
+{
+  "name": "07-Task-Extraction",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "task-extraction",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "selene-task-extraction-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "const db = require('better-sqlite3')('/selene/data/selene.db');\n\n// Handle both webhook body format and direct JSON\nconst body = $input.item.json.body || $input.item.json;\nconst rawNoteId = body.raw_note_id;\n\nif (!rawNoteId) {\n  throw new Error('raw_note_id is required');\n}\n\nconst query = `\n  SELECT\n    rn.id as raw_note_id,\n    rn.content,\n    rn.tags,\n    pn.concepts,\n    pn.primary_theme,\n    pn.secondary_themes as themes,\n    sh.energy_level,\n    sh.emotional_tone,\n    sh.adhd_markers\n  FROM raw_notes rn\n  LEFT JOIN processed_notes pn ON rn.id = pn.raw_note_id\n  LEFT JOIN sentiment_history sh ON pn.id = sh.processed_note_id\n  WHERE rn.id = ?\n  LIMIT 1\n`;\n\nconst row = db.prepare(query).get(rawNoteId);\ndb.close();\n\nif (!row) {\n  throw new Error(`Note not found: ${rawNoteId}`);\n}\n\nreturn { json: row };"
+      },
+      "id": "fetch-note-data",
+      "name": "Fetch Note Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const note = $input.item.json;\n\n// Build prompt with inline template\nconst prompt = `You are a task extraction assistant for an ADHD-optimized productivity system.\n\nAnalyze the following note and extract actionable tasks. Be thorough but realistic.\n\nINPUT:\nNote Content: ${note.content || ''}\nEnergy Level: ${note.energy_level || 'unknown'}\nConcepts: ${note.concepts || '[]'}\nThemes: ${note.themes || '[]'}\nEmotional Tone: ${note.emotional_tone || 'neutral'}\nADHD Markers: ${note.adhd_markers || 'none'}\n\nINSTRUCTIONS:\n1. Extract ONLY actionable tasks (things the person can DO)\n2. Each task should be specific and start with a verb\n3. Do NOT extract vague intentions (\"I should...\" → skip unless it becomes \"Do X\")\n4. Do NOT extract questions unless they require research action\n5. If note has no actionable tasks, return empty array\n\nFor each task, provide:\n- task_text: Clear, actionable description (start with verb, <80 characters)\n- energy_required: high/medium/low\n  * high = creative work, learning, complex decisions, writing\n  * medium = routine work, communication, light planning\n  * low = organizing, simple responses, filing, sorting\n- estimated_minutes: 5, 15, 30, 60, 120, or 240\n  * Be realistic, ADHD users often underestimate\n  * Add 25% buffer to initial estimates\n- task_type: action/decision/research/communication/learning/planning\n- context_tags: Array of relevant contexts (max 3)\n  * Common: work, personal, home, creative, technical, social, urgent, deadline\n- overwhelm_factor: 1-10 (how overwhelming this might feel)\n  * 1-3 = Simple, clear, quick\n  * 4-6 = Moderate complexity or time\n  * 7-8 = Complex, vague, or emotionally difficult\n  * 9-10 = Overwhelming, needs breakdown\n\nENERGY MATCHING:\n- If note's energy_level is \"high\", bias tasks to \"high\" energy\n- If note's energy_level is \"low\", bias tasks to \"medium\" or \"low\" energy\n- If ADHD marker is \"overwhelm\", increase overwhelm_factor by 2\n\nOUTPUT FORMAT (JSON only, no explanation):\n[\n  {\n    \"task_text\": \"Write project proposal draft\",\n    \"energy_required\": \"high\",\n    \"estimated_minutes\": 60,\n    \"task_type\": \"action\",\n    \"context_tags\": [\"work\", \"writing\"],\n    \"overwhelm_factor\": 6\n  }\n]\n\nIf no tasks: []\n\nBEGIN ANALYSIS:`;\n\nreturn {\n  json: {\n    ...note,\n    prompt_text: prompt\n  }\n};"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "=mistral:7b"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json.prompt_text}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{false}}"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        }
+      },
+      "id": "ollama-extract",
+      "name": "Ollama Extract Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const response = $input.item.json.response;\n// Reference Build Prompt node directly (Ollama HTTP replaces input data)\nconst noteData = $('Build Prompt').first().json;\n\nconsole.log('[Parse Tasks] Ollama response type:', typeof response);\nconsole.log('[Parse Tasks] raw_note_id from Build Prompt:', noteData.raw_note_id);\n\nlet tasks = [];\ntry {\n  const parsed = JSON.parse(response);\n  console.log('[Parse Tasks] Parsed type:', typeof parsed, 'Is array:', Array.isArray(parsed));\n  if (Array.isArray(parsed)) {\n    tasks = parsed;\n  } else if (parsed && Array.isArray(parsed.tasks)) {\n    tasks = parsed.tasks;\n  } else {\n    tasks = [];\n  }\n  console.log('[Parse Tasks] Extracted tasks count:', tasks.length);\n} catch (e) {\n  console.error('Failed to parse Ollama response:', e);\n  return {\n    json: {\n      raw_note_id: noteData.raw_note_id,\n      tasks: [],\n      task_count: 0,\n      error: 'Invalid JSON from Ollama'\n    }\n  };\n}\n\n// Validate and EMBED metadata into each task (so Split preserves it)\nconst validatedTasks = tasks.filter(task => {\n  return task.task_text && task.energy_required && task.estimated_minutes && task.task_type;\n}).map(task => {\n  if (!task.overwhelm_factor || task.overwhelm_factor < 1 || task.overwhelm_factor > 10) {\n    task.overwhelm_factor = 5;\n  }\n  // EMBED metadata directly into each task object\n  return {\n    ...task,\n    raw_note_id: noteData.raw_note_id,\n    original_note: noteData.content,\n    concepts: noteData.concepts,\n    themes: noteData.themes\n  };\n});\n\nconsole.log('[Parse Tasks] First task after embedding:', validatedTasks[0] ? JSON.stringify(validatedTasks[0]).substring(0, 200) : 'none');\n\nreturn {\n  json: {\n    tasks: validatedTasks,\n    task_count: validatedTasks.length\n  }\n};"
+      },
+      "id": "parse-tasks",
+      "name": "Parse Tasks JSON",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tasks",
+        "options": {
+          "includeOtherFields": "include",
+          "destinationFieldName": "task"
+        }
+      },
+      "id": "split-tasks",
+      "name": "Split Tasks",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3456/create-task",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"title\": $json.task.task_text,\n  \"notes\": \"Extracted from Selene note #\" + $json.task.raw_note_id + \"\\n\\nEnergy: \" + $json.task.energy_required + \"\\nEstimated: \" + $json.task.estimated_minutes + \"min\\nOverwhelm: \" + $json.task.overwhelm_factor + \"/10\\n\\nOriginal note:\\n\" + $json.task.original_note,\n  \"tags\": $json.task.context_tags,\n  \"when\": \"anytime\",\n  \"passthrough\": {\n    \"task\": $json.task,\n    \"raw_note_id\": $json.task.raw_note_id,\n    \"concepts\": $json.task.concepts,\n    \"themes\": $json.task.themes\n  }\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "create-things-task",
+      "name": "Create Things Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const db = require('better-sqlite3')('/selene/data/selene.db');\n\n// Debug: Log all available data\nconsole.log('[Store Task] $json:', JSON.stringify($json, null, 2));\nconsole.log('[Store Task] $input.item.json:', JSON.stringify($input.item.json, null, 2));\n\n// Try to get data from input item (might have original data)\nconst inputData = $input.item.json;\nconsole.log('[Store Task] Input keys:', Object.keys(inputData || {}));\n\n// Reference data from wherever it is\nlet task, rawNoteId, concepts, themes;\nif (inputData.task) {\n  // Data came through properly\n  task = inputData.task;\n  rawNoteId = inputData.raw_note_id;\n  concepts = inputData.concepts;\n  themes = inputData.themes;\n} else if (inputData.passthrough) {\n  // Passthrough pattern\n  task = inputData.passthrough.task;\n  rawNoteId = inputData.passthrough.raw_note_id;\n  concepts = inputData.passthrough.concepts;\n  themes = inputData.passthrough.themes;\n} else {\n  console.error('[Store Task] ERROR: Could not find task data!');\n  throw new Error('Task data not found in input');\n}\n\nconsole.log('[Store Task] Got data:', { rawNoteId, taskText: task?.task_text });\n\n// Get Things task_id from HTTP response (current $json)\nconst thingsTaskId = $json.task_id;\n\nconsole.log('[Store Task] Things task_id:', thingsTaskId);\n\n// Generate simple unique ID without crypto module\nconst generateUniqueId = () => {\n  const timestamp = Date.now();\n  const random = Math.floor(Math.random() * 1000000);\n  return `selene-${timestamp}-${random}`;\n};\n\n// Use Things task_id if available, otherwise generate one\nconst finalThingsTaskId = thingsTaskId || generateUniqueId();\n\nconst stmt = db.prepare(`\n  INSERT INTO task_metadata (\n    raw_note_id,\n    things_task_id,\n    energy_required,\n    estimated_minutes,\n    related_concepts,\n    related_themes,\n    overwhelm_factor,\n    task_type,\n    context_tags\n  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n`);\n\nstmt.run(\n  rawNoteId,\n  finalThingsTaskId,\n  task.energy_required,\n  task.estimated_minutes,\n  JSON.stringify(concepts || []),\n  JSON.stringify(themes || []),\n  task.overwhelm_factor,\n  task.task_type,\n  JSON.stringify(task.context_tags || [])\n);\n\ndb.close();\n\nconsole.log('[Store Task] Successfully stored task metadata for note', rawNoteId);\n\nreturn {\n  json: {\n    raw_note_id: rawNoteId,\n    things_task_id: finalThingsTaskId,\n    task_text: task.task_text\n  }\n};"
+      },
+      "id": "store-metadata",
+      "name": "Store Task Metadata",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1750, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const db = require('better-sqlite3')('/selene/data/selene.db');\n\nconst rawNoteId = $input.first().json.raw_note_id;\nconst taskCount = $input.all().length;\n\n// Update raw_notes\ndb.prepare(`\n  UPDATE raw_notes\n  SET tasks_extracted = 1,\n      tasks_extracted_at = CURRENT_TIMESTAMP\n  WHERE id = ?\n`).run(rawNoteId);\n\n// Update processed_notes\nconst status = taskCount > 0 ? 'tasks_created' : 'no_tasks';\ndb.prepare(`\n  UPDATE processed_notes\n  SET things_integration_status = ?\n  WHERE raw_note_id = ?\n`).run(status, rawNoteId);\n\ndb.close();\n\nreturn {\n  json: {\n    success: true,\n    raw_note_id: rawNoteId,\n    tasks_created: taskCount\n  }\n};"
+      },
+      "id": "update-status",
+      "name": "Update Note Status",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1950, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Fetch Note Data", "type": "main", "index": 0 }]]
+    },
+    "Fetch Note Data": {
+      "main": [[{ "node": "Build Prompt", "type": "main", "index": 0 }]]
+    },
+    "Build Prompt": {
+      "main": [[{ "node": "Ollama Extract Tasks", "type": "main", "index": 0 }]]
+    },
+    "Ollama Extract Tasks": {
+      "main": [[{ "node": "Parse Tasks JSON", "type": "main", "index": 0 }]]
+    },
+    "Parse Tasks JSON": {
+      "main": [[{ "node": "Split Tasks", "type": "main", "index": 0 }]]
+    },
+    "Split Tasks": {
+      "main": [[{ "node": "Create Things Task", "type": "main", "index": 0 }]]
+    },
+    "Create Things Task": {
+      "main": [[{ "node": "Store Task Metadata", "type": "main", "index": 0 }]]
+    },
+    "Store Task Metadata": {
+      "main": [[{ "node": "Update Note Status", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-26T00:00:00.000Z",
+  "versionId": "1"
+}

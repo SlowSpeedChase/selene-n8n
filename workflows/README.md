@@ -5,6 +5,7 @@ This directory contains all n8n workflows for the Selene note processing system,
 ## Directory Structure
 
 ```
+
 workflows/
 ├── README.md                          # This file
 ├── 01-ingestion/                      # Note ingestion & storage
@@ -70,15 +71,20 @@ Legend:
 
 ### 1. Import Workflows
 
-For each workflow:
+**Use CLI commands to import workflows (NEVER use n8n UI):**
+
 ```bash
-# In n8n UI (http://localhost:5678)
-1. Go to Workflows
-2. Click "Import from File"
-3. Navigate to workflows/{phase}/workflow.json
-4. Click "Import"
-5. Activate the workflow
+# Import all workflows using the management script
+./scripts/import-workflows.sh
+
+# OR import specific workflow
+./scripts/manage-workflow.sh import /workflows/01-ingestion/workflow.json
+
+# Verify import
+./scripts/manage-workflow.sh list
 ```
+
+**See:** `@workflows/CLAUDE.md` for the mandatory CLI workflow process
 
 ### 2. Test Each Phase
 
@@ -230,15 +236,23 @@ EOF
 
 ## Contributing Workflow Changes
 
-When modifying workflows:
+**CRITICAL: NEVER edit workflows in n8n UI. Always use CLI.**
 
-1. **Update the workflow** in n8n UI
-2. **Export** the workflow.json
-3. **Place** in the appropriate workflows/{phase}/ directory
-4. **Update** TEST.md with new test cases
-5. **Run** test.sh to validate
-6. **Document** changes in STATUS.md
-7. **Update** README.md if structure changed
+**Mandatory 6-step CLI process:**
+
+1. **Export** current version: `./scripts/manage-workflow.sh export <workflow-id>`
+2. **Edit** the workflow.json file using Read/Edit tools
+3. **Update** workflow: `./scripts/manage-workflow.sh update <workflow-id> <file>`
+4. **Test** the workflow: `./workflows/{phase}/scripts/test-with-markers.sh`
+5. **Document** changes in `workflows/{phase}/docs/STATUS.md`
+6. **Commit** workflow.json and STATUS.md to git
+
+**Why CLI-only:**
+- UI changes don't persist in git (breaks version control)
+- Professional teams treat workflows as code (immutable, version-controlled)
+- CLI ensures testing and documentation happen
+
+**See:** `@workflows/CLAUDE.md` for detailed workflow modification procedures
 
 ## Troubleshooting
 

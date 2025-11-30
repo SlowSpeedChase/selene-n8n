@@ -87,7 +87,7 @@
     },
     {
       "parameters": {
-        "functionCode": "const Database = require('better-sqlite3');\n\nconst noteId = $json.noteId;\nconst rawNoteId = $json.rawNoteId;\nconst sentimentData = $json.sentimentData;\nconst analyzedAt = $json.analyzedAt;\n\ntry {\n  const db = new Database('/selene/data/selene.db');\n  \n  // Update processed_notes with sentiment data\n  const updateQuery = `UPDATE processed_notes\n                       SET sentiment_analyzed = 1,\n                           sentiment_data = ?,\n                           overall_sentiment = ?,\n                           sentiment_score = ?,\n                           emotional_tone = ?,\n                           energy_level = ?,\n                           sentiment_analyzed_at = ?\n                       WHERE id = ?`;\n  \n  const updateStmt = db.prepare(updateQuery);\n  updateStmt.run(\n    JSON.stringify(sentimentData),\n    sentimentData.overall_sentiment,\n    sentimentData.sentiment_score,\n    sentimentData.emotional_tone,\n    sentimentData.energy_level,\n    analyzedAt,\n    noteId\n  );\n  \n  // Insert into sentiment_history\n  const insertQuery = `INSERT INTO sentiment_history (\n                         processed_note_id, raw_note_id,\n                         overall_sentiment, sentiment_score,\n                         emotional_tone, energy_level,\n                         stress_indicators, key_emotions,\n                         adhd_markers, analysis_confidence,\n                         analyzed_at\n                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;\n  \n  const insertStmt = db.prepare(insertQuery);\n  insertStmt.run(\n    noteId,\n    rawNoteId,\n    sentimentData.overall_sentiment,\n    sentimentData.sentiment_score,\n    sentimentData.emotional_tone,\n    sentimentData.energy_level,\n    sentimentData.stress_indicators ? 1 : 0,\n    JSON.stringify(sentimentData.key_emotions || []),\n    JSON.stringify(sentimentData.adhd_markers),\n    sentimentData.analysis_confidence,\n    analyzedAt\n  );\n  \n  db.close();\n  \n  return {\n    json: {\n      success: true,\n      noteId: noteId,\n      sentiment: sentimentData.overall_sentiment,\n      confidence: sentimentData.analysis_confidence\n    }\n  };\n  \n} catch (error) {\n  console.error('SQLite Update Error:', error);\n  throw new Error(`Failed to store sentiment: ${error.message}`);\n}"
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst noteId = $json.noteId;\nconst rawNoteId = $json.rawNoteId;\nconst sentimentData = $json.sentimentData;\nconst analyzedAt = $json.analyzedAt;\n\ntry {\n  const db = new Database('/selene/data/selene.db');\n  \n  // Update processed_notes with sentiment data\n  const updateQuery = `UPDATE processed_notes\n                       SET sentiment_analyzed = 1,\n                           sentiment_data = ?,\n                           overall_sentiment = ?,\n                           sentiment_score = ?,\n                           emotional_tone = ?,\n                           energy_level = ?,\n                           sentiment_analyzed_at = ?\n                       WHERE id = ?`;\n  \n  const updateStmt = db.prepare(updateQuery);\n  updateStmt.run(\n    JSON.stringify(sentimentData),\n    sentimentData.overall_sentiment,\n    sentimentData.sentiment_score,\n    sentimentData.emotional_tone,\n    sentimentData.energy_level,\n    analyzedAt,\n    noteId\n  );\n  \n  // Insert into sentiment_history\n  const insertQuery = `INSERT INTO sentiment_history (\n                         processed_note_id, raw_note_id,\n                         overall_sentiment, sentiment_score,\n                         emotional_tone, energy_level,\n                         stress_indicators, key_emotions,\n                         adhd_markers, analysis_confidence,\n                         analyzed_at\n                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;\n  \n  const insertStmt = db.prepare(insertQuery);\n  insertStmt.run(\n    noteId,\n    rawNoteId,\n    sentimentData.overall_sentiment,\n    sentimentData.sentiment_score,\n    sentimentData.emotional_tone,\n    sentimentData.energy_level,\n    sentimentData.stress_indicators ? 1 : 0,\n    JSON.stringify(sentimentData.key_emotions || []),\n    JSON.stringify(sentimentData.adhd_markers),\n    sentimentData.analysis_confidence,\n    analyzedAt\n  );\n  \n  db.close();\n  \n  return {\n    json: {\n      success: true,\n      noteId: noteId,\n      rawNoteId: rawNoteId,\n      sentiment: sentimentData.overall_sentiment,\n      confidence: sentimentData.analysis_confidence\n    }\n  };\n  \n} catch (error) {\n  console.error('SQLite Update Error:', error);\n  throw new Error(`Failed to store sentiment: ${error.message}`);\n}"
       },
       "id": "sqlite-store-sentiment",
       "name": "Store Enhanced Sentiment",
@@ -114,7 +114,30 @@
     },
     {
       "parameters": {
-        "functionCode": "const noteId = $('Get Note for Sentiment Analysis').item.json.id;\nconst rawNoteId = $('Get Note for Sentiment Analysis').item.json.raw_note_id;\nconst sentiment = $('Store Enhanced Sentiment').item.json.sentiment;\nconst confidence = $('Store Enhanced Sentiment').item.json.confidence;\n\nreturn {\n  json: {\n    success: true,\n    processedNoteId: noteId,\n    rawNoteId: rawNoteId,\n    sentiment: sentiment,\n    analysisConfidence: confidence,\n    message: `Sentiment analysis complete for note ${rawNoteId}, export triggered`\n  }\n};"
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/task-extraction",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "raw_note_id",
+              "value": "={{ $json.rawNoteId }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "http-trigger-task-extraction",
+      "name": "Trigger Task Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1650, 350]
+    },
+    {
+      "parameters": {
+        "functionCode": "const noteId = $('Get Note for Sentiment Analysis').item.json.id;\nconst rawNoteId = $('Get Note for Sentiment Analysis').item.json.raw_note_id;\nconst sentiment = $('Store Enhanced Sentiment').item.json.sentiment;\nconst confidence = $('Store Enhanced Sentiment').item.json.confidence;\n\nreturn {\n  json: {\n    success: true,\n    processedNoteId: noteId,\n    rawNoteId: rawNoteId,\n    sentiment: sentiment,\n    analysisConfidence: confidence,\n    message: `Sentiment analysis complete for note ${rawNoteId}, export and task extraction triggered`\n  }\n};"
       },
       "id": "function-build-response",
       "name": "Build Response",
@@ -197,11 +220,27 @@
             "node": "Trigger Obsidian Export",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Trigger Task Extraction",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
     "Trigger Obsidian Export": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Task Extraction": {
       "main": [
         [
           {

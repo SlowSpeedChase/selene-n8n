@@ -14,6 +14,7 @@ Bash automation scripts for testing, cleanup, workflow management, and database 
 
 ## Key Files
 
+- **manage-workflow.sh** - n8n workflow management (export, import, update)
 - **test-ingest.sh** - Test note ingestion workflow
 - **cleanup-tests.sh** - Remove test data from database
 - **import-workflows.sh** - Import n8n workflows
@@ -226,6 +227,179 @@ for workflow_json in "$WORKFLOW_DIR"/*/workflow.json; do
 
     echo "✓ $workflow_name imported"
 done
+```
+
+## manage-workflow.sh
+
+### Purpose
+Comprehensive n8n workflow management via CLI - list, export, import, and update workflows.
+
+**CRITICAL: This is the PRIMARY tool for workflow modifications. Always use this instead of manual n8n UI edits.**
+
+### Usage
+
+```bash
+# List all workflows
+./scripts/manage-workflow.sh list
+
+# Show workflow details
+./scripts/manage-workflow.sh show <workflow-id>
+
+# Export workflow to JSON
+./scripts/manage-workflow.sh export <workflow-id> [output-file]
+
+# Import workflow from JSON
+./scripts/manage-workflow.sh import <input-file> [--separate]
+
+# Update existing workflow (creates backup first)
+./scripts/manage-workflow.sh update <workflow-id> <input-file>
+
+# Backup credentials
+./scripts/manage-workflow.sh backup-creds [output-file]
+```
+
+### Common Workflows
+
+#### Modifying an Existing Workflow
+
+```bash
+# 1. List workflows to find ID
+./scripts/manage-workflow.sh list
+
+# 2. Export current version (creates timestamped backup)
+./scripts/manage-workflow.sh export 1
+
+# 3. Edit the workflow JSON using Read/Edit tools
+# (Make changes to workflows/01-ingestion/workflow.json)
+
+# 4. Update the workflow (auto-backup + import)
+./scripts/manage-workflow.sh update 1 /workflows/01-ingestion/workflow.json
+
+# 5. Test the workflow
+./workflows/01-ingestion/scripts/test-with-markers.sh
+
+# 6. Update documentation
+# Edit workflows/01-ingestion/docs/STATUS.md
+```
+
+#### Creating a New Workflow
+
+```bash
+# 1. Create workflow JSON file
+# (Use Read/Write tools to create workflows/XX-name/workflow.json)
+
+# 2. Import into n8n
+./scripts/manage-workflow.sh import /workflows/XX-name/workflow.json
+
+# 3. Test the workflow
+./workflows/XX-name/scripts/test-with-markers.sh
+```
+
+#### Emergency Backup
+
+```bash
+# Backup all credentials (sensitive!)
+./scripts/manage-workflow.sh backup-creds
+
+# Export specific workflow
+./scripts/manage-workflow.sh export 1 /workflows/backup-critical.json
+```
+
+### Features
+
+- **Automatic Backups**: `update` command creates timestamped backups before importing
+- **Interactive Mode**: Run `export` or `show` without ID to select interactively
+- **Container Checks**: Verifies n8n container is running before operations
+- **Color-Coded Output**: Info (green), warnings (yellow), errors (red), steps (blue)
+- **Safe Operations**: Validates inputs and provides clear error messages
+
+### Integration with Workflow Development
+
+**ALWAYS follow this pattern when modifying workflows:**
+
+1. **Export** current version (backup)
+2. **Edit** JSON file using Read/Edit tools
+3. **Import** updated version
+4. **Test** with test-with-markers.sh
+5. **Document** changes in STATUS.md
+6. **Commit** to git
+
+### Pattern
+
+```bash
+#!/bin/bash
+set -e
+
+CONTAINER_NAME="selene-n8n"
+
+# Check container is running
+check_container() {
+    if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        echo "ERROR: Container not running"
+        exit 1
+    fi
+}
+
+# List workflows
+list_workflows() {
+    docker exec "$CONTAINER_NAME" n8n list:workflow
+}
+
+# Export workflow
+export_workflow() {
+    local workflow_id="$1"
+    local output_file="${2:-/workflows/backup-${workflow_id}-$(date +%Y%m%d-%H%M%S).json}"
+
+    docker exec "$CONTAINER_NAME" n8n export:workflow --id="$workflow_id" --output="$output_file"
+    echo "Exported to: $output_file"
+}
+
+# Import workflow
+import_workflow() {
+    local input_file="$1"
+    local separate="${2:-false}"
+
+    if [ "$separate" = "--separate" ]; then
+        docker exec "$CONTAINER_NAME" n8n import:workflow --input="$input_file" --separate
+    else
+        docker exec "$CONTAINER_NAME" n8n import:workflow --input="$input_file"
+    fi
+}
+
+# Update workflow (backup + import)
+update_workflow() {
+    local workflow_id="$1"
+    local input_file="$2"
+
+    # Backup first
+    export_workflow "$workflow_id"
+
+    # Import updated version
+    import_workflow "$input_file" "--separate"
+}
+```
+
+### Error Handling
+
+```bash
+# Container not running
+if ! docker ps | grep -q selene-n8n; then
+    echo "ERROR: n8n container not running"
+    echo "Start with: docker-compose up -d"
+    exit 1
+fi
+
+# Invalid workflow ID
+if ! docker exec selene-n8n n8n show:workflow --id="$ID" 2>/dev/null; then
+    echo "ERROR: Workflow $ID not found"
+    exit 1
+fi
+
+# File not found
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "ERROR: File not found: $INPUT_FILE"
+    exit 1
+fi
 ```
 
 ## test-with-markers.sh (Workflow-Specific)

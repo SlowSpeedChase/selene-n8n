@@ -54,8 +54,8 @@ services:
       # This enables the SQLite node used in workflows 03, 04, 05, 06
       - N8N_COMMUNITY_PACKAGES_INSTALL=n8n-nodes-sqlite
 
-      # Allow better-sqlite3 in Function nodes
-      - NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3
+      # Allow better-sqlite3 and crypto in Function nodes
+      - NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3,crypto
       - NODE_PATH=/home/node/.n8n/node_modules
 
       # Security
