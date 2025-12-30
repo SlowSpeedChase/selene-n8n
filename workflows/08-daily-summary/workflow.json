@@ -1,0 +1,149 @@
+{
+  "name": "08-Daily-Summary | Selene",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule: Midnight Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  const query = `\n    SELECT id, title, tags, word_count, created_at\n    FROM raw_notes\n    WHERE date(created_at) >= date('now', '-1 day')\n    AND test_run IS NULL\n    ORDER BY created_at DESC\n  `;\n  \n  const notes = db.prepare(query).all();\n  \n  db.close();\n  \n  return {\n    json: {\n      notes: notes,\n      count: notes.length,\n      queryDate: new Date().toISOString().split('T')[0]\n    }\n  };\n  \n} catch (error) {\n  if (db) db.close();\n  console.error('Query notes error:', error);\n  return {\n    json: {\n      notes: [],\n      count: 0,\n      error: error.message,\n      queryDate: new Date().toISOString().split('T')[0]\n    }\n  };\n}"
+      },
+      "id": "query-notes",
+      "name": "Query Today's Notes",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  const query = `\n    SELECT \n      p.id,\n      p.concepts,\n      p.primary_theme,\n      p.secondary_themes,\n      r.title\n    FROM processed_notes p\n    JOIN raw_notes r ON p.raw_note_id = r.id\n    WHERE date(p.processed_at) >= date('now', '-1 day')\n    AND r.test_run IS NULL\n    ORDER BY p.processed_at DESC\n  `;\n  \n  const insights = db.prepare(query).all();\n  \n  db.close();\n  \n  const parsedInsights = insights.map(i => ({\n    ...i,\n    concepts: i.concepts ? JSON.parse(i.concepts) : [],\n    secondary_themes: i.secondary_themes ? JSON.parse(i.secondary_themes) : []\n  }));\n  \n  return {\n    json: {\n      insights: parsedInsights,\n      count: parsedInsights.length\n    }\n  };\n  \n} catch (error) {\n  if (db) db.close();\n  console.error('Query insights error:', error);\n  return {\n    json: {\n      insights: [],\n      count: 0,\n      error: error.message\n    }\n  };\n}"
+      },
+      "id": "query-insights",
+      "name": "Query Processed Insights",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 350]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  const query = `\n    SELECT \n      pattern_type,\n      pattern_name,\n      description,\n      confidence,\n      discovered_at\n    FROM detected_patterns\n    WHERE is_active = 1\n    ORDER BY discovered_at DESC\n    LIMIT 5\n  `;\n  \n  const patterns = db.prepare(query).all();\n  \n  db.close();\n  \n  return {\n    json: {\n      patterns: patterns,\n      count: patterns.length\n    }\n  };\n  \n} catch (error) {\n  if (db) db.close();\n  console.error('Query patterns error:', error);\n  return {\n    json: {\n      patterns: [],\n      count: 0,\n      error: error.message\n    }\n  };\n}"
+      },
+      "id": "query-patterns",
+      "name": "Query Active Patterns",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Merge Query Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [700, 350]
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = $input.all();\n\nconst notesData = items[0]?.json || { notes: [], count: 0 };\nconst insightsData = items[1]?.json || { insights: [], count: 0 };\nconst patternsData = items[2]?.json || { patterns: [], count: 0 };\n\nconst today = new Date();\nconst dateStr = today.toLocaleDateString('en-US', { \n  weekday: 'long', \n  year: 'numeric', \n  month: 'long', \n  day: 'numeric' \n});\n\nlet notesSection = '';\nif (notesData.count === 0) {\n  notesSection = 'No new notes captured today.';\n} else {\n  notesSection = notesData.notes.map(n => {\n    const tags = n.tags ? JSON.parse(n.tags).join(', ') : 'no tags';\n    return `- \"${n.title}\" (${n.word_count} words, tags: ${tags})`;\n  }).join('\\n');\n}\n\nlet insightsSection = '';\nif (insightsData.count === 0) {\n  insightsSection = 'No notes processed today.';\n} else {\n  const allConcepts = insightsData.insights.flatMap(i => i.concepts || []);\n  const allThemes = insightsData.insights.map(i => i.primary_theme).filter(Boolean);\n  const uniqueConcepts = [...new Set(allConcepts)].slice(0, 10);\n  const uniqueThemes = [...new Set(allThemes)];\n  insightsSection = `Concepts: ${uniqueConcepts.join(', ') || 'none'}\\nThemes: ${uniqueThemes.join(', ') || 'none'}`;\n}\n\nlet patternsSection = '';\nif (patternsData.count === 0) {\n  patternsSection = 'No active patterns detected yet.';\n} else {\n  patternsSection = patternsData.patterns.map(p => \n    `- ${p.pattern_name}: ${p.description || 'No description'}`\n  ).join('\\n');\n}\n\nconst prompt = `You are summarizing a personal knowledge capture system for someone with ADHD.\nBe brief and clear. Write 2-4 sentences max.\n\nToday's date: ${dateStr}\n\nNotes captured today (${notesData.count}):\n${notesSection}\n\nInsights extracted:\n${insightsSection}\n\nRecurring themes:\n${patternsSection}\n\nWrite a brief executive summary paragraph covering:\n- What was captured today (or note if quiet day)\n- Any notable insights or themes emerging`;\n\nreturn {\n  json: {\n    prompt: prompt,\n    date: dateStr,\n    dateISO: today.toISOString().split('T')[0],\n    stats: {\n      notesCount: notesData.count,\n      insightsCount: insightsData.count,\n      patternsCount: patternsData.count\n    }\n  }\n};"
+      },
+      "id": "build-prompt",
+      "name": "Build Summary Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'mistral:7b', prompt: $json.prompt, stream: false }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ollama-request",
+      "name": "Send to Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 350],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "functionCode": "const promptData = $('Build Summary Prompt').item.json;\nconst stats = promptData.stats;\n\nconst fallbackSummary = stats.notesCount > 0\n  ? `Captured ${stats.notesCount} note(s) today. Summary generation unavailable - Ollama may be offline.`\n  : `No new notes captured today. Summary generation unavailable - Ollama may be offline.`;\n\nreturn {\n  json: {\n    response: fallbackSummary,\n    fallback: true,\n    error: 'Ollama unavailable'\n  }\n};"
+      },
+      "id": "ollama-fallback",
+      "name": "Fallback: Ollama Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1100, 500]
+    },
+    {
+      "parameters": {
+        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst promptData = $('Build Summary Prompt').item.json;\nconst ollamaResponse = $json;\n\nconst summary = ollamaResponse.response || 'Summary generation failed. Please check Ollama connection.';\n\nconst dateISO = promptData.dateISO;\nconst dateTitle = promptData.date;\nconst stats = promptData.stats;\n\nconst markdown = `# Daily Summary - ${dateTitle}\n\n${summary}\n\n---\n\n**Stats:** ${stats.notesCount} notes captured, ${stats.insightsCount} processed, ${stats.patternsCount} active patterns\n\n---\n*Generated automatically at midnight by Selene*\n`;\n\nconst dailyDir = '/obsidian/Daily';\nif (!fs.existsSync(dailyDir)) {\n  fs.mkdirSync(dailyDir, { recursive: true });\n}\n\nconst filename = `${dateISO}-summary.md`;\nconst filepath = path.join(dailyDir, filename);\nfs.writeFileSync(filepath, markdown, 'utf8');\n\nreturn {\n  json: {\n    success: true,\n    filepath: filepath,\n    filename: filename,\n    date: dateISO,\n    summaryLength: summary.length,\n    stats: stats\n  }\n};"
+      },
+      "id": "write-obsidian",
+      "name": "Write to Obsidian",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1300, 400]
+    }
+  ],
+  "connections": {
+    "Schedule: Midnight Daily": {
+      "main": [[
+        { "node": "Query Today's Notes", "type": "main", "index": 0 },
+        { "node": "Query Processed Insights", "type": "main", "index": 0 },
+        { "node": "Query Active Patterns", "type": "main", "index": 0 }
+      ]]
+    },
+    "Query Today's Notes": {
+      "main": [[{ "node": "Merge Query Results", "type": "main", "index": 0 }]]
+    },
+    "Query Processed Insights": {
+      "main": [[{ "node": "Merge Query Results", "type": "main", "index": 1 }]]
+    },
+    "Query Active Patterns": {
+      "main": [[{ "node": "Merge Query Results", "type": "main", "index": 2 }]]
+    },
+    "Merge Query Results": {
+      "main": [[{ "node": "Build Summary Prompt", "type": "main", "index": 0 }]]
+    },
+    "Build Summary Prompt": {
+      "main": [[{ "node": "Send to Ollama", "type": "main", "index": 0 }]]
+    },
+    "Send to Ollama": {
+      "main": [
+        [{ "node": "Write to Obsidian", "type": "main", "index": 0 }],
+        [{ "node": "Fallback: Ollama Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fallback: Ollama Error": {
+      "main": [[{ "node": "Write to Obsidian", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
