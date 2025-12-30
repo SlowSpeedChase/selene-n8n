@@ -35,6 +35,33 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 | **Design ADHD features** | `@.claude/ADHD_Principles.md` | `@.claude/DEVELOPMENT.md` |
 | **Daily operations** | `@.claude/OPERATIONS.md` | `@scripts/CLAUDE.md` |
 | **Check status** | `@.claude/PROJECT-STATUS.md` | `@ROADMAP.md` |
+| **Phase 7 / Task extraction** | `@docs/plans/2025-12-30-task-extraction-planning-design.md` | `@docs/architecture/metadata-definitions.md` |
+| **Development workflow** | `@.claude/GITOPS.md` | `@templates/BRANCH-STATUS.md` |
+
+---
+
+## Development Workflow (MANDATORY)
+
+**Claude MUST follow `@.claude/GITOPS.md` for all development work.**
+
+Key requirements:
+- All work in phase-named branches: `phase-X.Y/feature-name`
+- Every branch has `BRANCH-STATUS.md` with stage checklists
+- Use superpowers skills at each stage (TDD, verification, code review)
+- Full closure ritual after merge (archive, update roadmap, cleanup)
+
+**Stages:** planning → dev → testing → docs → review → ready
+
+**Quick commands:**
+```bash
+# Start new work
+git worktree add -b phase-X.Y/name .worktrees/name main
+
+# Check active work
+git worktree list
+```
+
+**See:** `@.claude/GITOPS.md` for complete workflow
 
 ---
 
@@ -157,17 +184,22 @@ sqlite3 data/selene.db ".schema raw_notes"
 ## Project Status
 
 **Completed:**
-- ✅ Workflow 01 (Ingestion) - Production ready, 6/7 tests passing
+- ✅ Workflow 01 (Ingestion) - Production ready
 - ✅ Workflow 02 (LLM Processing) - Concept extraction working
+- ✅ Workflow 03 (Pattern Detection) - Theme trend analysis
+- ✅ Phase 2 - Obsidian Export - ADHD-optimized export
 - ✅ SeleneChat - Database integration, Ollama AI, clickable citations
 
-**In Progress:**
-- 🔨 Phase 1.5 - UUID Tracking Foundation
-- 🔨 Phase 7 - Things Integration (planning complete)
+**Ready for Implementation:**
+- 📋 Phase 7.1 - Task Extraction with Classification (design revised 2025-12-30)
+  - Local AI classifies: actionable / needs_planning / archive_only
+  - Actionable tasks route to Things inbox
+  - needs_planning items flagged for SeleneChat
 
 **Next Up:**
-- ⬜ Workflow 03 (Pattern Detection) - Theme trend analysis
-- ⬜ Phase 2 - Obsidian Export - ADHD-optimized export
+- ⬜ Phase 7.2 - SeleneChat Planning Integration
+- ⬜ Phase 7.3 - Cloud AI Integration (sanitization layer)
+- ⬜ Phase 7.4 - Contextual Surfacing
 
 **Details:** `@.claude/PROJECT-STATUS.md`
 
@@ -287,6 +319,8 @@ selene-n8n/
 
 ## Version History
 
+- **2025-12-30**: Added GitOps development practices (.claude/GITOPS.md)
+- **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification
 - **2025-11-27**: Reorganized into modular context structure
 - **2025-11-13**: Added SeleneChat enhancements phase
 - **2025-11-01**: Added Phase 1.5 (UUID Tracking Foundation)

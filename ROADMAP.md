@@ -1,8 +1,8 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2025-11-24
-**Status:** Phase 1-2 Complete ✅ | Phase 7 Planning Complete 📋
+**Last Updated:** 2025-12-30
+**Status:** Phase 1-3 Complete ✅ | Phase 7 Design Revised 📋
 
 ---
 
@@ -47,15 +47,22 @@ Infrastructure and architectural enhancements:
 
 - **[UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** - Draft identification and edit detection
 
-### 🎯 **Phase 7: Things Integration (Planning Complete)**
+### 🎯 **Phase 7: Things Integration (Design Revised 2025-12-30)**
 
-Complete integration package ready for implementation:
+Task extraction with classification - route actionable items to Things:
 
-- **[📋 Integration Summary](./docs/THINGS-INTEGRATION-SUMMARY.md)** - START HERE: Overview and next steps
+- **[📋 Phase 7 Roadmap](./docs/roadmap/16-PHASE-7-THINGS.md)** - START HERE: Complete phase documentation
+- **[🎯 Phase 7.1 Design](./docs/plans/2025-12-30-task-extraction-planning-design.md)** - Task Extraction with Classification design
+- **[📊 Metadata Definitions](./docs/architecture/metadata-definitions.md)** - Field specifications for classification
 - **[🏛️ Architecture](./docs/architecture/things-integration.md)** - Technical design and system architecture
 - **[👤 User Stories](./docs/user-stories/things-integration-stories.md)** - User scenarios and acceptance criteria
 - **[🧠 ADHD Features Deep Dive](./docs/planning/adhd-features-integration.md)** - For planning future phases (8+)
-- **[🛠️ Phase 7.1 Implementation Spec](./docs/plans/auto-create-tasks-from-notes.md)** - Step-by-step build guide
+
+**Key Changes (2025-12-30):**
+- Phase 7.1: Task Extraction with Classification (actionable/needs_planning/archive_only)
+- Phase 7.2: SeleneChat Planning Integration
+- Phase 7.3: Cloud AI Integration (with sanitization layer)
+- Phase 7.4: Contextual Surfacing (thread continuation)
 
 ### 🛠️ **Setup & Maintenance**
 
@@ -269,6 +276,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification, new architectural layers
 - **2025-11-13**: Added SeleneChat Enhancements phase - Chat session summaries to database
 - **2025-11-01**: Added Phase 1.5 (UUID Tracking Foundation) - Draft identification and edit detection
 - **2025-10-31**: Reorganized into modular documentation structure

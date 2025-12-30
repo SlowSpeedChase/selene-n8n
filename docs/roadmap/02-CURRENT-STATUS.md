@@ -1,6 +1,6 @@
 # Selene n8n - Current Status
 
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-12-30
 
 ## Summary
 
@@ -277,6 +277,35 @@ See [07-PHASE-5-ADHD.md](./07-PHASE-5-ADHD.md)
 
 See [08-PHASE-6-EVENT-DRIVEN.md](./08-PHASE-6-EVENT-DRIVEN.md)
 
+### 📋 Phase 7: Things Integration
+
+**Status:** READY FOR IMPLEMENTATION (Design Revised 2025-12-30)
+**Goal:** Task extraction with classification - route actionable items to Things
+
+**Phase 7.1 - Task Extraction with Classification:**
+- Local AI classifies notes as: actionable, needs_planning, archive_only
+- Actionable tasks → Things inbox (with metadata)
+- needs_planning items → Flagged for SeleneChat planning
+- Full metadata extracted for all notes
+
+**Architectural Layers:**
+- **Local AI (Ollama):** Metadata extraction, classification, organization
+- **Cloud AI (Phase 7.3+):** Planning, scoping, breakdown (with sanitization)
+- **SeleneChat:** Knowledge queries, planning sessions, thread continuation
+- **Things:** Receives clear actionable tasks only (no projects)
+
+**Sub-phases:**
+- Phase 7.1: Task Extraction with Classification
+- Phase 7.2: SeleneChat Planning Integration
+- Phase 7.3: Cloud AI Integration (sanitization layer)
+- Phase 7.4: Contextual Surfacing (thread continuation)
+
+**Design Documents:**
+- `docs/plans/2025-12-30-task-extraction-planning-design.md` - Full design
+- `docs/architecture/metadata-definitions.md` - Field specifications
+
+See [16-PHASE-7-THINGS.md](./16-PHASE-7-THINGS.md)
+
 ---
 
 ## System Configuration
@@ -326,6 +355,16 @@ SELECT theme, COUNT(*) FROM (
 ---
 
 ## Recent Changes
+
+### 2025-12-30 (Phase 7.1 Design Revision)
+- **Phase 7.1 redesigned as "Task Extraction with Classification"**
+- Notes classified as: actionable, needs_planning, archive_only
+- Actionable tasks route directly to Things inbox
+- needs_planning items flagged for SeleneChat planning sessions
+- New architectural layers defined: Local AI, Cloud AI, SeleneChat, Things
+- Phase 7.2-7.4 revised: SeleneChat Planning, Cloud AI Integration, Contextual Surfacing
+- Created `docs/plans/2025-12-30-task-extraction-planning-design.md`
+- Created `docs/architecture/metadata-definitions.md`
 
 ### 2025-11-13 (SeleneChat Planning)
 - **Added SeleneChat Enhancements Phase** 📋
