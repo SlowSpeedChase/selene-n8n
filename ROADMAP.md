@@ -276,6 +276,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2025-12-31**: Workflow 08-Daily-Summary completed - Automated daily executive summaries with Ollama
 - **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification, new architectural layers
 - **2025-11-13**: Added SeleneChat Enhancements phase - Chat session summaries to database
 - **2025-11-01**: Added Phase 1.5 (UUID Tracking Foundation) - Draft identification and edit detection

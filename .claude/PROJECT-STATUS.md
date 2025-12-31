@@ -1,7 +1,7 @@
 # Selene n8n Project - Current Status
 
-**Last Updated:** 2025-10-30
-**Status:** Workflow 01 Complete, Ready for Workflow 02
+**Last Updated:** 2025-12-31
+**Status:** Workflows 01 & 08 Complete, Ready for Workflow 02
 
 ---
 
@@ -74,6 +74,62 @@ CREATE TABLE raw_notes (
 - Quick reference: `workflows/01-ingestion/INDEX.md`
 - Status/results: `workflows/01-ingestion/docs/STATUS.md`
 - Drafts setup: `workflows/01-ingestion/docs/DRAFTS-QUICKSTART.md`
+
+---
+
+### ✅ 08-Daily-Summary Workflow (COMPLETE)
+
+**Status:** Production Ready
+**Location:** `workflows/08-daily-summary/`
+**Completed:** 2025-12-31
+
+**What It Does:**
+- Runs daily at midnight (00:00) via schedule trigger
+- Queries last 24 hours of data from three sources:
+  - `raw_notes` - Recently captured notes
+  - `processed_notes` - LLM-extracted concepts and themes
+  - `detected_patterns` - Active recurring patterns
+- Sends data to Ollama (mistral:7b) for executive summary generation
+- Writes formatted markdown to `/obsidian/Selene/Daily/YYYY-MM-DD-summary.md`
+- Includes error fallback if Ollama is offline
+
+**Key Features:**
+- ✅ Automated daily execution (cron: 0 0 * * *)
+- ✅ Multi-source data aggregation (notes + insights + patterns)
+- ✅ LLM-generated executive summary
+- ✅ ADHD-friendly daily context visibility
+- ✅ Graceful error handling (Ollama timeout/offline)
+- ✅ Obsidian vault integration
+
+**Output Format:**
+- Markdown file with daily statistics
+- Summary of note activity and themes
+- Connection to detected patterns
+- Automatic timestamp and metadata
+
+**Workflow Nodes:**
+- Schedule: Midnight Daily (scheduleTrigger)
+- Query All Data (function - parallel queries)
+- Build Summary Prompt (function)
+- Send to Ollama (httpRequest with 120s timeout)
+- Fallback: Ollama Error (function)
+- Prepare Markdown (function)
+- Convert to Binary (moveBinaryData)
+- Write to Obsidian (writeBinaryFile)
+
+**Configuration:**
+- Ollama URL: `http://host.docker.internal:11434/api/generate`
+- Model: `mistral:7b`
+- Output path: `/obsidian/Selene/Daily/`
+- Timezone: Server timezone
+
+**Testing:**
+- Test script: `./workflows/08-daily-summary/scripts/test-with-markers.sh`
+- Status: All tests passing (as of 2025-12-31)
+
+**Documentation:**
+- Quick start: `workflows/08-daily-summary/README.md`
+- Status/results: `workflows/08-daily-summary/docs/STATUS.md`
 
 ---
 
@@ -373,8 +429,18 @@ cd workflows/01-ingestion
 
 ---
 
-## Achievements This Session
+## Recent Achievements
 
+### 2025-12-31
+✅ Completed Workflow 08 - Daily Summary
+✅ Implemented automated daily executive summaries
+✅ Integrated Ollama LLM for summary generation
+✅ Multi-source data aggregation (notes, insights, patterns)
+✅ Obsidian vault output with markdown formatting
+✅ Error handling for Ollama offline scenarios
+✅ All tests passing
+
+### 2025-10-30
 ✅ Completed ingestion workflow testing (6/7 pass rate)
 ✅ Fixed better-sqlite3 module loading
 ✅ Fixed switch node logic for duplicate detection

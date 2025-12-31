@@ -18,7 +18,8 @@ workflows/
 ├── 03-pattern-detection/             # Pattern & theme detection (Coming soon)
 ├── 04-obsidian-export/                # Obsidian export (Coming soon)
 ├── 05-sentiment-analysis/             # Sentiment analysis (Coming soon)
-└── 06-connection-network/             # Network analysis (Coming soon)
+├── 06-connection-network/             # Network analysis (Coming soon)
+└── 08-daily-summary/                  # Daily executive summaries (Production)
 ```
 
 ## Workflow Pipeline
@@ -59,6 +60,7 @@ workflows/
 | 04-Obsidian-Export | ⏳ Pending | Exports to Obsidian |
 | 05-Sentiment-Analysis | ⏳ Pending | Analyzes sentiment |
 | 06-Connection-Network | ⏳ Pending | Builds connection graphs |
+| 08-Daily-Summary | ✅ Production Ready | Generates daily executive summaries |
 
 Legend:
 - ✅ Production Ready

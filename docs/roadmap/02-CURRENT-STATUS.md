@@ -328,6 +328,7 @@ See [16-PHASE-7-THINGS.md](./16-PHASE-7-THINGS.md)
 | 04-obsidian-export | ✅ Active | Event-driven + Schedule | Triggered by 05 + Hourly |
 | 05-sentiment-analysis | ✅ Active | Event-driven | Triggered by 02 |
 | 06-connection-network | ⬜ Not built | - | - |
+| 08-daily-summary | ✅ Active | Schedule | Daily at midnight |
 
 ### Database Stats
 
@@ -355,6 +356,17 @@ SELECT theme, COUNT(*) FROM (
 ---
 
 ## Recent Changes
+
+### 2025-12-31 (Workflow 08 - Daily Summary Complete)
+- **Workflow 08-Daily-Summary - PRODUCTION READY!** ✅
+- Automated daily executive summaries at midnight
+- Multi-source data aggregation: raw_notes, processed_notes, detected_patterns
+- Ollama LLM integration for intelligent summary generation
+- Markdown output to Obsidian vault: `/obsidian/Selene/Daily/YYYY-MM-DD-summary.md`
+- Error fallback handling for Ollama offline scenarios
+- ADHD-friendly daily context visibility
+- All tests passing
+- 8 workflow nodes: Schedule trigger, queries, LLM processing, file output
 
 ### 2025-12-30 (Phase 7.1 Design Revision)
 - **Phase 7.1 redesigned as "Task Extraction with Classification"**
