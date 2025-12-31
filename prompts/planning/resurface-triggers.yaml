@@ -1,0 +1,21 @@
+version: 1.0
+
+triggers:
+  progress:
+    threshold_percent: 50
+    message: "Good progress! Ready to plan next steps?"
+    status: review
+
+  stuck:
+    days_inactive: 3
+    message: "This seems stuck. Want to rethink the approach?"
+    status: review
+
+  completion:
+    threshold_percent: 100
+    message: "All tasks done! Want to reflect or plan what's next?"
+    status: review
+
+defaults:
+  check_interval_hours: 1
+  require_minimum_tasks: 1

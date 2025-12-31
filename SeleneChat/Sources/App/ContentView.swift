@@ -7,11 +7,13 @@ struct ContentView: View {
     enum NavigationItem: String, CaseIterable {
         case chat = "Chat"
         case search = "Search"
+        case planning = "Planning"
 
         var icon: String {
             switch self {
             case .chat: return "message.fill"
             case .search: return "magnifyingglass"
+            case .planning: return "list.bullet.clipboard"
             }
         }
     }
@@ -30,6 +32,8 @@ struct ContentView: View {
                 ChatView()
             case .search:
                 SearchView()
+            case .planning:
+                PlanningView()
             }
         }
     }

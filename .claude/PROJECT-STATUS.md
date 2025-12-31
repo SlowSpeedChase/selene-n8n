@@ -1,7 +1,7 @@
 # Selene n8n Project - Current Status
 
-**Last Updated:** 2025-12-30
-**Status:** Workflows 01, 07 & 08 Complete - Phase 7.1 Task Extraction DONE
+**Last Updated:** 2025-12-31
+**Status:** Workflows 01, 07 & 08 Complete - Phase 7.2 Design Complete
 
 ---
 
@@ -407,30 +407,33 @@ cd workflows/01-ingestion
 
 ## Next Session Priorities
 
-1. **Review 02-llm-processing-workflow.json**
-   - Understand current implementation
-   - Identify gaps or issues
-   - Plan modifications
+1. **Implement Phase 7.2 - SeleneChat Planning Integration**
+   - Design doc: `docs/plans/2025-12-31-phase-7.2-selenechat-planning-design.md`
+   - Create git worktree: `phase-7.2/selenechat-planning`
+   - Implementation checklist in design doc
 
-2. **Set up Ollama Integration**
-   - Verify Ollama is accessible from n8n
-   - Test API calls
-   - Configure model parameters
+2. **Phase 7.2a: Foundation**
+   - Add `task_links` table migration
+   - Create `ClaudeAPIService.swift`
+   - Create `ThingsURLService.swift`
+   - Create `PromptLoader.swift`
+   - Create initial methodology files
 
-3. **Design processed_notes Schema**
-   - Determine what data to store
-   - Create or verify table structure
-   - Add test_run column for consistency
+3. **Phase 7.2b: Planning Tab**
+   - Add "Planning" to ContentView navigation
+   - Create `PlanningView.swift` (thread list)
+   - Query `discussion_threads` from database
 
-4. **Implement LLM Processing**
-   - Create workflow logic
-   - Handle errors gracefully
-   - Test with sample notes
+4. **Phase 7.2c: Planning Conversations**
+   - Create `PlanningConversationView.swift`
+   - Integrate Claude API for responses
+   - Implement task extraction from responses
+   - Create tasks in Things automatically
 
-5. **Testing & Documentation**
-   - Create test suite for workflow 02
-   - Document in same pattern as workflow 01
-   - Update this status file
+5. **Phase 7.2d: Bidirectional Flow**
+   - Implement Things status checking via AppleScript
+   - Add resurface trigger logic
+   - Update thread status based on task progress
 
 ---
 
@@ -464,6 +467,15 @@ cd workflows/01-ingestion
 ---
 
 ## Recent Achievements
+
+### 2025-12-31
+📋 Phase 7.2 Design Complete - SeleneChat Planning Integration
+- New "Planning" sidebar tab for guided breakdown conversations
+- Dual AI routing: Ollama (sensitive) / Claude API (planning)
+- Things as task database - only store relationship links in Selene
+- Methodology layer: editable prompts/triggers without code changes
+- Bidirectional Things flow with resurface triggers (progress/stuck/complete)
+- Design doc: `docs/plans/2025-12-31-phase-7.2-selenechat-planning-design.md`
 
 ### 2025-12-30
 ✅ Completed Phase 7.1 - Task Extraction with Classification

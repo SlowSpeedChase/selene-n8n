@@ -1,8 +1,9 @@
 # Phase 7: Things Integration
 
-**Status:** 📋 READY FOR IMPLEMENTATION (Phase 7.1 Design Revised)
+**Status:** 🚧 Phase 7.1 Complete ✅ | Phase 7.2 Design Complete 📋
 **Started:** 2025-11-24
-**Design Updated:** 2025-12-30
+**Phase 7.1 Completed:** 2025-12-30
+**Phase 7.2 Design:** 2025-12-31
 **Goal:** Integrate Selene with Things 3 via intelligent classification - AI triages notes and routes actionable items to Things
 
 ---
@@ -264,13 +265,23 @@ No push notifications. No scheduled reminders. Available when you engage.
 
 ### Phase 7.2: SeleneChat Planning Integration (Weeks 3-4)
 
+**Status:** 📋 DESIGN COMPLETE
+**Design Doc:** [Phase 7.2 Design](../plans/2025-12-31-phase-7.2-selenechat-planning-design.md)
+
 **Goal:** SeleneChat queries flagged items and facilitates planning conversations
+
+**Key Design Decisions (2025-12-31):**
+- **Dual AI routing:** Ollama for sensitive notes, Claude API for planning conversations
+- **Things as task database:** No task duplication - only store relationship links in Selene
+- **Methodology layer:** Editable prompts/triggers in `prompts/planning/` directory
+- **Bidirectional Things flow:** Resurface triggers (progress/stuck/complete)
+- **Single app experience:** All planning in SeleneChat, no context switching
 
 **Scope:**
 - SeleneChat queries `needs_planning` items from database
-- "Threads to continue" UI section
-- Basic planning conversation (local AI only)
-- Generate actionable tasks from planning → Things
+- New "Planning" sidebar tab with thread list
+- Guided breakdown conversations using Claude API
+- Automatic task extraction → Things via URL scheme
 
 **SeleneChat Features:**
 
@@ -642,6 +653,7 @@ Local re-applies: Specifics from original note
 ## Related Documentation
 
 - [Task Extraction Planning Design](../plans/2025-12-30-task-extraction-planning-design.md) - Complete Phase 7.1 design (2025-12-30)
+- [SeleneChat Planning Integration Design](../plans/2025-12-31-phase-7.2-selenechat-planning-design.md) - Complete Phase 7.2 design (2025-12-31)
 - [Metadata Definitions](../architecture/metadata-definitions.md) - Field specifications for classification
 - [AI Metadata Context](.claude/METADATA.md) - AI context for metadata handling
 - [Things Integration Architecture](../architecture/things-integration.md) - Technical architecture
@@ -685,7 +697,7 @@ Local re-applies: Specifics from original note
 
 ---
 
-**Phase Status:** 📋 READY FOR IMPLEMENTATION
-**Next Action:** Begin Phase 7.1 implementation (classification workflow)
+**Phase Status:** 🚧 Phase 7.1 Complete | Phase 7.2 Design Complete
+**Next Action:** Begin Phase 7.2 implementation (SeleneChat Planning Integration)
 **Owner:** Chase Easterling
-**Last Updated:** 2025-12-30
+**Last Updated:** 2025-12-31

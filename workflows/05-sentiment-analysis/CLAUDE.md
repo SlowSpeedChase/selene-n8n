@@ -2,33 +2,36 @@
 
 ## Purpose
 
-Analyzes emotional tone and energy levels in notes using Ollama LLM. Tracks sentiment trends over time for ADHD-focused emotional awareness and energy management.
+Analyzes emotional tone, energy levels, and ADHD-specific markers in notes using Ollama LLM. Tracks sentiment trends over time for ADHD-focused emotional awareness and energy management.
 
 ## Tech Stack
 
 - Ollama HTTP API (mistral:7b model via `host.docker.internal:11434`)
 - better-sqlite3 (direct access, no credentials)
-- Cron trigger (every 45 seconds for batch processing)
+- Webhook trigger (triggered by Workflow 02 after LLM processing)
 - JSON parsing for LLM responses
 
 ## Key Files
 
-- workflow.json (249 lines) - Main workflow using better-sqlite3
+- workflow.json - Main workflow using better-sqlite3
 - README.md - Full workflow documentation
-- SETUP.md - Import and activation guide
-- tests/TESTING.md - Comprehensive testing guide
-- tests/test-notes.json - 8 ADHD pattern test cases
-- tests/run-tests.sh - Automated test runner
+- CLAUDE.md - AI context file (this file)
+- docs/STATUS.md - Test results and current state
+- docs/SETUP.md - Import and activation guide
+- scripts/test-with-markers.sh - Automated test runner with cleanup
+- tests/test-notes.json - 8 ADHD pattern test cases (reference data)
+- tests/TESTING.md - Comprehensive testing guide (legacy)
 
 ## Data Flow
 
-1. **Cron Trigger** - Every 45 seconds, query for one unanalyzed note
-2. **Query Note** - SELECT FROM processed_notes WHERE sentiment_analyzed = 0 LIMIT 1
-3. **Prepare Prompt** - Format note content for sentiment analysis
+1. **Webhook Trigger** - Receives POST with processedNoteId
+2. **Get Note** - Query processed_notes + raw_notes for note data
+3. **Build Prompt** - Create ADHD-aware system prompt with context
 4. **Call Ollama** - POST to `http://host.docker.internal:11434/api/generate`
-5. **Parse Response** - Extract sentiment, energy level, confidence, emotion tags
-6. **Store Results** - INSERT into sentiment_history + UPDATE processed_notes
-7. **Log Success** - Console output for debugging
+5. **Parse Response** - Extract sentiment, energy level, ADHD markers, confidence
+6. **Store Results** - UPDATE processed_notes + INSERT into sentiment_history
+7. **Trigger Downstream** - Fire Obsidian Export and Task Extraction webhooks
+8. **Return Response** - JSON response with analysis summary
 
 ## Common Patterns
 
@@ -96,8 +99,7 @@ db.close();
 
 ### Run Tests
 ```bash
-cd workflows/05-sentiment-analysis
-./tests/run-tests.sh
+./workflows/05-sentiment-analysis/scripts/test-with-markers.sh
 ```
 
 ### Prerequisites
@@ -113,13 +115,12 @@ docker-compose exec n8n env | grep NODE_FUNCTION_ALLOW_EXTERNAL
 ```
 
 ### Test Checklist
-- [ ] Test with unanalyzed notes in database
-- [ ] Test with empty database (no notes to process)
-- [ ] Verify IF node handles null values
-- [ ] Check Ollama connection via host.docker.internal
-- [ ] Validate sentiment_history inserts
-- [ ] Verify ADHD markers detection
-- [ ] Check average confidence > 0.7
+- [x] Webhook trigger works with processedNoteId
+- [x] Ollama connection via host.docker.internal
+- [x] ADHD markers detection (overwhelm, hyperfocus, etc.)
+- [x] sentiment_history inserts correctly
+- [x] processed_notes updated correctly
+- [x] Downstream workflows triggered
 
 ## Database Schema
 
@@ -219,7 +220,8 @@ chmod 755 data/
 ## Related Context
 
 @workflows/05-sentiment-analysis/README.md
-@workflows/05-sentiment-analysis/SETUP.md
+@workflows/05-sentiment-analysis/docs/STATUS.md
+@workflows/05-sentiment-analysis/docs/SETUP.md
 @workflows/02-llm-processing/CLAUDE.md
 @database/schema.sql
 @workflows/CLAUDE.md

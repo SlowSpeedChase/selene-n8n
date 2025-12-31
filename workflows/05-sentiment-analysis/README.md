@@ -2,11 +2,13 @@
 
 **Purpose:** Analyze emotional tone, energy levels, and ADHD markers in processed notes
 
-**Trigger:** Every 45 seconds (automatic)
+**Trigger:** Webhook (POST to `/webhook/api/analyze-sentiment`)
 
 **Processing Time:** ~5-10 seconds per note
 
 **Dependencies:** Workflow 02 (LLM Processing) must complete first
+
+**Status:** Production Ready (71 notes analyzed)
 
 ---
 
@@ -31,50 +33,60 @@ This enables you to:
 ## Architecture
 
 ```
-┌──────────────────┐
-│  Cron Trigger    │ Every 45 seconds
-│  (45s interval)  │
-└────────┬─────────┘
-         │
-         ▼
 ┌─────────────────────────────┐
-│  Get Unanalyzed Note        │ Query SQLite for next note
-│  WHERE sentiment_analyzed=0 │ where sentiment_analyzed = 0
-└────────┬────────────────────┘
-         │
-         ▼
-┌──────────────────┐
-│   Has Note?      │ Check if query returned a note
-└────────┬─────────┘
-         │ (yes)
-         ▼
-┌────────────────────────────┐
-│  Build Sentiment Prompt    │ Create system + user prompt
-│  - Extract title & content │ for Ollama
-│  - Add ADHD-aware context  │
-└────────┬───────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│  Ollama: Analyze Sentiment │ Send to Mistral 7B
-│  - Model: mistral:7b       │
-│  - Temperature: 0.4        │
-│  - Timeout: 60s            │
-└────────┬───────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│  Parse Sentiment Results   │ Extract JSON response
-│  - Parse JSON safely       │
-│  - Fallback to regex       │
-└────────┬───────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│  Store Sentiment Analysis  │ Update processed_notes
-│  - Update processed_notes  │ and insert into
-│  - Insert into history     │ sentiment_history
-└────────────────────────────┘
+│  Webhook: Analyze Sentiment │  POST with processedNoteId
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│  Get Note for Analysis      │  Query processed_notes + raw_notes
+│  (better-sqlite3)           │  WHERE id = processedNoteId
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│  Build Enhanced Prompt      │  Create ADHD-aware system prompt
+│  - Extract title/content    │  Include theme/concepts context
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│  Ollama: Sentiment Analysis │  POST to host.docker.internal:11434
+│  - Model: mistral:7b        │  Temperature: 0.35
+│  - Timeout: 90s             │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│  Parse Sentiment Results    │  Extract JSON from LLM response
+│  - JSON parsing             │  Fallback to regex if needed
+│  - ADHD marker extraction   │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│  Store Enhanced Sentiment   │  UPDATE processed_notes
+│  (better-sqlite3)           │  INSERT into sentiment_history
+└──────────────┬──────────────┘
+               │
+               ▼
+┌──────────────┴──────────────┐
+│                             │
+▼                             ▼
+┌───────────────────┐  ┌───────────────────┐
+│ Trigger Obsidian  │  │ Trigger Task      │
+│ Export            │  │ Extraction        │
+└─────────┬─────────┘  └─────────┬─────────┘
+          │                      │
+          └──────────┬───────────┘
+                     ▼
+           ┌─────────────────────┐
+           │ Build Response      │
+           └─────────┬───────────┘
+                     ▼
+           ┌─────────────────────┐
+           │ Respond to Webhook  │
+           └─────────────────────┘
 ```
 
 ---

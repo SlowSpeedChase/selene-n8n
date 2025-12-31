@@ -2,29 +2,37 @@
 
 ## Purpose
 
-Builds relationship network between notes based on shared concepts, themes, and keywords. Creates graph structure for exploring knowledge connections and discovering patterns.
+Builds relationship network between notes based on shared concepts, themes, and temporal proximity. Creates graph structure for exploring knowledge connections and discovering patterns. Designed for ADHD-friendly knowledge navigation.
+
+## Current Status
+
+**BLOCKED** - Workflow requires `note_connections` table which does not exist.
+See `docs/STATUS.md` for details and resolution options.
 
 ## Tech Stack
 
+- n8n Cron trigger (every 6 hours)
 - better-sqlite3 for database operations
-- Graph algorithms (concept overlap, cosine similarity)
+- Weighted similarity calculation (concept overlap + theme overlap + temporal)
 - JSON array manipulation
 - Network analysis metrics
 
 ## Key Files
 
 - workflow.json (169 lines) - Main workflow definition
-- README.md - Network building overview
-- docs/STATUS.md - Test results
+- README.md - Quick start and usage guide
+- docs/STATUS.md - Test results and known issues
+- scripts/test-with-markers.sh - Prerequisite checker
 
 ## Data Flow
 
-1. **Query Processed Notes** - SELECT from processed_notes with concepts/themes
-2. **Calculate Similarity** - Compare concept arrays between notes
-3. **Identify Connections** - Find notes with >threshold overlap
-4. **Weight Edges** - Calculate connection strength (0.0-1.0)
-5. **Store Network** - INSERT into network_analysis_history
-6. **Update Metadata** - Track connection counts per note
+1. **Every 6 Hours** - Cron trigger activates workflow
+2. **Get Recent Notes** - SELECT from processed_notes JOIN raw_notes (LIMIT 100)
+3. **Calculate Note Connections** - O(n^2) comparison of all note pairs
+4. **Split Connections for Insert** - Transform to individual items
+5. **Store Connection** - INSERT into note_connections (**TABLE MISSING**)
+6. **Generate Network Statistics** - Calculate hub notes, strongest connections
+7. **Store Network Statistics** - INSERT into network_analysis_history
 
 ## Common Patterns
 
@@ -86,18 +94,40 @@ cd workflows/06-connection-network
 
 ## Database Schema
 
-**Table: network_analysis_history**
+**Table: note_connections (DOES NOT EXIST - NEEDS TO BE CREATED)**
+```sql
+CREATE TABLE note_connections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_note_id INTEGER NOT NULL,
+    target_note_id INTEGER NOT NULL,
+    connection_strength REAL,
+    connection_type TEXT,             -- 'concept_based' or 'theme_based'
+    shared_concepts TEXT,             -- JSON array
+    shared_themes TEXT,               -- JSON array
+    concept_overlap_score REAL,
+    theme_overlap_score REAL,
+    temporal_score REAL,
+    days_between INTEGER,
+    discovered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER DEFAULT 1,
+    UNIQUE(source_note_id, target_note_id),
+    FOREIGN KEY (source_note_id) REFERENCES raw_notes(id),
+    FOREIGN KEY (target_note_id) REFERENCES raw_notes(id)
+);
+```
+
+**Table: network_analysis_history (EXISTS)**
 ```sql
 CREATE TABLE network_analysis_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    from_note_id INTEGER NOT NULL,
-    to_note_id INTEGER NOT NULL,
-    connection_strength REAL,        -- 0.0 to 1.0 (similarity score)
-    shared_concepts TEXT,             -- JSON array of overlapping concepts
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    test_run TEXT,
-    FOREIGN KEY (from_note_id) REFERENCES raw_notes(id),
-    FOREIGN KEY (to_note_id) REFERENCES raw_notes(id)
+    analysis_id TEXT UNIQUE NOT NULL,
+    total_notes INTEGER,
+    total_connections INTEGER,
+    avg_connection_strength REAL,
+    concept_based_count INTEGER,
+    theme_based_count INTEGER,
+    network_stats TEXT,               -- JSON object with detailed stats
+    analyzed_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 

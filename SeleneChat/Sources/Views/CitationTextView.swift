@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Type alias for convenience
+typealias ParsedCitation = CitationParser.ParsedCitation
+
 /// View that renders text with clickable inline citations
 struct CitationTextView: View {
     let content: String
@@ -48,7 +51,8 @@ struct CitationTextView: View {
 
     /// Parse content into text segments
     private func parseContent() {
-        let (_, citations) = CitationParser.parse(content)
+        let parseResult = CitationParser.parse(content)
+        let citations = parseResult.citations
 
         var segments: [TextSegment] = []
         var currentIndex = content.startIndex
@@ -160,7 +164,7 @@ struct CitationTextViewClickable: View {
                     Button(action: {
                         handleCitationTap(citation)
                     }) {
-                        Text(citation.displayText)
+                        Text(citation.fullText)
                             .foregroundColor(.blue)
                             .underline()
                     }
@@ -175,7 +179,8 @@ struct CitationTextViewClickable: View {
 
     /// Parse content into text segments
     private func parseContent() {
-        let (_, citations) = CitationParser.parse(content)
+        let parseResult = CitationParser.parse(content)
+        let citations = parseResult.citations
 
         var segments: [TextSegment] = []
         var currentIndex = content.startIndex

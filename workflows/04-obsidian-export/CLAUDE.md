@@ -14,9 +14,11 @@ Exports notes from SQLite to Obsidian vault as markdown files, maintaining backl
 
 ## Key Files
 
-- workflow.json (158 lines) - Main workflow definition
+- workflow.json (158 lines) - Main workflow definition (source of truth)
 - README.md - Export configuration guide
-- docs/STATUS.md - Test results
+- CLAUDE.md - This context file
+- docs/STATUS.md - Test results and current state
+- scripts/test-with-markers.sh - Automated test suite
 
 ## Data Flow
 
@@ -85,11 +87,22 @@ vault/Selene/
 
 ### Run Tests
 ```bash
-cd workflows/04-obsidian-export
-./scripts/test-with-markers.sh
+./workflows/04-obsidian-export/scripts/test-with-markers.sh
 ```
 
-### Validation
+### Test Coverage (10/10 passing)
+- Docker container running
+- Database exists
+- Vault directory exists
+- Export script in container
+- Test note creation
+- Processed note with sentiment
+- Webhook trigger
+- Database update (exported flag)
+- Files in vault
+- Test cleanup
+
+### Manual Validation
 - Check vault/Selene/ for generated files
 - Verify frontmatter YAML is valid
 - Test backlinks open in Obsidian

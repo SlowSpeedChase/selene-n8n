@@ -430,14 +430,18 @@ JOIN raw_notes rn ON pn.raw_note_id = rn.id;
 
 ```
 04-obsidian-export/
+├── workflow.json                             # ADHD-optimized n8n workflow (source of truth)
+├── CLAUDE.md                                 # AI context file
 ├── README.md                                 # This file
-├── workflow.json                             # ADHD-optimized n8n workflow
 ├── docs/
+│   ├── STATUS.md                            # Test results and current state
 │   ├── OBSIDIAN-EXPORT-GUIDE.md             # Complete features guide
 │   ├── OBSIDIAN-EXPORT-SETUP.md             # Setup instructions
 │   ├── OBSIDIAN-EXPORT-COMPARISON.md        # Feature comparison
 │   ├── OBSIDIAN-EXPORT-DOCKER.md            # Docker configuration
 │   └── OBSIDIAN-EXPORT-IMPLEMENTATION.md    # Technical details
+├── scripts/
+│   └── test-with-markers.sh                 # Automated test suite
 └── archive/
     └── workflow-standard.json                # Old simple version
 ```
