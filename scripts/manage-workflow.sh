@@ -206,6 +206,73 @@ select_workflow() {
     echo "$workflow_id"
 }
 
+# Show sync status
+status_workflows() {
+    check_jq
+
+    log_info "Checking workflow sync status..."
+    echo ""
+
+    # Get all workflow directories
+    local workflow_dirs=$(find "$WORKFLOWS_DIR" -maxdepth 1 -type d -name "[0-9]*" | sort)
+
+    # Get all n8n workflows
+    local n8n_data=$(get_n8n_workflows)
+
+    # Collect tracked IDs
+    local tracked_ids=""
+
+    echo "=== Synced Workflows ==="
+    for dir in $workflow_dirs; do
+        if [ -f "$dir/workflow.json" ]; then
+            local name=$(get_workflow_name "$dir")
+            local mapped_id=$(get_mapped_id "$name")
+
+            if [ -n "$mapped_id" ]; then
+                # Check if exists in n8n
+                local n8n_info=$(echo "$n8n_data" | grep "^${mapped_id}|" || true)
+                if [ -n "$n8n_info" ]; then
+                    local active=$(echo "$n8n_info" | cut -d'|' -f3)
+                    local status_icon="inactive"
+                    [ "$active" = "1" ] && status_icon="active"
+                    printf "  %-25s → %s (%s)\n" "$name" "$mapped_id" "$status_icon"
+                    tracked_ids="$tracked_ids $mapped_id"
+                else
+                    printf "  %-25s → %s (NOT IN N8N!)\n" "$name" "$mapped_id"
+                fi
+            else
+                printf "  %-25s → (not mapped)\n" "$name"
+            fi
+        fi
+    done
+
+    echo ""
+    echo "=== Orphaned in n8n (not tracked in git) ==="
+    local orphan_count=0
+    while IFS='|' read -r id name active; do
+        if [ -n "$id" ]; then
+            # Check if this ID is tracked
+            if ! echo "$tracked_ids" | grep -q "$id"; then
+                local status_icon="inactive"
+                [ "$active" = "1" ] && status_icon="ACTIVE"
+                printf "  %-20s  %-30s (%s)\n" "$id" "$name" "$status_icon"
+                orphan_count=$((orphan_count + 1))
+            fi
+        fi
+    done <<< "$n8n_data"
+
+    if [ "$orphan_count" -eq 0 ]; then
+        echo "  (none)"
+    fi
+
+    echo ""
+    echo "=== Summary ==="
+    echo "  Orphaned workflows: $orphan_count"
+    if [ "$orphan_count" -gt 0 ]; then
+        log_warn "Run './scripts/manage-workflow.sh cleanup' to remove orphans"
+    fi
+}
+
 # Show usage
 usage() {
     cat <<EOF
@@ -221,6 +288,7 @@ ${YELLOW}Commands:${NC}
   ${BLUE}import${NC} <file> [--separate]    Import workflow from JSON
   ${BLUE}update${NC} <id> <file>            Update workflow (backup + import)
   ${BLUE}backup-creds${NC} [output]         Export credentials to JSON
+  ${BLUE}status${NC}                        Show sync status and orphaned workflows
 
 ${YELLOW}Examples:${NC}
   # List all workflows
@@ -297,6 +365,9 @@ main() {
             ;;
         backup-creds)
             export_credentials "${2:-}"
+            ;;
+        status)
+            status_workflows
             ;;
         help|--help|-h)
             usage
