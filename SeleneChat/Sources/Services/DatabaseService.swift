@@ -663,9 +663,9 @@ class DatabaseService: ObservableObject {
 
         let query = discussionThreads
             .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
-            .filter(threadStatus == "pending" || threadStatus == "active" || threadStatus == "review")
-            .filter(threadTestRun == nil)
-            .order(threadCreatedAt.desc)
+            .filter(discussionThreads[threadStatus] == "pending" || discussionThreads[threadStatus] == "active" || discussionThreads[threadStatus] == "review")
+            .filter(discussionThreads[threadTestRun] == nil)
+            .order(discussionThreads[threadCreatedAt].desc)
 
         var threads: [DiscussionThread] = []
 
@@ -693,7 +693,7 @@ class DatabaseService: ObservableObject {
 
         let query = discussionThreads
             .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
-            .filter(threadId == Int64(threadIdValue))
+            .filter(discussionThreads[threadId] == Int64(threadIdValue))
 
         guard let row = try db.pluck(query) else {
             return nil
@@ -710,7 +710,7 @@ class DatabaseService: ObservableObject {
         let dateFormatter = ISO8601DateFormatter()
         let now = dateFormatter.string(from: Date())
 
-        let thread = discussionThreads.filter(threadId == Int64(threadIdValue))
+        let thread = discussionThreads.filter(discussionThreads[threadId] == Int64(threadIdValue))
 
         var updates: [Setter] = [threadStatus <- status.rawValue]
 
@@ -730,30 +730,30 @@ class DatabaseService: ObservableObject {
     private func parseThread(from row: Row) throws -> DiscussionThread {
         let dateFormatter = ISO8601DateFormatter()
 
-        // Parse related concepts JSON
+        // Parse related concepts JSON - use table-qualified column access for joined rows
         var conceptsArray: [String]? = nil
-        if let conceptsStr = try? row.get(threadRelatedConcepts),
+        if let conceptsStr = try? row.get(discussionThreads[threadRelatedConcepts]),
            let data = conceptsStr.data(using: .utf8) {
             conceptsArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
-        // Parse thread type
-        let typeStr = try row.get(threadType)
+        // Parse thread type - use table-qualified column access
+        let typeStr = try row.get(discussionThreads[threadType])
         let threadTypeEnum = DiscussionThread.ThreadType(rawValue: typeStr) ?? .planning
 
-        // Parse status
-        let statusStr = try row.get(threadStatus)
+        // Parse status - use table-qualified column access
+        let statusStr = try row.get(discussionThreads[threadStatus])
         let statusEnum = DiscussionThread.Status(rawValue: statusStr) ?? .pending
 
         return DiscussionThread(
-            id: Int(try row.get(threadId)),
-            rawNoteId: Int(try row.get(threadRawNoteId)),
+            id: Int(try row.get(discussionThreads[threadId])),
+            rawNoteId: Int(try row.get(discussionThreads[threadRawNoteId])),
             threadType: threadTypeEnum,
-            prompt: try row.get(threadPrompt),
+            prompt: try row.get(discussionThreads[threadPrompt]),
             status: statusEnum,
-            createdAt: dateFormatter.date(from: try row.get(threadCreatedAt)) ?? Date(),
-            surfacedAt: (try? row.get(threadSurfacedAt)).flatMap { dateFormatter.date(from: $0) },
-            completedAt: (try? row.get(threadCompletedAt)).flatMap { dateFormatter.date(from: $0) },
+            createdAt: dateFormatter.date(from: try row.get(discussionThreads[threadCreatedAt])) ?? Date(),
+            surfacedAt: (try? row.get(discussionThreads[threadSurfacedAt])).flatMap { dateFormatter.date(from: $0) },
+            completedAt: (try? row.get(discussionThreads[threadCompletedAt])).flatMap { dateFormatter.date(from: $0) },
             relatedConcepts: conceptsArray,
             noteTitle: try? row.get(rawNotes[title]),
             noteContent: try? row.get(rawNotes[content])
