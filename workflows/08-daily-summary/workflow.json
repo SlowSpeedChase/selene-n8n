@@ -104,6 +104,34 @@
       "type": "n8n-nodes-base.writeBinaryFile",
       "typeVersion": 1,
       "position": [1700, 350]
+    },
+    {
+      "parameters": {
+        "functionCode": "const markdown = $('Prepare Markdown').item.json.markdown;\n\nconst plainText = markdown\n  .replace(/^#{1,6}\\s+/gm, '')      // Remove header markers\n  .replace(/\\*\\*(.+?)\\*\\*/g, '$1')  // Bold → plain\n  .replace(/\\*(.+?)\\*/g, '$1')      // Italic → plain\n  .replace(/^---$/gm, '')           // Remove horizontal rules\n  .replace(/\\n{3,}/g, '\\n\\n')       // Collapse multiple newlines\n  .trim();\n\nreturn {\n  json: {\n    plainText: plainText\n  }\n};"
+      },
+      "id": "strip-markdown",
+      "name": "Strip Markdown",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1950, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://usetrmnl.com/api/custom_plugins/{{ $env.TRMNL_WEBHOOK_ID }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ merge_variables: { text: $json.plainText } }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "post-to-trmnl",
+      "name": "POST to TRMNL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 350],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -130,6 +158,12 @@
     },
     "Convert to Binary": {
       "main": [[{ "node": "Write to Obsidian", "type": "main", "index": 0 }]]
+    },
+    "Write to Obsidian": {
+      "main": [[{ "node": "Strip Markdown", "type": "main", "index": 0 }]]
+    },
+    "Strip Markdown": {
+      "main": [[{ "node": "POST to TRMNL", "type": "main", "index": 0 }]]
     }
   },
   "settings": {

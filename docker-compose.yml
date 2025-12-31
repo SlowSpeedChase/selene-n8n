@@ -42,6 +42,13 @@ services:
       # Task Runners (recommended for future compatibility)
       - N8N_RUNNERS_ENABLED=true
 
+      # Logging Configuration
+      - N8N_LOG_LEVEL=warn              # error, warn, info, debug (warn = good signal-to-noise)
+      - N8N_LOG_OUTPUT=console,file     # Log to both console and file
+      - N8N_LOG_FILE_LOCATION=/home/node/.n8n/logs/n8n.log
+      - N8N_LOG_FILE_SIZE_MAX=16        # Max 16MB per file
+      - N8N_LOG_FILE_COUNT_MAX=10       # Keep 10 log files (160MB total max)
+
       # Disable telemetry for privacy
       - N8N_DIAGNOSTICS_ENABLED=false
       - N8N_VERSION_NOTIFICATIONS_ENABLED=false
@@ -54,8 +61,8 @@ services:
       # This enables the SQLite node used in workflows 03, 04, 05, 06
       - N8N_COMMUNITY_PACKAGES_INSTALL=n8n-nodes-sqlite
 
-      # Allow better-sqlite3 and crypto in Function nodes
-      - NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3,crypto
+      # Allow better-sqlite3, crypto, fs, and path in Function nodes
+      - NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3,crypto,fs,path
       - NODE_PATH=/home/node/.n8n/node_modules
 
       # Security
@@ -64,6 +71,7 @@ services:
 
       # Custom environment variables for workflows
       - SELENE_DB_PATH=/selene/data/selene.db
+      - TRMNL_WEBHOOK_ID=1f73e060-9d02-4b85-b122-50d7275c7bd9
       - SELENE_ENV=production
       - OBSIDIAN_VAULT_PATH=/obsidian
       - OLLAMA_BASE_URL=http://localhost:11434

@@ -1,6 +1,6 @@
 # 08-Daily-Summary Workflow
 
-Generates a daily executive summary at midnight, combining recent note activity with emerging patterns, and saves it to your Obsidian vault.
+Generates a daily executive summary at midnight, combining recent note activity with emerging patterns. Saves to Obsidian vault and pushes to TRMNL e-ink display.
 
 ## Quick Start
 
@@ -53,8 +53,13 @@ which connect to your ongoing theme of building external memory systems.
 - **Timeout:** 120 seconds
 
 ### Output Path
-- **Directory:** `/obsidian/Daily/`
+- **Directory:** `/obsidian/Selene/Daily/`
 - **Filename:** `YYYY-MM-DD-summary.md`
+
+### TRMNL Integration
+- **Webhook:** `https://usetrmnl.com/api/custom_plugins/{TRMNL_WEBHOOK_ID}`
+- **Format:** Plain text (markdown stripped)
+- **Env var:** `TRMNL_WEBHOOK_ID` in docker-compose.yml
 
 ## Testing
 

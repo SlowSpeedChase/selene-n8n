@@ -19,6 +19,9 @@ WORKDIR /home/node
 # Must be run as root for global installation
 RUN npm install -g better-sqlite3@11.0.0
 
+# Copy custom entrypoint script with executable permissions
+COPY --chmod=755 scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
 # Change ownership of installed packages to node user
 RUN chown -R node:node /home/node
 
@@ -31,6 +34,9 @@ USER node
 
 # Create directory for Selene data
 RUN mkdir -p /home/node/.n8n
+
+# Use custom entrypoint to fix permissions before starting n8n
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Expose n8n port
 EXPOSE 5678

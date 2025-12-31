@@ -18,6 +18,8 @@
 - [x] Ollama generates summary
 - [x] File written to Obsidian
 - [x] Error handling configured
+- [x] TRMNL integration added (Strip Markdown + POST nodes)
+- [x] TRMNL push verified
 
 ---
 
@@ -52,6 +54,11 @@ Daily summaries written to: `/obsidian/Selene/Daily/YYYY-MM-DD-summary.md`
 ---
 
 ## Recent Changes
+
+### 2025-12-31
+- Added TRMNL e-ink display integration
+- Strip Markdown node converts output to plain text
+- POST to TRMNL node sends to webhook
 
 ### 2025-12-30
 - Initial implementation
