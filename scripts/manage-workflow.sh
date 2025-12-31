@@ -273,6 +273,77 @@ status_workflows() {
     fi
 }
 
+# Initialize mapping file from current n8n state
+init_mapping() {
+    check_jq
+
+    log_info "Initializing workflow ID mapping..."
+
+    if [ -f "$MAPPING_FILE" ]; then
+        log_warn "Mapping file already exists: $MAPPING_FILE"
+        read -p "Overwrite? [y/N]: " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Aborted"
+            return 1
+        fi
+    fi
+
+    # Start fresh mapping
+    echo "{}" > "$MAPPING_FILE"
+
+    # Get all workflow directories
+    local workflow_dirs=$(find "$WORKFLOWS_DIR" -maxdepth 1 -type d -name "[0-9]*" | sort)
+
+    # Get all n8n workflows
+    local n8n_data=$(get_n8n_workflows)
+
+    for dir in $workflow_dirs; do
+        if [ -f "$dir/workflow.json" ]; then
+            local name=$(get_workflow_name "$dir")
+            log_step "Finding n8n ID for: $name"
+
+            # Find matching workflows in n8n (match on name pattern)
+            # Use the directory name pattern (e.g., "07-task-extraction" matches "07-Task-Extraction")
+            local prefix=$(echo "$name" | cut -d'-' -f1)  # Get "07" from "07-task-extraction"
+            local matches=$(echo "$n8n_data" | grep "^.*|${prefix}-" || true)
+
+            if [ -z "$matches" ]; then
+                log_warn "  No match found in n8n for: $name"
+                continue
+            fi
+
+            # Count matches
+            local match_count=$(echo "$matches" | wc -l | tr -d ' ')
+
+            if [ "$match_count" -eq 1 ]; then
+                local id=$(echo "$matches" | cut -d'|' -f1)
+                local n8n_name=$(echo "$matches" | cut -d'|' -f2)
+                set_mapped_id "$name" "$id"
+                log_info "  Mapped: $name → $id ($n8n_name)"
+            else
+                # Multiple matches - prefer active one
+                local active_match=$(echo "$matches" | grep "|1$" | head -1)
+                if [ -n "$active_match" ]; then
+                    local id=$(echo "$active_match" | cut -d'|' -f1)
+                    local n8n_name=$(echo "$active_match" | cut -d'|' -f2)
+                    set_mapped_id "$name" "$id"
+                    log_warn "  Multiple matches, using active: $name → $id ($n8n_name)"
+                else
+                    log_error "  Multiple inactive matches for $name - please resolve manually:"
+                    echo "$matches" | while IFS='|' read -r id n8n_name active; do
+                        echo "    $id  $n8n_name"
+                    done
+                fi
+            fi
+        fi
+    done
+
+    echo ""
+    log_info "Mapping file created: $MAPPING_FILE"
+    log_info "Run './scripts/manage-workflow.sh status' to review"
+}
+
 # Show usage
 usage() {
     cat <<EOF
@@ -289,6 +360,7 @@ ${YELLOW}Commands:${NC}
   ${BLUE}update${NC} <id> <file>            Update workflow (backup + import)
   ${BLUE}backup-creds${NC} [output]         Export credentials to JSON
   ${BLUE}status${NC}                        Show sync status and orphaned workflows
+  ${BLUE}init${NC}                          Initialize mapping file from current n8n state
 
 ${YELLOW}Examples:${NC}
   # List all workflows
@@ -368,6 +440,9 @@ main() {
             ;;
         status)
             status_workflows
+            ;;
+        init)
+            init_mapping
             ;;
         help|--help|-h)
             usage
