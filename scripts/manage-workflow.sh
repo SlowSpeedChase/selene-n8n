@@ -375,6 +375,8 @@ sync_single_workflow() {
     # Copy to container and import
     local container_path="/tmp/workflow-import-$$.json"
     docker cp "$tmp_file" "$CONTAINER_NAME:$container_path"
+    # Fix ownership for n8n user (docker cp creates files as root)
+    docker exec -u root "$CONTAINER_NAME" chown node:node "$container_path" 2>/dev/null || true
 
     # Import workflow
     local import_output
@@ -457,6 +459,88 @@ sync_workflows() {
     fi
 }
 
+# Clean up orphaned workflows
+cleanup_workflows() {
+    check_jq
+
+    local force="${1:-}"
+
+    log_info "Finding orphaned workflows..."
+
+    # Get tracked IDs
+    local tracked_ids=$(get_all_tracked_ids)
+
+    # Find orphans
+    local orphans=""
+    local orphan_count=0
+
+    while IFS='|' read -r id name active; do
+        if [ -n "$id" ]; then
+            if ! echo "$tracked_ids" | grep -q "^${id}$"; then
+                orphans="$orphans$id|$name|$active\n"
+                orphan_count=$((orphan_count + 1))
+            fi
+        fi
+    done <<< "$(get_n8n_workflows)"
+
+    if [ "$orphan_count" -eq 0 ]; then
+        log_info "No orphaned workflows found"
+        return 0
+    fi
+
+    echo ""
+    echo "Found $orphan_count orphaned workflows:"
+    echo ""
+    printf "  %-20s  %-35s  %s\n" "ID" "Name" "Status"
+    printf "  %-20s  %-35s  %s\n" "--------------------" "-----------------------------------" "------"
+
+    echo -e "$orphans" | while IFS='|' read -r id name active; do
+        if [ -n "$id" ]; then
+            local status="inactive"
+            [ "$active" = "1" ] && status="ACTIVE"
+            printf "  %-20s  %-35s  %s\n" "$id" "$name" "$status"
+        fi
+    done
+
+    echo ""
+
+    # Check for active workflows
+    local active_count=$(echo -e "$orphans" | grep "|1$" | grep -v "^$" | wc -l | tr -d ' ')
+    if [ "$active_count" -gt 0 ]; then
+        log_warn "$active_count orphaned workflows are ACTIVE"
+        log_warn "Active workflows will NOT be deleted (disable them first)"
+    fi
+
+    # Confirm deletion
+    if [ "$force" != "--force" ]; then
+        read -p "Delete all inactive orphaned workflows? [y/N]: " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Aborted"
+            return 0
+        fi
+    fi
+
+    # Delete orphans (skip active)
+    local deleted=0
+    local failed=0
+    while IFS='|' read -r id name active; do
+        if [ -n "$id" ] && [ "$active" != "1" ]; then
+            log_step "Deleting: $id ($name)"
+            if query_n8n_db "DELETE FROM workflow_entity WHERE id = '$id';"; then
+                log_info "  ✓ Deleted"
+                ((deleted++))
+            else
+                log_error "  Failed to delete"
+                ((failed++))
+            fi
+        fi
+    done < <(echo -e "$orphans")
+
+    echo ""
+    log_info "Cleanup complete: $deleted deleted, $failed failed"
+}
+
 # Show usage
 usage() {
     cat <<EOF
@@ -474,7 +558,8 @@ ${YELLOW}Commands:${NC}
   ${BLUE}backup-creds${NC} [output]         Export credentials to JSON
   ${BLUE}status${NC}                        Show sync status and orphaned workflows
   ${BLUE}init${NC}                          Initialize mapping file from current n8n state
-  ${BLUE}sync${NC} [name]                    Sync workflow(s) from git to n8n
+  ${BLUE}sync${NC} [name]                   Sync workflow(s) from git to n8n
+  ${BLUE}cleanup${NC} [--force]             Delete orphaned workflows from n8n
 
 ${YELLOW}Examples:${NC}
   # List all workflows
@@ -560,6 +645,9 @@ main() {
             ;;
         sync)
             sync_workflows "${2:-}"
+            ;;
+        cleanup)
+            cleanup_workflows "${2:-}"
             ;;
         help|--help|-h)
             usage
