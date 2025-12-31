@@ -344,6 +344,119 @@ init_mapping() {
     log_info "Run './scripts/manage-workflow.sh status' to review"
 }
 
+# Sync a single workflow from git to n8n
+sync_single_workflow() {
+    local workflow_name="${1:-}"
+    if [ -z "$workflow_name" ]; then
+        log_error "Workflow name required"
+        return 1
+    fi
+    local workflow_dir="$WORKFLOWS_DIR/$workflow_name"
+    local workflow_file="$workflow_dir/workflow.json"
+
+    if [ ! -f "$workflow_file" ]; then
+        log_error "Workflow file not found: $workflow_file"
+        return 1
+    fi
+
+    local mapped_id=$(get_mapped_id "$workflow_name")
+    local tmp_file=$(mktemp)
+
+    if [ -n "$mapped_id" ]; then
+        # Update existing: inject ID into workflow JSON
+        log_step "Updating $workflow_name → $mapped_id"
+        jq --arg id "$mapped_id" '.id = $id' "$workflow_file" > "$tmp_file"
+    else
+        # New workflow: import without ID, capture new ID after
+        log_step "Creating new workflow: $workflow_name"
+        cp "$workflow_file" "$tmp_file"
+    fi
+
+    # Copy to container and import
+    local container_path="/tmp/workflow-import-$$.json"
+    docker cp "$tmp_file" "$CONTAINER_NAME:$container_path"
+
+    # Import workflow
+    local import_output
+    import_output=$(docker exec "$CONTAINER_NAME" n8n import:workflow --input="$container_path" 2>&1)
+    local import_status=$?
+
+    # Cleanup temp files
+    rm -f "$tmp_file"
+    docker exec "$CONTAINER_NAME" rm -f "$container_path" 2>/dev/null || true
+
+    if [ $import_status -ne 0 ]; then
+        log_error "Import failed for $workflow_name"
+        echo "$import_output"
+        return 1
+    fi
+
+    # If new workflow, find and save the ID
+    if [ -z "$mapped_id" ]; then
+        # Get workflow name from JSON to find in n8n
+        local json_name=$(jq -r '.name' "$workflow_file")
+        local safe_name="${json_name//\'/\'\'}"  # Escape single quotes for SQLite
+        local new_id=$(query_n8n_db "SELECT id FROM workflow_entity WHERE name = '$safe_name' ORDER BY createdAt DESC LIMIT 1;")
+
+        if [ -n "$new_id" ]; then
+            set_mapped_id "$workflow_name" "$new_id"
+            log_info "  New ID captured: $new_id"
+        else
+            log_warn "  Could not capture new workflow ID"
+        fi
+    fi
+
+    log_info "✓ $workflow_name synced"
+}
+
+# Sync all or specific workflow
+sync_workflows() {
+    check_jq
+
+    local target="${1:-}"
+
+    if [ -n "$target" ]; then
+        # Sync single workflow
+        sync_single_workflow "$target"
+    else
+        # Sync all workflows
+        log_info "Syncing all workflows from git to n8n..."
+        echo ""
+
+        local workflow_dirs=$(find "$WORKFLOWS_DIR" -maxdepth 1 -type d -name "[0-9]*" | sort)
+        local success_count=0
+        local fail_count=0
+
+        for dir in $workflow_dirs; do
+            if [ -f "$dir/workflow.json" ]; then
+                local name=$(get_workflow_name "$dir")
+                if sync_single_workflow "$name"; then
+                    success_count=$((success_count + 1))
+                else
+                    fail_count=$((fail_count + 1))
+                fi
+            fi
+        done
+
+        echo ""
+        log_info "Sync complete: $success_count succeeded, $fail_count failed"
+
+        # Check for orphans
+        local orphan_count=$(get_n8n_workflows | while IFS='|' read -r id name active; do
+            if [ -n "$id" ]; then
+                local tracked=$(get_all_tracked_ids)
+                if ! echo "$tracked" | grep -q "$id"; then
+                    echo "$id"
+                fi
+            fi
+        done | wc -l | tr -d ' ')
+
+        if [ "$orphan_count" -gt 0 ]; then
+            log_warn "$orphan_count orphaned workflows in n8n (run 'status' for details)"
+        fi
+    fi
+}
+
 # Show usage
 usage() {
     cat <<EOF
@@ -361,6 +474,7 @@ ${YELLOW}Commands:${NC}
   ${BLUE}backup-creds${NC} [output]         Export credentials to JSON
   ${BLUE}status${NC}                        Show sync status and orphaned workflows
   ${BLUE}init${NC}                          Initialize mapping file from current n8n state
+  ${BLUE}sync${NC} [name]                    Sync workflow(s) from git to n8n
 
 ${YELLOW}Examples:${NC}
   # List all workflows
@@ -443,6 +557,9 @@ main() {
             ;;
         init)
             init_mapping
+            ;;
+        sync)
+            sync_workflows "${2:-}"
             ;;
         help|--help|-h)
             usage
