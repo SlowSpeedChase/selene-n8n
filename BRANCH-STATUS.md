@@ -41,11 +41,11 @@ This is the foundation of Phase 7, enabling intelligent triage of captured notes
 - [x] Code follows project patterns
 
 ### Testing
-- [ ] Unit tests pass
-- [ ] Integration tests pass (if applicable)
-- [ ] Manual testing completed
-- [ ] Edge cases verified
-- [ ] Verified with superpowers:verification-before-completion
+- [x] Unit tests pass (58 tests: 32 migration + 26 prompt)
+- [~] Integration tests pass (if applicable) - Partial, see notes below
+- [x] Manual testing completed
+- [~] Edge cases verified - Classification edge cases need refinement
+- [x] Verified with superpowers:verification-before-completion
 
 ### Docs
 - [ ] workflow STATUS.md updated (if workflow changed)
@@ -138,4 +138,76 @@ This is the foundation of Phase 7, enabling intelligent triage of captured notes
 
 ## Blocked Items
 
-(None currently)
+### n8n Switch Node Compatibility Issue
+
+The Switch node typeVersion 3 format is not compatible with n8n 1.110.1. Initial workaround attempted (downgrade to typeVersion 2) but still encountering "Could not find property option" errors. The classification is working correctly (Ollama returns correct classifications), but the routing and database updates are not executing.
+
+**Next steps:**
+1. Further investigate n8n node compatibility
+2. Consider alternative routing approach (IF node chain instead of Switch)
+3. Test on newer n8n version if available
+
+---
+
+## Notes
+
+**2025-12-30 - Batch 3 Complete (Tasks 7-8) - Testing Phase**
+
+**Task 7: Test Script Created**
+- Created comprehensive test script at `workflows/07-task-extraction/scripts/test-with-markers.sh`
+- Tests all three classification paths (actionable, needs_planning, archive_only)
+- Added worktree detection for database path resolution
+- Generates unique test_run IDs for cleanup
+- Verifies database state after each test
+
+**Test Script Features:**
+- Dependency checks (n8n, Ollama, Things wrapper, database, migration)
+- Creates test notes with proper raw_notes + processed_notes records
+- Triggers workflow via webhook
+- Verifies classification, discussion_threads, and task_metadata
+- Provides cleanup instructions and optional auto-cleanup
+
+**Task 8: Integration Testing Results**
+
+**Test Results (2025-12-30 19:08):**
+- Test Run ID: test-run-20251230-190844
+- Total Tests: 3
+- Passed: 1 (archive_only path)
+- Failed: 2 (actionable and needs_planning paths)
+- Skipped: 0
+
+**Observations:**
+1. Classification LLM is working correctly:
+   - "Call dentist" classified as `actionable` with confidence 1
+   - "Redesign website" classified as `needs_planning` with confidence 0.9
+   - "Energy levels" classified as `archive_only` with confidence 1
+
+2. Routing issue:
+   - All notes show `archive_only` in database despite correct LLM output
+   - Switch node routing appears to fail silently
+   - No "Update Status" or "Flag for Planning" logs observed
+
+3. n8n compatibility:
+   - Error: "Could not find property option" persists
+   - Attempted fixes: Switch typeVersion 2, simplified SplitOut options
+   - Workflow imports successfully but routing does not execute
+
+**Files Modified (Batch 3):**
+- `workflows/07-task-extraction/scripts/test-with-markers.sh` - Complete test script
+- `workflows/07-task-extraction/workflow.json` - Switch node downgrade attempt
+
+**Workflow State:**
+- Workflow imports and webhook triggers correctly
+- Classification prompt and Ollama call work correctly
+- Parse Classification node works correctly
+- Route by Classification Switch node has compatibility issues
+- Downstream nodes (actionable, needs_planning paths) do not execute
+
+**Recommended Resolution:**
+Replace Switch node with IF node chain:
+```
+Parse Classification
+    -> IF actionable -> Build Task Extraction Prompt -> ...
+    -> IF needs_planning -> Flag for Planning
+    -> (else) Store Classification (Archive)
+```

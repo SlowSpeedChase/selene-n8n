@@ -65,49 +65,41 @@
     },
     {
       "parameters": {
+        "mode": "rules",
         "rules": {
           "rules": [
             {
-              "outputKey": "actionable",
+              "output": 0,
               "conditions": {
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.classification }}",
-                    "rightValue": "actionable",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "value1": "={{ $json.classification }}",
+                    "value2": "actionable",
+                    "operation": "equal"
                   }
                 ]
               }
             },
             {
-              "outputKey": "needs_planning",
+              "output": 1,
               "conditions": {
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.classification }}",
-                    "rightValue": "needs_planning",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "value1": "={{ $json.classification }}",
+                    "value2": "needs_planning",
+                    "operation": "equal"
                   }
                 ]
               }
             }
-          ],
-          "fallbackOutput": {
-            "output": "extra"
-          }
+          ]
         },
-        "options": {}
+        "fallbackOutput": 2
       },
       "id": "route-by-classification",
       "name": "Route by Classification",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
+      "typeVersion": 2,
       "position": [1250, 300]
     },
     {
@@ -150,26 +142,7 @@
     {
       "parameters": {
         "fieldToSplitOut": "tasks",
-        "options": {
-          "include": "selectedOtherFields",
-          "fieldsToInclude": {
-            "fields": [
-              {
-                "fieldName": "raw_note_id"
-              },
-              {
-                "fieldName": "processed_note_id"
-              },
-              {
-                "fieldName": "classification"
-              },
-              {
-                "fieldName": "test_run"
-              }
-            ]
-          },
-          "destinationFieldName": "task"
-        }
+        "options": {}
       },
       "id": "split-tasks",
       "name": "Split Tasks",
@@ -183,7 +156,7 @@
         "url": "http://host.docker.internal:3456/create-task",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  \"title\": $json.task.task_text,\n  \"notes\": \"Extracted from Selene note #\" + $json.task.raw_note_id + \"\\n\\nEnergy: \" + $json.task.energy_required + \"\\nEstimated: \" + $json.task.estimated_minutes + \"min\\nOverwhelm: \" + $json.task.overwhelm_factor + \"/10\\n\\nOriginal note:\\n\" + $json.task.original_note,\n  \"tags\": $json.task.context_tags,\n  \"when\": \"anytime\",\n  \"passthrough\": {\n    \"task\": $json.task,\n    \"raw_note_id\": $json.task.raw_note_id,\n    \"processed_note_id\": $json.task.processed_note_id,\n    \"concepts\": $json.task.concepts,\n    \"themes\": $json.task.themes,\n    \"test_run\": $json.task.test_run\n  }\n} }}",
+        "jsonBody": "={{ {\n  \"title\": $json.task_text,\n  \"notes\": \"Extracted from Selene note #\" + $json.raw_note_id + \"\\n\\nEnergy: \" + $json.energy_required + \"\\nEstimated: \" + $json.estimated_minutes + \"min\\nOverwhelm: \" + $json.overwhelm_factor + \"/10\\n\\nOriginal note:\\n\" + $json.original_note,\n  \"tags\": $json.context_tags,\n  \"when\": \"anytime\",\n  \"passthrough\": {\n    \"task\": $json,\n    \"raw_note_id\": $json.raw_note_id,\n    \"processed_note_id\": $json.processed_note_id,\n    \"concepts\": $json.concepts,\n    \"themes\": $json.themes,\n    \"test_run\": $json.test_run\n  }\n} }}",
         "options": {
           "response": {
             "response": {
