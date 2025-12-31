@@ -1,8 +1,8 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2025-12-30
-**Status:** Phase 1-3 Complete ✅ | Phase 7 Design Revised 📋
+**Last Updated:** 2025-12-31
+**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2 Design Complete 📋
 
 ---
 
@@ -53,14 +53,15 @@ Task extraction with classification - route actionable items to Things:
 
 - **[📋 Phase 7 Roadmap](./docs/roadmap/16-PHASE-7-THINGS.md)** - START HERE: Complete phase documentation
 - **[🎯 Phase 7.1 Design](./docs/plans/2025-12-30-task-extraction-planning-design.md)** - Task Extraction with Classification design
+- **[🗓️ Phase 7.2 Design](./docs/plans/2025-12-31-phase-7.2-selenechat-planning-design.md)** - SeleneChat Planning Integration design
 - **[📊 Metadata Definitions](./docs/architecture/metadata-definitions.md)** - Field specifications for classification
 - **[🏛️ Architecture](./docs/architecture/things-integration.md)** - Technical design and system architecture
 - **[👤 User Stories](./docs/user-stories/things-integration-stories.md)** - User scenarios and acceptance criteria
 - **[🧠 ADHD Features Deep Dive](./docs/planning/adhd-features-integration.md)** - For planning future phases (8+)
 
-**Key Changes (2025-12-30):**
-- Phase 7.1: Task Extraction with Classification (actionable/needs_planning/archive_only)
-- Phase 7.2: SeleneChat Planning Integration
+**Key Changes:**
+- Phase 7.1: Task Extraction with Classification ✅ COMPLETE (2025-12-30)
+- Phase 7.2: SeleneChat Planning Integration 📋 DESIGN COMPLETE (2025-12-31)
 - Phase 7.3: Cloud AI Integration (with sanitization layer)
 - Phase 7.4: Contextual Surfacing (thread continuation)
 
@@ -276,6 +277,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2025-12-31**: Phase 7.2 design complete - SeleneChat Planning Integration with dual AI routing
 - **2025-12-31**: Workflow 08-Daily-Summary completed - Automated daily executive summaries with Ollama
 - **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification, new architectural layers
 - **2025-11-13**: Added SeleneChat Enhancements phase - Chat session summaries to database
