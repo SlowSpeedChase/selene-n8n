@@ -65,19 +65,68 @@
     },
     {
       "parameters": {
-        "functionCode": "// Route based on classification\nconst classification = $json.classification;\nconst rawNoteId = $json.raw_note_id;\n\nconsole.log('[Route by Classification] Classification:', classification, 'raw_note_id:', rawNoteId);\nconsole.log('[Route by Classification] All keys:', Object.keys($json));\n\n// Create a clean data object to pass through\nconst data = {\n  raw_note_id: $json.raw_note_id,\n  processed_note_id: $json.processed_note_id,\n  content: $json.content,\n  tags: $json.tags,\n  concepts: $json.concepts,\n  primary_theme: $json.primary_theme,\n  themes: $json.themes,\n  energy_level: $json.energy_level,\n  emotional_tone: $json.emotional_tone,\n  adhd_markers: $json.adhd_markers,\n  test_run: $json.test_run,\n  classification: classification,\n  classification_confidence: $json.classification_confidence,\n  classification_reasoning: $json.classification_reasoning\n};\n\nconsole.log('[Route by Classification] Passing data with raw_note_id:', data.raw_note_id);\n\n// Multi-output routing:\n// Output 0: actionable\n// Output 1: needs_planning\n// Output 2: archive_only\n\nif (classification === 'actionable') {\n  return [[{json: data}], [], []];\n} else if (classification === 'needs_planning') {\n  return [[], [{json: data}], []];\n} else {\n  // archive_only or unknown defaults to archive\n  return [[], [], [{json: data}]];\n}",
-        "outputs": 3
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "actionable",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "actionable"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "needs_planning",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "needs_planning"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "archive_only",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "archive_only"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "id": "route-classification",
       "name": "Route by Classification",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [1250, 300],
-      "outputs": ["main", "main", "main"]
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1250, 300]
     },
     {
       "parameters": {
-        "functionCode": "// Unwrap input data (multi-output routing workaround)\nlet note = $input.item.json;\nif (Array.isArray(note)) {\n  note = note[0];\n}\nif (note && note.json) {\n  note = note.json;\n}\n\n// Guard: Only process if this is an actionable note\nif (!note || note.classification !== 'actionable') {\n  console.log('[Build Task Extraction Prompt] Skipping - not actionable:', note ? note.classification : 'no data');\n  return [];\n}\n\nconsole.log('[Build Task Extraction Prompt] Processing actionable note:', note.raw_note_id);\n\n// Build prompt - note has already been classified as actionable\nconst prompt = `You are a task extraction assistant for an ADHD-optimized productivity system.\n\nThis note has already been classified as ACTIONABLE, meaning it contains clear, specific tasks.\nExtract all actionable tasks from this note.\n\nINPUT:\nNote Content: ${note.content || ''}\nEnergy Level: ${note.energy_level || 'unknown'}\nConcepts: ${note.concepts || '[]'}\nThemes: ${note.primary_theme || 'general'}\nEmotional Tone: ${note.emotional_tone || 'neutral'}\nADHD Markers: ${note.adhd_markers || 'none'}\nClassification Reasoning: ${note.classification_reasoning || 'Classified as actionable'}\n\nINSTRUCTIONS:\n1. Extract ALL actionable tasks (things the person can DO)\n2. Each task should be specific and start with a verb\n3. Tasks should be completable in a single session\n4. Do NOT extract vague goals - those would be \"needs_planning\"\n\nFor each task, provide:\n- task_text: Clear, actionable description (start with verb, <80 characters)\n- energy_required: high/medium/low\n  * high = creative work, learning, complex decisions, writing\n  * medium = routine work, communication, light planning\n  * low = organizing, simple responses, filing, sorting\n- estimated_minutes: 5, 15, 30, 60, 120, or 240\n  * Be realistic, ADHD users often underestimate\n  * Add 25% buffer to initial estimates\n- task_type: action/decision/research/communication/learning/planning\n- context_tags: Array of relevant contexts (max 3)\n  * Common: work, personal, home, creative, technical, social, urgent, deadline\n- overwhelm_factor: 1-10 (how overwhelming this might feel)\n  * 1-3 = Simple, clear, quick\n  * 4-6 = Moderate complexity or time\n  * 7-8 = Complex but doable\n  * 9-10 = Should have been needs_planning\n\nOUTPUT FORMAT (JSON only, no explanation):\n[\n  {\n    \"task_text\": \"Write project proposal draft\",\n    \"energy_required\": \"high\",\n    \"estimated_minutes\": 60,\n    \"task_type\": \"action\",\n    \"context_tags\": [\"work\", \"writing\"],\n    \"overwhelm_factor\": 6\n  }\n]\n\nIf somehow no tasks found: []\n\nBEGIN EXTRACTION:`;\n\nreturn {\n  json: {\n    ...note,\n    prompt_text: prompt\n  }\n};"
+        "functionCode": "const note = $input.item.json;\n\nconsole.log('[Build Task Extraction Prompt] Processing actionable note:', note.raw_note_id);\n\n// Build prompt - Switch node already routed only actionable notes here\nconst prompt = `You are a task extraction assistant for an ADHD-optimized productivity system.\n\nThis note has already been classified as ACTIONABLE, meaning it contains clear, specific tasks.\nExtract all actionable tasks from this note.\n\nINPUT:\nNote Content: ${note.content || ''}\nEnergy Level: ${note.energy_level || 'unknown'}\nConcepts: ${note.concepts || '[]'}\nThemes: ${note.primary_theme || 'general'}\nEmotional Tone: ${note.emotional_tone || 'neutral'}\nADHD Markers: ${note.adhd_markers || 'none'}\nClassification Reasoning: ${note.classification_reasoning || 'Classified as actionable'}\n\nINSTRUCTIONS:\n1. Extract ALL actionable tasks (things the person can DO)\n2. Each task should be specific and start with a verb\n3. Tasks should be completable in a single session\n4. Do NOT extract vague goals - those would be \"needs_planning\"\n\nFor each task, provide:\n- task_text: Clear, actionable description (start with verb, <80 characters)\n- energy_required: high/medium/low\n  * high = creative work, learning, complex decisions, writing\n  * medium = routine work, communication, light planning\n  * low = organizing, simple responses, filing, sorting\n- estimated_minutes: 5, 15, 30, 60, 120, or 240\n  * Be realistic, ADHD users often underestimate\n  * Add 25% buffer to initial estimates\n- task_type: action/decision/research/communication/learning/planning\n- context_tags: Array of relevant contexts (max 3)\n  * Common: work, personal, home, creative, technical, social, urgent, deadline\n- overwhelm_factor: 1-10 (how overwhelming this might feel)\n  * 1-3 = Simple, clear, quick\n  * 4-6 = Moderate complexity or time\n  * 7-8 = Complex but doable\n  * 9-10 = Should have been needs_planning\n\nOUTPUT FORMAT (JSON only, no explanation):\n[\n  {\n    \"task_text\": \"Write project proposal draft\",\n    \"energy_required\": \"high\",\n    \"estimated_minutes\": 60,\n    \"task_type\": \"action\",\n    \"context_tags\": [\"work\", \"writing\"],\n    \"overwhelm_factor\": 6\n  }\n]\n\nIf somehow no tasks found: []\n\nBEGIN EXTRACTION:`;\n\nreturn {\n  json: {\n    ...note,\n    prompt_text: prompt\n  }\n};"
       },
       "id": "build-prompt",
       "name": "Build Task Extraction Prompt",
@@ -125,17 +174,38 @@
     },
     {
       "parameters": {
-        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst task = $input.item.json;\n\nconsole.log('[Write Things Task] Processing task:', task.task_text);\nconsole.log('[Write Things Task] raw_note_id:', task.raw_note_id);\n\nconst timestamp = Date.now();\nconst random = Math.floor(Math.random() * 10000);\nconst filename = `task-${task.raw_note_id}-${timestamp}-${random}.json`;\n\nconst thingsTask = {\n  title: task.task_text,\n  notes: `Extracted from Selene note #${task.raw_note_id}\\n\\nEnergy: ${task.energy_required}\\nEstimated: ${task.estimated_minutes}min\\nOverwhelm: ${task.overwhelm_factor}/10\\nType: ${task.task_type}\\n\\nOriginal note:\\n${(task.original_note || '').substring(0, 500)}`,\n  tags: task.context_tags || [],\n  selene_metadata: {\n    raw_note_id: task.raw_note_id,\n    processed_note_id: task.processed_note_id,\n    energy_required: task.energy_required,\n    estimated_minutes: task.estimated_minutes,\n    overwhelm_factor: task.overwhelm_factor,\n    task_type: task.task_type,\n    concepts: task.concepts,\n    themes: task.themes,\n    test_run: task.test_run\n  }\n};\n\nconst pendingDir = '/obsidian/things-pending';\nconst filePath = path.join(pendingDir, filename);\n\ntry {\n  if (!fs.existsSync(pendingDir)) {\n    fs.mkdirSync(pendingDir, { recursive: true });\n  }\n  fs.writeFileSync(filePath, JSON.stringify(thingsTask, null, 2));\n  console.log('[Write Things Task] Wrote file:', filePath);\n} catch (err) {\n  console.error('[Write Things Task] Error writing file:', err.message);\n  throw err;\n}\n\nreturn {\n  json: {\n    task: task,\n    raw_note_id: task.raw_note_id,\n    processed_note_id: task.processed_note_id,\n    things_file: filename,\n    concepts: task.concepts,\n    themes: task.themes,\n    test_run: task.test_run\n  }\n};"
+        "functionCode": "const task = $input.item.json;\n\nconsole.log('[Prepare Things Task] Processing task:', task.task_text);\nconsole.log('[Prepare Things Task] raw_note_id:', task.raw_note_id);\n\nconst timestamp = Date.now();\nconst random = Math.floor(Math.random() * 10000);\nconst filename = `task-${task.raw_note_id}-${timestamp}-${random}.json`;\n\nconst thingsTask = {\n  title: task.task_text,\n  notes: `Extracted from Selene note #${task.raw_note_id}\\n\\nEnergy: ${task.energy_required}\\nEstimated: ${task.estimated_minutes}min\\nOverwhelm: ${task.overwhelm_factor}/10\\nType: ${task.task_type}\\n\\nOriginal note:\\n${(task.original_note || '').substring(0, 500)}`,\n  tags: task.context_tags || [],\n  selene_metadata: {\n    raw_note_id: task.raw_note_id,\n    processed_note_id: task.processed_note_id,\n    energy_required: task.energy_required,\n    estimated_minutes: task.estimated_minutes,\n    overwhelm_factor: task.overwhelm_factor,\n    task_type: task.task_type,\n    concepts: task.concepts,\n    themes: task.themes,\n    test_run: task.test_run\n  }\n};\n\nconst filePath = `/obsidian/things-pending/${filename}`;\nconst fileContent = JSON.stringify(thingsTask, null, 2);\n\nconsole.log('[Prepare Things Task] Will write to:', filePath);\n\nreturn {\n  json: {\n    task: task,\n    raw_note_id: task.raw_note_id,\n    processed_note_id: task.processed_note_id,\n    things_file: filename,\n    file_path: filePath,\n    file_content: fileContent,\n    concepts: task.concepts,\n    themes: task.themes,\n    test_run: task.test_run\n  }\n};"
       },
-      "id": "create-things-task",
-      "name": "Write Things Task File",
+      "id": "prepare-things-task",
+      "name": "Prepare Things Task",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [2250, 100]
     },
     {
       "parameters": {
-        "functionCode": "const db = require('better-sqlite3')('/selene/data/selene.db');\n\ntry {\n  // Debug: Log all available data\n  console.log('[Store Task] $json:', JSON.stringify($json, null, 2));\n  console.log('[Store Task] $input.item.json:', JSON.stringify($input.item.json, null, 2));\n\n  // Try to get data from input item (from Write Things Task File node)\n  const inputData = $input.item.json;\n  console.log('[Store Task] Input keys:', Object.keys(inputData || {}));\n\n  // Reference data from wherever it is\n  let task, rawNoteId, processedNoteId, concepts, themes, testRun, thingsFile;\n  if (inputData.task) {\n    // Data came through properly from Write Things Task File node\n    task = inputData.task;\n    rawNoteId = inputData.raw_note_id || inputData.task.raw_note_id;\n    processedNoteId = inputData.processed_note_id || inputData.task.processed_note_id;\n    concepts = inputData.concepts || inputData.task.concepts;\n    themes = inputData.themes || inputData.task.themes;\n    testRun = inputData.test_run || inputData.task.test_run;\n    thingsFile = inputData.things_file;\n  } else {\n    console.error('[Store Task] ERROR: Could not find task data!');\n    throw new Error('Task data not found in input');\n  }\n\n  console.log('[Store Task] Got data:', { rawNoteId, taskText: task?.task_text, thingsFile });\n\n  // Generate simple unique ID without crypto module\n  const generateUniqueId = () => {\n    const timestamp = Date.now();\n    const random = Math.floor(Math.random() * 1000000);\n    return `selene-${timestamp}-${random}`;\n  };\n\n  // Use things_file as the identifier, or generate one if missing\n  const finalThingsTaskId = thingsFile || generateUniqueId();\n\n  console.log('[Store Task] Things task_id (from file):', finalThingsTaskId);\n\n  // Check if task_metadata table exists, create if not\n  const tableExists = db.prepare(`\n    SELECT name FROM sqlite_master WHERE type='table' AND name='task_metadata'\n  `).get();\n\n  if (!tableExists) {\n    db.prepare(`\n      CREATE TABLE task_metadata (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        raw_note_id INTEGER NOT NULL,\n        things_task_id TEXT,\n        energy_required TEXT,\n        estimated_minutes INTEGER,\n        related_concepts TEXT,\n        related_themes TEXT,\n        overwhelm_factor INTEGER,\n        task_type TEXT,\n        context_tags TEXT,\n        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n        test_run TEXT,\n        FOREIGN KEY (raw_note_id) REFERENCES raw_notes(id)\n      )\n    `).run();\n  }\n\n  db.prepare(`\n    INSERT INTO task_metadata (\n      raw_note_id, things_task_id, energy_required, estimated_minutes,\n      related_concepts, related_themes, overwhelm_factor, task_type, context_tags, test_run\n    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  `).run(\n    rawNoteId,\n    finalThingsTaskId,\n    task.energy_required,\n    task.estimated_minutes,\n    JSON.stringify(concepts || []),\n    JSON.stringify(themes || []),\n    task.overwhelm_factor,\n    task.task_type,\n    JSON.stringify(task.context_tags || []),\n    testRun || null\n  );\n\n  console.log('[Store Task] Successfully stored task metadata for note', rawNoteId);\n\n  return {\n    json: {\n      raw_note_id: rawNoteId,\n      processed_note_id: processedNoteId,\n      things_task_id: finalThingsTaskId,\n      task_text: task.task_text,\n      test_run: testRun\n    }\n  };\n} finally {\n  db.close();\n}"
+        "functionCode": "// Convert string to binary for writeBinaryFile node\nconst inputData = $input.item.json;\n\nconsole.log('[Write Things File] Input keys:', Object.keys(inputData));\n\nconst filePath = inputData.file_path;\nconst fileContent = inputData.file_content;\n\nconsole.log('[Write Things File] Preparing file:', filePath);\n\n// Convert the string content to binary (Buffer)\nconst binaryData = Buffer.from(fileContent, 'utf8');\n\nreturn {\n  json: {\n    ...inputData,\n    file_prepared: true\n  },\n  binary: {\n    data: {\n      data: binaryData.toString('base64'),\n      mimeType: 'application/json',\n      fileName: inputData.things_file\n    }\n  }\n};"
+      },
+      "id": "prepare-binary",
+      "name": "Prepare Binary Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2350, 100]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ $json.file_path }}",
+        "options": {}
+      },
+      "id": "write-things-file",
+      "name": "Write Things File",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [2450, 100]
+    },
+    {
+      "parameters": {
+        "functionCode": "const db = require('better-sqlite3')('/selene/data/selene.db');\n\ntry {\n  // Get data from Prepare Things Task node (Write Things File node replaces the json)\n  const preparedData = $('Prepare Things Task').first().json;\n  console.log('[Store Task] preparedData keys:', Object.keys(preparedData || {}));\n\n  const task = preparedData.task;\n  const rawNoteId = preparedData.raw_note_id;\n  const processedNoteId = preparedData.processed_note_id;\n  const concepts = preparedData.concepts;\n  const themes = preparedData.themes;\n  const testRun = preparedData.test_run;\n  const thingsFile = preparedData.things_file;\n\n  console.log('[Store Task] Got data:', { rawNoteId, taskText: task?.task_text, thingsFile });\n\n  // Generate simple unique ID without crypto module\n  const generateUniqueId = () => {\n    const timestamp = Date.now();\n    const random = Math.floor(Math.random() * 1000000);\n    return `selene-${timestamp}-${random}`;\n  };\n\n  // Use things_file as the identifier, or generate one if missing\n  const finalThingsTaskId = thingsFile || generateUniqueId();\n\n  console.log('[Store Task] Things task_id (from file):', finalThingsTaskId);\n\n  // Check if task_metadata table exists, create if not\n  const tableExists = db.prepare(`\n    SELECT name FROM sqlite_master WHERE type='table' AND name='task_metadata'\n  `).get();\n\n  if (!tableExists) {\n    db.prepare(`\n      CREATE TABLE task_metadata (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        raw_note_id INTEGER NOT NULL,\n        things_task_id TEXT,\n        energy_required TEXT,\n        estimated_minutes INTEGER,\n        related_concepts TEXT,\n        related_themes TEXT,\n        overwhelm_factor INTEGER,\n        task_type TEXT,\n        context_tags TEXT,\n        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n        test_run TEXT,\n        FOREIGN KEY (raw_note_id) REFERENCES raw_notes(id)\n      )\n    `).run();\n  }\n\n  db.prepare(`\n    INSERT INTO task_metadata (\n      raw_note_id, things_task_id, energy_required, estimated_minutes,\n      related_concepts, related_themes, overwhelm_factor, task_type, context_tags, test_run\n    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  `).run(\n    rawNoteId,\n    finalThingsTaskId,\n    task.energy_required,\n    task.estimated_minutes,\n    JSON.stringify(concepts || []),\n    JSON.stringify(themes || []),\n    task.overwhelm_factor,\n    task.task_type,\n    JSON.stringify(task.context_tags || []),\n    testRun || null\n  );\n\n  console.log('[Store Task] Successfully stored task metadata for note', rawNoteId);\n\n  return {\n    json: {\n      raw_note_id: rawNoteId,\n      processed_note_id: processedNoteId,\n      things_task_id: finalThingsTaskId,\n      task_text: task.task_text,\n      test_run: testRun\n    }\n  };\n} finally {\n  db.close();\n}"
       },
       "id": "store-metadata",
       "name": "Store Task Metadata",
@@ -155,7 +225,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Unwrap input data (multi-output routing workaround)\nlet data = $input.item.json;\nif (Array.isArray(data)) {\n  data = data[0];\n}\nif (data && data.json) {\n  data = data.json;\n}\n\n// Guard: Only process if this is a needs_planning note\nif (!data || data.classification !== 'needs_planning') {\n  console.log('[Flag for Planning] Skipping - not needs_planning:', data ? data.classification : 'no data');\n  return [];\n}\n\nconst db = require('better-sqlite3')('/selene/data/selene.db');\n\ntry {\n  const rawNoteId = data.raw_note_id;\n  const processedNoteId = data.processed_note_id;\n  const testRun = data.test_run;\n  const content = data.content;\n  const concepts = data.concepts;\n  const classificationReasoning = data.classification_reasoning;\n\n  console.log('[Flag for Planning] Processing note', rawNoteId);\n\n  // Update processed_notes with classification and planning_status\n  db.prepare(`\n    UPDATE processed_notes\n    SET classification = 'needs_planning',\n        planning_status = 'pending_review'\n    WHERE id = ? OR raw_note_id = ?\n  `).run(processedNoteId, rawNoteId);\n\n  // Get processed_note_id if not already available\n  let pnId = processedNoteId;\n  if (!pnId) {\n    const row = db.prepare('SELECT id FROM processed_notes WHERE raw_note_id = ?').get(rawNoteId);\n    pnId = row ? row.id : null;\n  }\n\n  // Create discussion thread for SeleneChat (Phase 7.2 prep)\n  // Generate a planning prompt based on the note content\n  const planningPrompt = `This note needs breakdown into actionable tasks: \"${(content || '').substring(0, 200)}...\"`;\n\n  db.prepare(`\n    INSERT INTO discussion_threads (raw_note_id, thread_type, prompt, status, related_concepts, test_run)\n    VALUES (?, 'planning', ?, 'pending', ?, ?)\n  `).run(\n    rawNoteId,\n    planningPrompt,\n    JSON.stringify(concepts || []),\n    testRun || null\n  );\n\n  console.log('[Flag for Planning] Created discussion thread for note', rawNoteId);\n\n  return {\n    json: {\n      success: true,\n      raw_note_id: rawNoteId,\n      processed_note_id: pnId,\n      classification: 'needs_planning',\n      planning_status: 'pending_review',\n      discussion_thread_created: true,\n      test_run: testRun\n    }\n  };\n} finally {\n  db.close();\n}"
+        "functionCode": "const data = $input.item.json;\nconst db = require('better-sqlite3')('/selene/data/selene.db');\n\ntry {\n  const rawNoteId = data.raw_note_id;\n  const processedNoteId = data.processed_note_id;\n  const testRun = data.test_run;\n  const content = data.content;\n  const concepts = data.concepts;\n  const classificationReasoning = data.classification_reasoning;\n\n  console.log('[Flag for Planning] Processing needs_planning note', rawNoteId);\n\n  // Update processed_notes with classification and planning_status\n  db.prepare(`\n    UPDATE processed_notes\n    SET classification = 'needs_planning',\n        planning_status = 'pending_review'\n    WHERE id = ? OR raw_note_id = ?\n  `).run(processedNoteId, rawNoteId);\n\n  // Get processed_note_id if not already available\n  let pnId = processedNoteId;\n  if (!pnId) {\n    const row = db.prepare('SELECT id FROM processed_notes WHERE raw_note_id = ?').get(rawNoteId);\n    pnId = row ? row.id : null;\n  }\n\n  // Create discussion thread for SeleneChat (Phase 7.2 prep)\n  // Generate a planning prompt based on the note content\n  const planningPrompt = `This note needs breakdown into actionable tasks: \"${(content || '').substring(0, 200)}...\"`;\n\n  db.prepare(`\n    INSERT INTO discussion_threads (raw_note_id, thread_type, prompt, status, related_concepts, test_run)\n    VALUES (?, 'planning', ?, 'pending', ?, ?)\n  `).run(\n    rawNoteId,\n    planningPrompt,\n    JSON.stringify(concepts || []),\n    testRun || null\n  );\n\n  console.log('[Flag for Planning] Created discussion thread for note', rawNoteId);\n\n  return {\n    json: {\n      success: true,\n      raw_note_id: rawNoteId,\n      processed_note_id: pnId,\n      classification: 'needs_planning',\n      planning_status: 'pending_review',\n      discussion_thread_created: true,\n      test_run: testRun\n    }\n  };\n} finally {\n  db.close();\n}"
       },
       "id": "flag-for-planning",
       "name": "Flag for Planning",
@@ -165,7 +235,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Unwrap input data (multi-output routing workaround)\nlet data = $input.item.json;\nif (Array.isArray(data)) {\n  data = data[0];\n}\nif (data && data.json) {\n  data = data.json;\n}\n\n// Guard: Only process if this is an archive_only note\nif (!data || data.classification !== 'archive_only') {\n  console.log('[Store Classification] Skipping - not archive_only:', data ? data.classification : 'no data');\n  return [];\n}\n\nconst db = require('better-sqlite3')('/selene/data/selene.db');\n\ntry {\n  const rawNoteId = data.raw_note_id;\n  const processedNoteId = data.processed_note_id;\n  const classification = data.classification;\n  const confidence = data.classification_confidence;\n  const testRun = data.test_run;\n\n  console.log('[Store Classification] Processing note', rawNoteId);\n\n  // Update processed_notes with classification only (archive_only path)\n  db.prepare(`\n    UPDATE processed_notes\n    SET classification = 'archive_only',\n        planning_status = NULL\n    WHERE id = ? OR raw_note_id = ?\n  `).run(processedNoteId, rawNoteId);\n\n  console.log('[Store Classification] Updated note', rawNoteId, 'as archive_only');\n\n  return {\n    json: {\n      success: true,\n      raw_note_id: rawNoteId,\n      processed_note_id: processedNoteId,\n      classification: 'archive_only',\n      classification_stored: true,\n      test_run: testRun\n    }\n  };\n} finally {\n  db.close();\n}"
+        "functionCode": "const data = $input.item.json;\nconst db = require('better-sqlite3')('/selene/data/selene.db');\n\ntry {\n  const rawNoteId = data.raw_note_id;\n  const processedNoteId = data.processed_note_id;\n  const testRun = data.test_run;\n\n  console.log('[Store Classification] Processing archive_only note', rawNoteId);\n\n  // Update processed_notes with classification only (archive_only path)\n  db.prepare(`\n    UPDATE processed_notes\n    SET classification = 'archive_only',\n        planning_status = NULL\n    WHERE id = ? OR raw_note_id = ?\n  `).run(processedNoteId, rawNoteId);\n\n  console.log('[Store Classification] Updated note', rawNoteId, 'as archive_only');\n\n  return {\n    json: {\n      success: true,\n      raw_note_id: rawNoteId,\n      processed_note_id: processedNoteId,\n      classification: 'archive_only',\n      classification_stored: true,\n      test_run: testRun\n    }\n  };\n} finally {\n  db.close();\n}"
       },
       "id": "store-classification",
       "name": "Store Classification (Archive)",
@@ -207,9 +277,15 @@
       "main": [[{ "node": "Split Tasks", "type": "main", "index": 0 }]]
     },
     "Split Tasks": {
-      "main": [[{ "node": "Write Things Task File", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Prepare Things Task", "type": "main", "index": 0 }]]
     },
-    "Write Things Task File": {
+    "Prepare Things Task": {
+      "main": [[{ "node": "Prepare Binary Data", "type": "main", "index": 0 }]]
+    },
+    "Prepare Binary Data": {
+      "main": [[{ "node": "Write Things File", "type": "main", "index": 0 }]]
+    },
+    "Write Things File": {
       "main": [[{ "node": "Store Task Metadata", "type": "main", "index": 0 }]]
     },
     "Store Task Metadata": {
