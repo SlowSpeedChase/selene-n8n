@@ -162,8 +162,8 @@ run_classification_test() {
         -d "{\"raw_note_id\": $note_id, \"test_run\": \"$TEST_RUN\"}" 2>&1)
 
     # Wait for processing (Ollama can take 5-15 seconds)
-    echo "Waiting for classification (10 seconds)..."
-    sleep 10
+    echo "Waiting for classification (15 seconds)..."
+    sleep 15
 
     # Check classification result
     local classification=$(sqlite3 "$DB_PATH" "SELECT classification FROM processed_notes WHERE raw_note_id = $note_id;" 2>/dev/null || echo "")
