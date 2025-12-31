@@ -178,6 +178,7 @@ struct PlanningConversationView: View {
     @State private var isProcessing = false
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
+    @State private var isContextExpanded = false
     @FocusState private var isInputFocused: Bool
 
     private let claudeService = ClaudeAPIService.shared
@@ -265,22 +266,89 @@ struct PlanningConversationView: View {
     }
 
     private var noteContextCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let title = thread.noteTitle {
-                Text(title)
-                    .font(.headline)
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            // Header - always visible
+            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isContextExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "doc.text")
+                        .foregroundColor(.accentColor)
 
-            if let content = thread.noteContent {
-                Text(content)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Original Note")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        if let title = thread.noteTitle {
+                            Text(title)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                        } else {
+                            Text("Untitled Note")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .italic()
+                        }
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isContextExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+
+            // Expandable content
+            if isContextExpanded {
+                Divider()
+                    .padding(.horizontal)
+
+                if let content = thread.noteContent {
+                    ScrollView {
+                        Text(content)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                    }
+                    .frame(maxHeight: 200)
+                } else {
+                    Text("No content available")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .italic()
+                        .padding()
+                }
+
+                // Related concepts if available
+                if let concepts = thread.relatedConcepts, !concepts.isEmpty {
+                    Divider()
+                        .padding(.horizontal)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(concepts, id: \.self) { concept in
+                                Text(concept)
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.accentColor.opacity(0.1))
+                                    .cornerRadius(4)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
+                }
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.accentColor.opacity(0.05))
+        .background(Color(NSColor.controlBackgroundColor))
     }
 
     private var inputArea: some View {
