@@ -14,20 +14,31 @@ Uses Ollama (mistral:7b) to extract concepts, themes, and keywords from notes in
 
 ## Key Files
 
-- workflow.json (293 lines) - Main workflow definition
-- docs/LLM-PROCESSING-STATUS.md - Current implementation state
+- workflow.json - Main workflow definition (webhook-triggered)
+- docs/STATUS.md - Test results and current state
 - docs/OLLAMA-SETUP.md - LLM model setup guide
 - docs/QUEUE-MANAGEMENT.md - Processing queue details
 - docs/LLM-PROCESSING-REFERENCE.md - Technical reference
+- scripts/test-with-markers.sh - Automated test suite
+- scripts/reset-stuck-notes.sh - Reset processing state
+
+## Trigger
+
+**Webhook:** `POST http://localhost:5678/webhook/api/process-note`
+**Payload:** `{"noteId": <integer>}`
 
 ## Data Flow
 
-1. **Query Raw Notes** - SELECT unprocessed notes from raw_notes (status = NULL or 'pending')
-2. **Prepare Prompt** - Format note content for LLM extraction
-3. **Call Ollama API** - POST to http://localhost:11434/api/generate
-4. **Parse Response** - Extract concepts, themes, keywords from JSON
-5. **Store Results** - INSERT into processed_notes with extracted data
-6. **Update Status** - Mark note as 'completed' or 'failed'
+1. **Receive Webhook** - Get noteId from POST payload
+2. **Lock Note** - Mark as 'processing' to prevent duplicates
+3. **Build Concept Prompt** - Detect note type, create context-aware prompt
+4. **Call Ollama** - POST to http://host.docker.internal:11434/api/generate
+5. **Parse Concepts** - Extract concepts with confidence scores
+6. **Build Theme Prompt** - Create theme detection prompt
+7. **Call Ollama** - Detect primary and secondary themes
+8. **Parse Themes** - Extract themes with confidence
+9. **Update Database** - INSERT to processed_notes, UPDATE raw_notes status
+10. **Trigger Sentiment** - Call sentiment analysis webhook
 
 ## Common Patterns
 
@@ -112,11 +123,15 @@ CREATE TABLE processed_notes (
 
 ## Known Issues
 
-1. **Ollama Timeout on Long Notes** - Notes >5000 chars may timeout
+1. **No HTTP Error Response for Invalid Notes**
+   - Workflow throws internal error but returns HTTP 200
+   - Workaround: Check database status after calling webhook
+
+2. **Ollama Timeout on Long Notes** - Notes >5000 chars may timeout
    - Workaround: Truncate or chunk long notes
 
-2. **JSON Parse Failures** - LLM sometimes returns invalid JSON
-   - Current handling: Log and mark as 'parse_error'
+3. **JSON Parse Failures** - LLM sometimes returns invalid JSON
+   - Current handling: Fallback parsing attempts
 
 ## Related Context
 
