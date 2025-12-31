@@ -52,3 +52,6 @@ vault/.obsidian/workspace.json
 
 # Test files
 test_persistence.swift
+
+# Workflow ID mapping (environment-specific)
+.workflow-ids.json

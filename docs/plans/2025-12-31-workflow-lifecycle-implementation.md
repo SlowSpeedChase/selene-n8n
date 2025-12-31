@@ -1,51 +1,60 @@
-#!/bin/bash
-# Script Purpose: Manage n8n workflows via CLI (export, import, list)
-# Usage: ./scripts/manage-workflow.sh [command] [options]
+# Workflow Lifecycle Management Implementation Plan
 
-set -e  # Exit on error
-set -u  # Exit on undefined variable
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-# Color output for readability
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'  # No Color
+**Goal:** Implement git-first workflow management to prevent n8n database clutter with sync, status, cleanup, and init commands.
 
-# Configuration
-CONTAINER_NAME="selene-n8n"
-WORKFLOWS_DIR="./workflows"
+**Architecture:** Enhance `scripts/manage-workflow.sh` with new commands. Use `.workflow-ids.json` mapping file (gitignored) to track n8n IDs. Sync injects IDs into workflow JSON before import to enable in-place updates.
 
-# Dev mode flag
-DEV_MODE=false
-DEV_CONTAINER_NAME="selene-n8n-dev"
+**Tech Stack:** Bash, jq (JSON manipulation), SQLite (n8n database queries), Docker exec for n8n CLI
 
-# Helper functions
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+**Design Doc:** `docs/plans/2025-12-31-workflow-lifecycle-management-design.md`
+
+---
+
+## Task 1: Setup - Add Mapping File Template and Gitignore
+
+**Files:**
+- Create: `.workflow-ids.example.json`
+- Modify: `.gitignore`
+
+**Step 1: Create example mapping file**
+
+Create `.workflow-ids.example.json`:
+```json
+{
+  "_comment": "Copy to .workflow-ids.json and populate with your n8n workflow IDs",
+  "01-ingestion": "your-n8n-id-here",
+  "02-llm-processing": "your-n8n-id-here"
 }
+```
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+**Step 2: Add .workflow-ids.json to gitignore**
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
+Add to `.gitignore`:
+```
+# Workflow ID mapping (environment-specific)
+.workflow-ids.json
+```
 
-log_step() {
-    echo -e "${BLUE}[STEP]${NC} $1"
-}
+**Step 3: Commit**
 
-# Check if container is running
-check_container() {
-    if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        log_error "Container '${CONTAINER_NAME}' is not running"
-        log_info "Start it with: docker-compose up -d"
-        exit 1
-    fi
-}
+```bash
+git add .workflow-ids.example.json .gitignore
+git commit -m "chore: add workflow ID mapping template and gitignore"
+```
 
+---
+
+## Task 2: Implement Helper Functions
+
+**Files:**
+- Modify: `scripts/manage-workflow.sh`
+
+**Step 1: Add jq dependency check**
+
+Add after existing helper functions (around line 38):
+```bash
 # Check for jq (required for JSON manipulation)
 check_jq() {
     if ! command -v jq &> /dev/null; then
@@ -54,7 +63,12 @@ check_jq() {
         exit 1
     fi
 }
+```
 
+**Step 2: Add mapping file functions**
+
+Add after `check_jq`:
+```bash
 # Mapping file path
 MAPPING_FILE="./.workflow-ids.json"
 
@@ -92,7 +106,12 @@ get_workflow_name() {
     local dir="$1"
     basename "$dir"
 }
+```
 
+**Step 3: Add n8n database query function**
+
+Add after mapping functions:
+```bash
 # Query n8n database directly
 query_n8n_db() {
     local query="$1"
@@ -103,109 +122,33 @@ query_n8n_db() {
 get_n8n_workflows() {
     query_n8n_db "SELECT id, name, active FROM workflow_entity ORDER BY name;"
 }
+```
 
-# List all workflows
-list_workflows() {
-    log_info "Listing all workflows..."
-    docker exec "$CONTAINER_NAME" n8n list:workflow
-}
+**Step 4: Verify syntax**
 
-# Export workflow
-export_workflow() {
-    local workflow_id="$1"
-    local output_file="${2:-}"
+```bash
+bash -n scripts/manage-workflow.sh && echo "SYNTAX OK"
+```
+Expected: `SYNTAX OK`
 
-    if [ -z "$workflow_id" ]; then
-        log_error "Usage: $0 export <workflow-id> [output-file]"
-        exit 1
-    fi
+**Step 5: Commit**
 
-    # If no output file specified, create timestamped backup
-    if [ -z "$output_file" ]; then
-        output_file="/workflows/backup-${workflow_id}-$(date +%Y%m%d-%H%M%S).json"
-        log_info "No output file specified, using: $output_file"
-    fi
+```bash
+git add scripts/manage-workflow.sh
+git commit -m "feat: add helper functions for workflow ID mapping"
+```
 
-    log_step "Exporting workflow ID: $workflow_id"
-    docker exec "$CONTAINER_NAME" n8n export:workflow --id="$workflow_id" --output="$output_file"
-    log_info "✓ Workflow exported to: $output_file"
-}
+---
 
-# Import workflow
-import_workflow() {
-    local input_file="$1"
-    local separate="${2:-false}"
+## Task 3: Implement `status` Command
 
-    if [ -z "$input_file" ]; then
-        log_error "Usage: $0 import <input-file> [--separate]"
-        exit 1
-    fi
+**Files:**
+- Modify: `scripts/manage-workflow.sh`
 
-    log_step "Importing workflow from: $input_file"
+**Step 1: Add status function**
 
-    if [ "$separate" = "--separate" ]; then
-        docker exec "$CONTAINER_NAME" n8n import:workflow --input="$input_file" --separate
-        log_info "✓ Workflow imported as separate instance"
-    else
-        docker exec "$CONTAINER_NAME" n8n import:workflow --input="$input_file"
-        log_info "✓ Workflow imported"
-    fi
-}
-
-# Update workflow (export backup, then import)
-update_workflow() {
-    local workflow_id="$1"
-    local input_file="$2"
-
-    if [ -z "$workflow_id" ] || [ -z "$input_file" ]; then
-        log_error "Usage: $0 update <workflow-id> <input-file>"
-        exit 1
-    fi
-
-    # Create backup first
-    log_step "Creating backup of workflow $workflow_id..."
-    export_workflow "$workflow_id"
-
-    # Import updated version
-    log_step "Importing updated workflow..."
-    import_workflow "$input_file" "--separate"
-
-    log_info "✓ Workflow updated successfully"
-}
-
-# Show workflow details
-show_workflow() {
-    local workflow_id="$1"
-
-    if [ -z "$workflow_id" ]; then
-        log_error "Usage: $0 show <workflow-id>"
-        exit 1
-    fi
-
-    log_info "Showing details for workflow ID: $workflow_id"
-    docker exec "$CONTAINER_NAME" n8n show:workflow --id="$workflow_id"
-}
-
-# Export credentials (backup)
-export_credentials() {
-    local output_file="${1:-/workflows/credentials-backup-$(date +%Y%m%d-%H%M%S).json}"
-
-    log_step "Exporting credentials..."
-    log_warn "Credentials contain sensitive data - handle with care!"
-    docker exec "$CONTAINER_NAME" n8n export:credentials --output="$output_file"
-    log_info "✓ Credentials exported to: $output_file"
-}
-
-# Interactive workflow selection
-select_workflow() {
-    log_info "Fetching workflows..."
-    docker exec "$CONTAINER_NAME" n8n list:workflow
-
-    echo ""
-    read -p "Enter workflow ID: " workflow_id
-    echo "$workflow_id"
-}
-
+Add before the `usage()` function:
+```bash
 # Show sync status
 status_workflows() {
     check_jq
@@ -272,7 +215,49 @@ status_workflows() {
         log_warn "Run './scripts/manage-workflow.sh cleanup' to remove orphans"
     fi
 }
+```
 
+**Step 2: Add status to case statement**
+
+Find the `case "$command" in` block and add after the `backup-creds)` case:
+```bash
+        status)
+            status_workflows
+            ;;
+```
+
+**Step 3: Update usage text**
+
+In the `usage()` function, add to the Commands section:
+```bash
+  ${BLUE}status${NC}                        Show sync status and orphaned workflows
+```
+
+**Step 4: Verify syntax**
+
+```bash
+bash -n scripts/manage-workflow.sh && echo "SYNTAX OK"
+```
+Expected: `SYNTAX OK`
+
+**Step 5: Commit**
+
+```bash
+git add scripts/manage-workflow.sh
+git commit -m "feat: add status command to show sync state and orphans"
+```
+
+---
+
+## Task 4: Implement `init` Command
+
+**Files:**
+- Modify: `scripts/manage-workflow.sh`
+
+**Step 1: Add init function**
+
+Add after `status_workflows` function:
+```bash
 # Initialize mapping file from current n8n state
 init_mapping() {
     check_jq
@@ -343,14 +328,52 @@ init_mapping() {
     log_info "Mapping file created: $MAPPING_FILE"
     log_info "Run './scripts/manage-workflow.sh status' to review"
 }
+```
 
+**Step 2: Add init to case statement**
+
+Add to the case statement:
+```bash
+        init)
+            init_mapping
+            ;;
+```
+
+**Step 3: Update usage text**
+
+Add to Commands section:
+```bash
+  ${BLUE}init${NC}                          Initialize mapping file from current n8n state
+```
+
+**Step 4: Verify syntax**
+
+```bash
+bash -n scripts/manage-workflow.sh && echo "SYNTAX OK"
+```
+Expected: `SYNTAX OK`
+
+**Step 5: Commit**
+
+```bash
+git add scripts/manage-workflow.sh
+git commit -m "feat: add init command to create mapping from n8n state"
+```
+
+---
+
+## Task 5: Implement `sync` Command
+
+**Files:**
+- Modify: `scripts/manage-workflow.sh`
+
+**Step 1: Add sync single workflow function**
+
+Add after `init_mapping` function:
+```bash
 # Sync a single workflow from git to n8n
 sync_single_workflow() {
-    local workflow_name="${1:-}"
-    if [ -z "$workflow_name" ]; then
-        log_error "Workflow name required"
-        return 1
-    fi
+    local workflow_name="$1"
     local workflow_dir="$WORKFLOWS_DIR/$workflow_name"
     local workflow_file="$workflow_dir/workflow.json"
 
@@ -375,8 +398,6 @@ sync_single_workflow() {
     # Copy to container and import
     local container_path="/tmp/workflow-import-$$.json"
     docker cp "$tmp_file" "$CONTAINER_NAME:$container_path"
-    # Fix ownership for n8n user (docker cp creates files as root)
-    docker exec -u root "$CONTAINER_NAME" chown node:node "$container_path" 2>/dev/null || true
 
     # Import workflow
     local import_output
@@ -397,8 +418,7 @@ sync_single_workflow() {
     if [ -z "$mapped_id" ]; then
         # Get workflow name from JSON to find in n8n
         local json_name=$(jq -r '.name' "$workflow_file")
-        local safe_name="${json_name//\'/\'\'}"  # Escape single quotes for SQLite
-        local new_id=$(query_n8n_db "SELECT id FROM workflow_entity WHERE name = '$safe_name' ORDER BY createdAt DESC LIMIT 1;")
+        local new_id=$(query_n8n_db "SELECT id FROM workflow_entity WHERE name = '$json_name' ORDER BY createdAt DESC LIMIT 1;")
 
         if [ -n "$new_id" ]; then
             set_mapped_id "$workflow_name" "$new_id"
@@ -458,7 +478,49 @@ sync_workflows() {
         fi
     fi
 }
+```
 
+**Step 2: Add sync to case statement**
+
+Add to the case statement:
+```bash
+        sync)
+            sync_workflows "${2:-}"
+            ;;
+```
+
+**Step 3: Update usage text**
+
+Add to Commands section:
+```bash
+  ${BLUE}sync${NC} [name]                    Sync workflow(s) from git to n8n
+```
+
+**Step 4: Verify syntax**
+
+```bash
+bash -n scripts/manage-workflow.sh && echo "SYNTAX OK"
+```
+Expected: `SYNTAX OK`
+
+**Step 5: Commit**
+
+```bash
+git add scripts/manage-workflow.sh
+git commit -m "feat: add sync command to push git workflows to n8n"
+```
+
+---
+
+## Task 6: Implement `cleanup` Command
+
+**Files:**
+- Modify: `scripts/manage-workflow.sh`
+
+**Step 1: Add cleanup function**
+
+Add after `sync_workflows` function:
+```bash
 # Clean up orphaned workflows
 cleanup_workflows() {
     check_jq
@@ -523,164 +585,192 @@ cleanup_workflows() {
 
     # Delete orphans (skip active)
     local deleted=0
-    local failed=0
-    while IFS='|' read -r id name active; do
+    echo -e "$orphans" | while IFS='|' read -r id name active; do
         if [ -n "$id" ] && [ "$active" != "1" ]; then
             log_step "Deleting: $id ($name)"
-            if query_n8n_db "DELETE FROM workflow_entity WHERE id = '$id';"; then
+            if docker exec "$CONTAINER_NAME" n8n delete:workflow --id="$id" 2>/dev/null; then
                 log_info "  ✓ Deleted"
-                ((deleted++))
+                deleted=$((deleted + 1))
             else
                 log_error "  Failed to delete"
-                ((failed++))
             fi
         fi
-    done < <(echo -e "$orphans")
+    done
 
     echo ""
-    log_info "Cleanup complete: $deleted deleted, $failed failed"
+    log_info "Cleanup complete"
 }
+```
 
-# Show usage
-usage() {
-    cat <<EOF
-${GREEN}n8n Workflow Management Script${NC}
+**Step 2: Add cleanup to case statement**
 
-${YELLOW}Usage:${NC}
-  $0 <command> [options]
-
-${YELLOW}Commands:${NC}
-  ${BLUE}list${NC}                          List all workflows
-  ${BLUE}show${NC} <id>                     Show workflow details
-  ${BLUE}export${NC} <id> [output]          Export workflow to JSON
-  ${BLUE}import${NC} <file> [--separate]    Import workflow from JSON
-  ${BLUE}update${NC} <id> <file>            Update workflow (backup + import)
-  ${BLUE}backup-creds${NC} [output]         Export credentials to JSON
-  ${BLUE}status${NC}                        Show sync status and orphaned workflows
-  ${BLUE}init${NC}                          Initialize mapping file from current n8n state
-  ${BLUE}sync${NC} [name]                   Sync workflow(s) from git to n8n
-  ${BLUE}cleanup${NC} [--force]             Delete orphaned workflows from n8n
-
-${YELLOW}Examples:${NC}
-  # List all workflows
-  $0 list
-
-  # Export specific workflow
-  $0 export 1 /workflows/01-ingestion/workflow.json
-
-  # Import workflow
-  $0 import /workflows/01-ingestion/workflow.json
-
-  # Update existing workflow (creates backup first)
-  $0 update 1 /workflows/01-ingestion/workflow.json
-
-  # Backup credentials
-  $0 backup-creds
-
-${YELLOW}Interactive Mode:${NC}
-  # Export with workflow selection
-  $0 export
-
-  # Show with workflow selection
-  $0 show
-
-${YELLOW}Notes:${NC}
-  - Container must be running (docker-compose up -d)
-  - File paths are relative to container (/workflows maps to ./workflows)
-  - Backups are timestamped automatically
-  - Always test workflows after importing changes
-
-${YELLOW}Dev Mode:${NC}
-  Add --dev flag to target development environment
-  $0 --dev list
-  $0 --dev export 1
-  $0 --dev update 1 /workflows/01-ingestion/workflow.json
-
-EOF
-}
-
-# Main script logic
-main() {
-    # Check if container is running
-    check_container
-
-    local command="${1:-}"
-
-    case "$command" in
-        list)
-            list_workflows
-            ;;
-        show)
-            if [ $# -eq 1 ]; then
-                # Interactive mode
-                workflow_id=$(select_workflow)
-                show_workflow "$workflow_id"
-            else
-                show_workflow "$2"
-            fi
-            ;;
-        export)
-            if [ $# -eq 1 ]; then
-                # Interactive mode
-                workflow_id=$(select_workflow)
-                export_workflow "$workflow_id"
-            else
-                export_workflow "${2:-}" "${3:-}"
-            fi
-            ;;
-        import)
-            import_workflow "${2:-}" "${3:-}"
-            ;;
-        update)
-            update_workflow "${2:-}" "${3:-}"
-            ;;
-        backup-creds)
-            export_credentials "${2:-}"
-            ;;
-        status)
-            status_workflows
-            ;;
-        init)
-            init_mapping
-            ;;
-        sync)
-            sync_workflows "${2:-}"
-            ;;
+Add to the case statement:
+```bash
         cleanup)
             cleanup_workflows "${2:-}"
             ;;
-        help|--help|-h)
-            usage
-            ;;
-        "")
-            log_error "No command specified"
-            usage
-            exit 1
-            ;;
-        *)
-            log_error "Unknown command: $command"
-            usage
-            exit 1
-            ;;
-    esac
-}
+```
 
-# Parse global flags
-ARGS=()
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --dev)
-            DEV_MODE=true
-            CONTAINER_NAME="$DEV_CONTAINER_NAME"
-            shift
-            ;;
-        *)
-            ARGS+=("$1")
-            shift
-            ;;
-    esac
-done
-set -- "${ARGS[@]}"
+**Step 3: Update usage text**
 
-# Run main function
-main "$@"
+Add to Commands section:
+```bash
+  ${BLUE}cleanup${NC} [--force]              Delete orphaned workflows from n8n
+```
+
+**Step 4: Verify syntax**
+
+```bash
+bash -n scripts/manage-workflow.sh && echo "SYNTAX OK"
+```
+Expected: `SYNTAX OK`
+
+**Step 5: Commit**
+
+```bash
+git add scripts/manage-workflow.sh
+git commit -m "feat: add cleanup command to remove orphaned workflows"
+```
+
+---
+
+## Task 7: Integration Testing
+
+**Files:**
+- None (testing only)
+
+**Step 1: Run init to create mapping**
+
+```bash
+./scripts/manage-workflow.sh init
+```
+Expected: Mapping file created with IDs for each workflow
+
+**Step 2: Check status**
+
+```bash
+./scripts/manage-workflow.sh status
+```
+Expected: Shows synced workflows and lists orphans
+
+**Step 3: Test sync on single workflow**
+
+```bash
+./scripts/manage-workflow.sh sync 01-ingestion
+```
+Expected: Workflow synced successfully
+
+**Step 4: Run cleanup (inspect only)**
+
+```bash
+./scripts/manage-workflow.sh cleanup
+```
+When prompted, answer `n` first to inspect. Then run again with `y` if ready to clean.
+
+**Step 5: Verify clean state**
+
+```bash
+./scripts/manage-workflow.sh status
+```
+Expected: No orphans (or only active orphans if any were skipped)
+
+---
+
+## Task 8: Update Documentation
+
+**Files:**
+- Modify: `scripts/CLAUDE.md`
+
+**Step 1: Update manage-workflow.sh section**
+
+Find the `## manage-workflow.sh` section and add the new commands to the Usage block:
+
+```bash
+# New lifecycle commands
+./scripts/manage-workflow.sh status              # Show sync state and orphans
+./scripts/manage-workflow.sh init                # Initialize mapping from n8n
+./scripts/manage-workflow.sh sync [name]         # Sync git → n8n
+./scripts/manage-workflow.sh cleanup [--force]   # Remove orphaned workflows
+```
+
+**Step 2: Add workflow lifecycle section**
+
+Add new section after the existing manage-workflow.sh documentation:
+
+```markdown
+### Workflow Lifecycle Management
+
+The script now includes git-first workflow lifecycle management:
+
+**Source of Truth:** `workflows/XX-name/workflow.json` files in git
+
+**ID Mapping:** `.workflow-ids.json` (gitignored) maps logical names to n8n IDs
+
+**Daily Workflow:**
+```bash
+# 1. Edit workflow JSON in git
+# 2. Push to n8n
+./scripts/manage-workflow.sh sync 07-task-extraction
+
+# 3. Test
+./workflows/07-task-extraction/scripts/test-with-markers.sh
+
+# 4. Commit
+git add workflows/07-task-extraction/workflow.json
+git commit -m "feat(07): description"
+```
+
+**First-Time Setup:**
+```bash
+./scripts/manage-workflow.sh init     # Create mapping from current n8n state
+./scripts/manage-workflow.sh status   # Review
+./scripts/manage-workflow.sh cleanup  # Remove old versions
+```
+```
+
+**Step 3: Commit**
+
+```bash
+git add scripts/CLAUDE.md
+git commit -m "docs: update script documentation with lifecycle commands"
+```
+
+---
+
+## Task 9: Final Commit and Cleanup
+
+**Step 1: Verify all changes**
+
+```bash
+git status
+git log --oneline -10
+```
+
+**Step 2: Run full test cycle**
+
+```bash
+./scripts/manage-workflow.sh status
+```
+
+**Step 3: Create summary commit if needed**
+
+If any uncommitted changes remain:
+```bash
+git add -A
+git commit -m "chore: workflow lifecycle management implementation complete"
+```
+
+---
+
+## Completion Checklist
+
+- [ ] `.workflow-ids.example.json` created
+- [ ] `.workflow-ids.json` in `.gitignore`
+- [ ] Helper functions added (jq check, mapping file operations, n8n queries)
+- [ ] `status` command working
+- [ ] `init` command working
+- [ ] `sync` command working
+- [ ] `cleanup` command working
+- [ ] Documentation updated
+- [ ] All tests passing
+- [ ] All changes committed
