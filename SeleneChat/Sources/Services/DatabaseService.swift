@@ -78,8 +78,9 @@ class DatabaseService: ObservableObject {
             isConnected = true
             print("✅ Connected to database at: \(databasePath)")
 
-            // Run migration if chat_sessions table doesn't exist
+            // Run migrations
             try? createChatSessionsTable()
+            try? Migration001_TaskLinks.run(db: db!)
         } catch {
             isConnected = false
             print("❌ Failed to connect to database: \(error)")
