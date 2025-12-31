@@ -62,6 +62,19 @@ class DatabaseService: ObservableObject {
     private let fullMessagesJson = Expression<String?>("full_messages_json")
     private let summaryText = Expression<String?>("summary_text")
 
+    // discussion_threads table
+    private let discussionThreads = Table("discussion_threads")
+    private let threadId = Expression<Int64>("id")
+    private let threadRawNoteId = Expression<Int64>("raw_note_id")
+    private let threadType = Expression<String>("thread_type")
+    private let threadPrompt = Expression<String>("prompt")
+    private let threadStatus = Expression<String>("status")
+    private let threadCreatedAt = Expression<String>("created_at")
+    private let threadSurfacedAt = Expression<String?>("surfaced_at")
+    private let threadCompletedAt = Expression<String?>("completed_at")
+    private let threadRelatedConcepts = Expression<String?>("related_concepts")
+    private let threadTestRun = Expression<String?>("test_run")
+
     init() {
         // Try to load saved path, otherwise use default
         let defaultPath = FileManager.default.homeDirectoryForCurrentUser
@@ -630,6 +643,121 @@ class DatabaseService: ObservableObject {
         let uniqueNotes = Array(Set(allNotes)).sorted { $0.createdAt > $1.createdAt }
 
         return Array(uniqueNotes.prefix(limit))
+    }
+
+    // MARK: - Discussion Threads
+
+    func getPendingThreads() async throws -> [DiscussionThread] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if table exists first
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='discussion_threads'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = discussionThreads
+            .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
+            .filter(threadStatus == "pending" || threadStatus == "active" || threadStatus == "review")
+            .filter(threadTestRun == nil)
+            .order(threadCreatedAt.desc)
+
+        var threads: [DiscussionThread] = []
+
+        for row in try db.prepare(query) {
+            let thread = try parseThread(from: row)
+            threads.append(thread)
+        }
+
+        return threads
+    }
+
+    func getThread(byId threadIdValue: Int) async throws -> DiscussionThread? {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if table exists first
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='discussion_threads'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return nil
+        }
+
+        let query = discussionThreads
+            .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
+            .filter(threadId == Int64(threadIdValue))
+
+        guard let row = try db.pluck(query) else {
+            return nil
+        }
+
+        return try parseThread(from: row)
+    }
+
+    func updateThreadStatus(_ threadIdValue: Int, status: DiscussionThread.Status) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateFormatter = ISO8601DateFormatter()
+        let now = dateFormatter.string(from: Date())
+
+        let thread = discussionThreads.filter(threadId == Int64(threadIdValue))
+
+        var updates: [Setter] = [threadStatus <- status.rawValue]
+
+        if status == .active {
+            updates.append(threadSurfacedAt <- now)
+        }
+
+        if status == .completed || status == .dismissed {
+            updates.append(threadCompletedAt <- now)
+        }
+
+        try db.run(thread.update(updates))
+
+        print("Updated thread \(threadIdValue) status to \(status.rawValue)")
+    }
+
+    private func parseThread(from row: Row) throws -> DiscussionThread {
+        let dateFormatter = ISO8601DateFormatter()
+
+        // Parse related concepts JSON
+        var conceptsArray: [String]? = nil
+        if let conceptsStr = try? row.get(threadRelatedConcepts),
+           let data = conceptsStr.data(using: .utf8) {
+            conceptsArray = try? JSONDecoder().decode([String].self, from: data)
+        }
+
+        // Parse thread type
+        let typeStr = try row.get(threadType)
+        let threadTypeEnum = DiscussionThread.ThreadType(rawValue: typeStr) ?? .planning
+
+        // Parse status
+        let statusStr = try row.get(threadStatus)
+        let statusEnum = DiscussionThread.Status(rawValue: statusStr) ?? .pending
+
+        return DiscussionThread(
+            id: Int(try row.get(threadId)),
+            rawNoteId: Int(try row.get(threadRawNoteId)),
+            threadType: threadTypeEnum,
+            prompt: try row.get(threadPrompt),
+            status: statusEnum,
+            createdAt: dateFormatter.date(from: try row.get(threadCreatedAt)) ?? Date(),
+            surfacedAt: (try? row.get(threadSurfacedAt)).flatMap { dateFormatter.date(from: $0) },
+            completedAt: (try? row.get(threadCompletedAt)).flatMap { dateFormatter.date(from: $0) },
+            relatedConcepts: conceptsArray,
+            noteTitle: try? row.get(rawNotes[title]),
+            noteContent: try? row.get(rawNotes[content])
+        )
     }
 
     // MARK: - Error Types
