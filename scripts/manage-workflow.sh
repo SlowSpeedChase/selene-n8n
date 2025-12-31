@@ -46,6 +46,64 @@ check_container() {
     fi
 }
 
+# Check for jq (required for JSON manipulation)
+check_jq() {
+    if ! command -v jq &> /dev/null; then
+        log_error "jq is required but not installed"
+        log_info "Install with: brew install jq"
+        exit 1
+    fi
+}
+
+# Mapping file path
+MAPPING_FILE="./.workflow-ids.json"
+
+# Get workflow ID from mapping file
+get_mapped_id() {
+    local workflow_name="$1"
+    if [ -f "$MAPPING_FILE" ]; then
+        jq -r --arg name "$workflow_name" '.[$name] // empty' "$MAPPING_FILE"
+    fi
+}
+
+# Set workflow ID in mapping file
+set_mapped_id() {
+    local workflow_name="$1"
+    local workflow_id="$2"
+
+    if [ ! -f "$MAPPING_FILE" ]; then
+        echo "{}" > "$MAPPING_FILE"
+    fi
+
+    local tmp=$(mktemp)
+    jq --arg name "$workflow_name" --arg id "$workflow_id" '.[$name] = $id' "$MAPPING_FILE" > "$tmp"
+    mv "$tmp" "$MAPPING_FILE"
+}
+
+# Get all tracked IDs from mapping file
+get_all_tracked_ids() {
+    if [ -f "$MAPPING_FILE" ]; then
+        jq -r 'to_entries[] | select(.key != "_comment") | .value' "$MAPPING_FILE"
+    fi
+}
+
+# Extract workflow name from directory path (e.g., "workflows/07-task-extraction" -> "07-task-extraction")
+get_workflow_name() {
+    local dir="$1"
+    basename "$dir"
+}
+
+# Query n8n database directly
+query_n8n_db() {
+    local query="$1"
+    docker exec "$CONTAINER_NAME" sh -c "sqlite3 /home/node/.n8n/database.sqlite \"$query\""
+}
+
+# Get all workflows from n8n
+get_n8n_workflows() {
+    query_n8n_db "SELECT id, name, active FROM workflow_entity ORDER BY name;"
+}
+
 # List all workflows
 list_workflows() {
     log_info "Listing all workflows..."
