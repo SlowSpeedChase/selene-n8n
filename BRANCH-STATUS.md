@@ -34,11 +34,11 @@ This is the foundation of Phase 7, enabling intelligent triage of captured notes
   - Plan location: `IMPLEMENTATION-PLAN.md` (9 tasks, ~3 hours estimated)
 
 ### Dev
-- [ ] Tests written first (superpowers:test-driven-development)
-- [ ] Core implementation complete
-- [ ] All tests passing
-- [ ] No linting/type errors
-- [ ] Code follows project patterns
+- [x] Tests written first (superpowers:test-driven-development)
+- [ ] Core implementation complete (Batch 1 of 3 done)
+- [x] All tests passing (58 tests: 32 migration + 26 prompt)
+- [x] No linting/type errors
+- [x] Code follows project patterns
 
 ### Testing
 - [ ] Unit tests pass
@@ -88,6 +88,26 @@ This is the foundation of Phase 7, enabling intelligent triage of captured notes
   3. Workflow restructure with routing logic
   4. Test script for all classification paths
 - Ready to proceed to dev stage
+
+**2025-12-30 - Batch 1 Complete (Tasks 1-2)**
+- Following TDD workflow: RED -> GREEN -> REFACTOR
+- Task 1: Database migration (008_classification_fields.sql)
+  - Added `classification` column to processed_notes (actionable/needs_planning/archive_only)
+  - Added `planning_status` column to processed_notes (pending_review/in_planning/planned/archived)
+  - Created `discussion_threads` table for SeleneChat planning threads
+  - 32 tests passing (all constraints and indexes verified)
+- Task 2: Classification prompt (prompts/classification-prompt.txt)
+  - Clear decision rules matching metadata-definitions.md
+  - JSON output format with classification, confidence, reasoning
+  - Edge case handling for mixed/ambiguous content
+  - 26 tests passing (all categories, rules, and format verified)
+- Total: 58 tests passing
+
+**Files created:**
+- `database/migrations/008_classification_fields.sql`
+- `database/migrations/tests/test-008-classification.sh`
+- `prompts/classification-prompt.txt`
+- `prompts/tests/test-classification-prompt.sh`
 
 ---
 
