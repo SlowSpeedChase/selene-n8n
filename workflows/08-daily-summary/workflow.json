@@ -69,13 +69,41 @@
     },
     {
       "parameters": {
-        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst promptData = $('Build Summary Prompt').item.json;\nconst ollamaResponse = $json;\n\nconst summary = ollamaResponse.response || 'Summary generation failed. Please check Ollama connection.';\n\nconst dateISO = promptData.dateISO;\nconst dateTitle = promptData.date;\nconst stats = promptData.stats;\n\nconst markdown = `# Daily Summary - ${dateTitle}\n\n${summary}\n\n---\n\n**Stats:** ${stats.notesCount} notes captured, ${stats.insightsCount} processed, ${stats.patternsCount} active patterns\n\n---\n*Generated automatically at midnight by Selene*\n`;\n\nconst dailyDir = '/obsidian/Daily';\nif (!fs.existsSync(dailyDir)) {\n  fs.mkdirSync(dailyDir, { recursive: true });\n}\n\nconst filename = `${dateISO}-summary.md`;\nconst filepath = path.join(dailyDir, filename);\nfs.writeFileSync(filepath, markdown, 'utf8');\n\nreturn {\n  json: {\n    success: true,\n    filepath: filepath,\n    filename: filename,\n    date: dateISO,\n    summaryLength: summary.length,\n    stats: stats\n  }\n};"
+        "functionCode": "const promptData = $('Build Summary Prompt').item.json;\nconst ollamaResponse = $json;\n\nconst summary = ollamaResponse.response || 'Summary generation failed. Please check Ollama connection.';\n\nconst dateISO = promptData.dateISO;\nconst dateTitle = promptData.date;\nconst stats = promptData.stats;\n\nconst markdown = `# Daily Summary - ${dateTitle}\n\n${summary}\n\n---\n\n**Stats:** ${stats.notesCount} notes captured, ${stats.insightsCount} processed, ${stats.patternsCount} active patterns\n\n---\n*Generated automatically at midnight by Selene*\n`;\n\nconst filename = `${dateISO}-summary.md`;\nconst filepath = `/obsidian/Selene/Daily/${filename}`;\n\nreturn {\n  json: {\n    markdown: markdown,\n    filepath: filepath,\n    filename: filename,\n    date: dateISO,\n    stats: stats\n  }\n};"
       },
-      "id": "write-obsidian",
-      "name": "Write to Obsidian",
+      "id": "prepare-markdown",
+      "name": "Prepare Markdown",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [1200, 350]
+    },
+    {
+      "parameters": {
+        "mode": "jsonToBinary",
+        "convertAllData": false,
+        "sourceKey": "markdown",
+        "destinationKey": "data",
+        "options": {
+          "fileName": "={{ $json.filename }}",
+          "mimeType": "text/markdown"
+        }
+      },
+      "id": "convert-to-binary",
+      "name": "Convert to Binary",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1.0,
+      "position": [1450, 350]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ $('Prepare Markdown').item.json.filepath }}",
+        "dataPropertyName": "data"
+      },
+      "id": "write-file",
+      "name": "Write to Obsidian",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [1700, 350]
     }
   ],
   "connections": {
@@ -90,11 +118,17 @@
     },
     "Send to Ollama": {
       "main": [
-        [{ "node": "Write to Obsidian", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Markdown", "type": "main", "index": 0 }],
         [{ "node": "Fallback: Ollama Error", "type": "main", "index": 0 }]
       ]
     },
     "Fallback: Ollama Error": {
+      "main": [[{ "node": "Prepare Markdown", "type": "main", "index": 0 }]]
+    },
+    "Prepare Markdown": {
+      "main": [[{ "node": "Convert to Binary", "type": "main", "index": 0 }]]
+    },
+    "Convert to Binary": {
       "main": [[{ "node": "Write to Obsidian", "type": "main", "index": 0 }]]
     }
   },
