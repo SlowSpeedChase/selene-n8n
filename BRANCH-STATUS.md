@@ -2,7 +2,7 @@
 
 **Created:** 2025-12-31
 **Design Doc:** docs/plans/2025-12-31-phase-7.2-selenechat-planning-design.md
-**Current Stage:** planning
+**Current Stage:** dev
 **Last Rebased:** 2025-12-31
 
 ## Overview
@@ -28,10 +28,10 @@ Add Planning tab to SeleneChat for guided breakdown conversations. Uses dual AI 
 
 ### Dev
 - [ ] Tests written first (superpowers:test-driven-development)
-- [ ] Core implementation complete
+- [x] Core implementation complete
 - [ ] All tests passing
 - [ ] No linting/type errors
-- [ ] Code follows project patterns
+- [x] Code follows project patterns
 
 ### Testing
 - [ ] Unit tests pass
@@ -62,24 +62,24 @@ Add Planning tab to SeleneChat for guided breakdown conversations. Uses dual AI 
 ## Implementation Plan
 
 ### Phase 7.2a: Foundation
-- [ ] Add `task_links` table migration
-- [ ] Create `ClaudeAPIService.swift`
-- [ ] Create `ThingsURLService.swift`
-- [ ] Create `PromptLoader.swift`
-- [ ] Create initial methodology files in `prompts/planning/`
+- [x] Add `task_links` table migration
+- [x] Create `ClaudeAPIService.swift`
+- [x] Create `ThingsURLService.swift`
+- [x] Create `PromptLoader.swift`
+- [x] Create initial methodology files in `prompts/planning/`
 
 ### Phase 7.2b: Planning Tab
-- [ ] Add "Planning" to ContentView navigation
-- [ ] Create `PlanningView.swift` (thread list)
-- [ ] Create `PlanningThreadRow.swift`
-- [ ] Query `discussion_threads` from database
+- [x] Add "Planning" to ContentView navigation
+- [x] Create `PlanningView.swift` (thread list)
+- [x] Create `PlanningThreadRow.swift`
+- [x] Query `discussion_threads` from database
 
 ### Phase 7.2c: Planning Conversations
-- [ ] Create `PlanningConversationView.swift`
-- [ ] Integrate Claude API for responses
-- [ ] Implement task extraction from responses
-- [ ] Create tasks in Things automatically
-- [ ] Store relationships in `task_links`
+- [x] Create `PlanningConversationView.swift`
+- [x] Integrate Claude API for responses
+- [x] Implement task extraction from responses
+- [x] Create tasks in Things automatically
+- [x] Store relationships in `task_links`
 
 ### Phase 7.2d: Bidirectional Flow
 - [ ] Implement Things status checking via AppleScript
@@ -109,6 +109,19 @@ Add Planning tab to SeleneChat for guided breakdown conversations. Uses dual AI 
 - Dual AI routing (Ollama local, Claude API for planning)
 - Methodology files for editable prompts/triggers
 - Bidirectional Things flow with resurface triggers
+
+**2025-12-31:** Phase 7.2a-c implementation complete (Tasks 1-10):
+- Task 1: Database migration - Added `task_links` table via `add_task_links.sql`
+- Task 2: Created `DiscussionThread` model with note/task associations
+- Task 3: Added thread queries to `DatabaseService` (fetch threads, update status)
+- Task 4: Created `ClaudeAPIService` with streaming support and task extraction
+- Task 5: Created `ThingsURLService` for URL scheme task creation
+- Task 6: Added Planning tab navigation to `ContentView`
+- Task 7: Created `PlanningView` with thread list and filtering
+- Task 8: Created `PlanningConversationView` with Claude integration
+- Task 9: Created methodology files (`system-prompt.md`, `triggers.json`, `extraction-rules.md`)
+- Task 10: Updated BRANCH-STATUS.md (this entry)
+- Next: Testing stage - verify build, run tests, manual verification
 
 ---
 
