@@ -35,7 +35,7 @@ This is the foundation of Phase 7, enabling intelligent triage of captured notes
 
 ### Dev
 - [x] Tests written first (superpowers:test-driven-development)
-- [ ] Core implementation complete (Batch 1 of 3 done)
+- [x] Core implementation complete (Batch 1 + Batch 2 done)
 - [x] All tests passing (58 tests: 32 migration + 26 prompt)
 - [x] No linting/type errors
 - [x] Code follows project patterns
@@ -108,6 +108,31 @@ This is the foundation of Phase 7, enabling intelligent triage of captured notes
 - `database/migrations/tests/test-008-classification.sh`
 - `prompts/classification-prompt.txt`
 - `prompts/tests/test-classification-prompt.sh`
+
+**2025-12-30 - Batch 2 Complete (Tasks 3-6)**
+- Task 3: Add Classification Node to workflow
+  - Added "Build Classification Prompt" node with full classification template
+  - Added "Ollama Classify Note" HTTP request node (30s timeout)
+  - Added "Parse Classification" node with JSON parsing and validation
+  - Classification values: actionable, needs_planning, archive_only
+- Task 4: Add Routing Logic (Switch Node)
+  - Added "Route by Classification" Switch node with 3 outputs
+  - Output 0: actionable -> Task extraction pipeline
+  - Output 1: needs_planning -> Flag for Planning node
+  - Output 2 (fallback): archive_only -> Store Classification node
+- Task 5: Update Task Extraction Prompt
+  - Renamed to "Build Task Extraction Prompt" for clarity
+  - Added classification context to prompt
+  - Notes that content is pre-classified as actionable
+- Task 6: Update Status Handling
+  - "Update Status (Actionable)" - Updates classification and things_integration_status
+  - "Flag for Planning" - Creates discussion_thread record for SeleneChat
+  - "Store Classification (Archive)" - Updates classification only, no task extraction
+
+**Files modified:**
+- `workflows/07-task-extraction/workflow.json` - Complete workflow restructure (14 nodes)
+- `workflows/07-task-extraction/STATUS.md` - Updated with new architecture
+- `workflows/07-task-extraction/README.md` - Added classification documentation
 
 ---
 
