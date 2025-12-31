@@ -1,7 +1,7 @@
 # Selene n8n Project - Current Status
 
-**Last Updated:** 2025-12-31
-**Status:** Workflows 01 & 08 Complete, Ready for Workflow 02
+**Last Updated:** 2025-12-30
+**Status:** Workflows 01, 07 & 08 Complete - Phase 7.1 Task Extraction DONE
 
 ---
 
@@ -130,6 +130,40 @@ CREATE TABLE raw_notes (
 **Documentation:**
 - Quick start: `workflows/08-daily-summary/README.md`
 - Status/results: `workflows/08-daily-summary/docs/STATUS.md`
+
+---
+
+### ✅ 07-Task-Extraction Workflow (COMPLETE)
+
+**Status:** Production Ready
+**Location:** `workflows/07-task-extraction/`
+**Completed:** 2025-12-30
+
+**What It Does:**
+- Classifies notes as: `actionable`, `needs_planning`, or `archive_only`
+- Extracts tasks from actionable notes using Ollama LLM
+- Routes actionable tasks to Things 3 inbox via file-based handoff
+- Flags `needs_planning` notes with discussion threads for SeleneChat
+- Stores classification metadata in database
+
+**Key Features:**
+- ✅ Three-way classification using Ollama
+- ✅ ADHD-optimized task metadata (energy, overwhelm, time estimates)
+- ✅ File-based Things integration with launchd automation
+- ✅ Discussion threads for planning items
+- ✅ Full E2E tests passing
+
+**Things Bridge Components:**
+```
+scripts/things-bridge/
+├── add-task-to-things.scpt      # AppleScript for Things API
+├── process-pending-tasks.sh     # Wrapper script
+└── com.selene.things-bridge.plist  # launchd configuration
+```
+
+**Documentation:**
+- Status/results: `workflows/07-task-extraction/STATUS.md`
+- Design: `docs/plans/2025-12-30-task-extraction-planning-design.md`
 
 ---
 
@@ -430,6 +464,14 @@ cd workflows/01-ingestion
 ---
 
 ## Recent Achievements
+
+### 2025-12-30
+✅ Completed Phase 7.1 - Task Extraction with Classification
+✅ Three-way note classification (actionable/needs_planning/archive_only)
+✅ File-based Things integration with launchd automation
+✅ AppleScript bridge for Things API
+✅ Discussion threads for planning items
+✅ Full E2E tests passing for both actionable and needs_planning paths
 
 ### 2025-12-31
 ✅ Completed Workflow 08 - Daily Summary
