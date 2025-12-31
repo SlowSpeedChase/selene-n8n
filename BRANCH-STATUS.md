@@ -24,7 +24,7 @@ Add Planning tab to SeleneChat for guided breakdown conversations. Uses dual AI 
 - [x] Conflict check completed (no overlapping work)
 - [x] Dependencies identified and noted
 - [x] Branch and worktree created
-- [ ] Implementation plan written (superpowers:writing-plans)
+- [x] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
 - [ ] Tests written first (superpowers:test-driven-development)
@@ -96,6 +96,13 @@ Add Planning tab to SeleneChat for guided breakdown conversations. Uses dual AI 
 ---
 
 ## Notes
+
+**2025-12-31:** Implementation plan created with 10 tasks:
+- Tasks 1-3: Database foundation (task_links, DiscussionThread, queries)
+- Tasks 4-5: Services (ClaudeAPIService, ThingsURLService)
+- Tasks 6-8: UI (Navigation, PlanningView, ConversationView)
+- Tasks 9-10: Methodology files and status
+- See: `docs/plans/2025-12-31-phase-7.2-implementation-plan.md`
 
 **2025-12-31:** Branch created. Design complete with key decisions:
 - Things is the task database (no duplication)
