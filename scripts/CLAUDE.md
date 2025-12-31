@@ -256,6 +256,12 @@ Comprehensive n8n workflow management via CLI - list, export, import, and update
 
 # Backup credentials
 ./scripts/manage-workflow.sh backup-creds [output-file]
+
+# New lifecycle commands
+./scripts/manage-workflow.sh status              # Show sync state and orphans
+./scripts/manage-workflow.sh init                # Initialize mapping from n8n
+./scripts/manage-workflow.sh sync [name]         # Sync git -> n8n
+./scripts/manage-workflow.sh cleanup [--force]   # Remove orphaned workflows
 ```
 
 ### Common Workflows
@@ -400,6 +406,35 @@ if [ ! -f "$INPUT_FILE" ]; then
     echo "ERROR: File not found: $INPUT_FILE"
     exit 1
 fi
+```
+
+### Workflow Lifecycle Management
+
+The script now includes git-first workflow lifecycle management:
+
+**Source of Truth:** `workflows/XX-name/workflow.json` files in git
+
+**ID Mapping:** `.workflow-ids.json` (gitignored) maps logical names to n8n IDs
+
+**Daily Workflow:**
+```bash
+# 1. Edit workflow JSON in git
+# 2. Push to n8n
+./scripts/manage-workflow.sh sync 07-task-extraction
+
+# 3. Test
+./workflows/07-task-extraction/scripts/test-with-markers.sh
+
+# 4. Commit
+git add workflows/07-task-extraction/workflow.json
+git commit -m "feat(07): description"
+```
+
+**First-Time Setup:**
+```bash
+./scripts/manage-workflow.sh init     # Create mapping from current n8n state
+./scripts/manage-workflow.sh status   # Review
+./scripts/manage-workflow.sh cleanup  # Remove old versions
 ```
 
 ## test-with-markers.sh (Workflow-Specific)
