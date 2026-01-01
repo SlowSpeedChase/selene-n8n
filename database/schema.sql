@@ -122,7 +122,8 @@ CREATE TABLE feedback_notes (
     status TEXT DEFAULT 'open',
     implemented_pr TEXT,
     implemented_at DATETIME,
-    test_run TEXT DEFAULT NULL
+    test_run TEXT DEFAULT NULL,
+    processing_error TEXT
 );
 CREATE INDEX idx_feedback_theme ON feedback_notes(theme);
 CREATE INDEX idx_feedback_status ON feedback_notes(status);
