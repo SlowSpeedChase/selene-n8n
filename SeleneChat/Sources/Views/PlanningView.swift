@@ -184,7 +184,6 @@ struct PlanningConversationView: View {
     @State private var showHistoryPrompt = false
     @StateObject private var providerService = AIProviderService.shared
 
-    private let claudeService = ClaudeAPIService.shared
     private let thingsService = ThingsURLService.shared
 
     var body: some View {
@@ -361,19 +360,22 @@ struct PlanningConversationView: View {
     }
 
     private func startConversation() async {
+        // Set initial provider from global default
+        currentProvider = providerService.globalDefault
+
         // Mark thread as active
         try? await databaseService.updateThreadStatus(thread.id, status: .active)
 
-        // Add initial AI message based on thread prompt
         let systemPrompt = buildSystemPrompt()
 
         isProcessing = true
 
         do {
-            let response = try await claudeService.sendPlanningMessage(
+            let response = try await providerService.sendPlanningMessage(
                 userMessage: "Start the planning session.",
                 conversationHistory: [],
-                systemPrompt: systemPrompt
+                systemPrompt: systemPrompt,
+                provider: currentProvider
             )
 
             conversationHistory.append(["role": "user", "content": "Start the planning session."])
@@ -381,16 +383,17 @@ struct PlanningConversationView: View {
 
             messages.append(PlanningMessage(
                 role: .assistant,
-                content: response.cleanMessage
+                content: response.cleanMessage,
+                provider: currentProvider
             ))
 
-            // Handle any extracted tasks
             await handleExtractedTasks(response.extractedTasks)
 
         } catch {
             messages.append(PlanningMessage(
                 role: .system,
-                content: "Failed to start conversation: \(error.localizedDescription)"
+                content: "Failed to start conversation: \(error.localizedDescription)",
+                provider: currentProvider
             ))
         }
 
@@ -403,7 +406,7 @@ struct PlanningConversationView: View {
         let userInput = inputText
         inputText = ""
 
-        // Add user message
+        // Add user message (no provider tracking for user messages)
         messages.append(PlanningMessage(role: .user, content: userInput))
         conversationHistory.append(["role": "user", "content": userInput])
 
@@ -411,26 +414,28 @@ struct PlanningConversationView: View {
 
         Task {
             do {
-                let response = try await claudeService.sendPlanningMessage(
+                let response = try await providerService.sendPlanningMessage(
                     userMessage: userInput,
                     conversationHistory: conversationHistory,
-                    systemPrompt: buildSystemPrompt()
+                    systemPrompt: buildSystemPrompt(),
+                    provider: currentProvider
                 )
 
                 conversationHistory.append(["role": "assistant", "content": response.message])
 
                 messages.append(PlanningMessage(
                     role: .assistant,
-                    content: response.cleanMessage
+                    content: response.cleanMessage,
+                    provider: currentProvider
                 ))
 
-                // Handle any extracted tasks
                 await handleExtractedTasks(response.extractedTasks)
 
             } catch {
                 messages.append(PlanningMessage(
                     role: .system,
-                    content: "Error: \(error.localizedDescription)"
+                    content: "Error: \(error.localizedDescription)",
+                    provider: currentProvider
                 ))
             }
 
