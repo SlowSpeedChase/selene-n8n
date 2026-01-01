@@ -6,8 +6,8 @@ Builds relationship network between notes based on shared concepts, themes, and 
 
 ## Current Status
 
-**BLOCKED** - Workflow requires `note_connections` table which does not exist.
-See `docs/STATUS.md` for details and resolution options.
+**ACTIVE** - Workflow production ready. Runs every 6 hours via cron.
+See `docs/STATUS.md` for test results and usage details.
 
 ## Tech Stack
 
@@ -26,13 +26,12 @@ See `docs/STATUS.md` for details and resolution options.
 
 ## Data Flow
 
-1. **Every 6 Hours** - Cron trigger activates workflow
+1. **Every 6 Hours / Manual Trigger** - Cron or webhook activates workflow
 2. **Get Recent Notes** - SELECT from processed_notes JOIN raw_notes (LIMIT 100)
-3. **Calculate Note Connections** - O(n^2) comparison of all note pairs
-4. **Split Connections for Insert** - Transform to individual items
-5. **Store Connection** - INSERT into note_connections (**TABLE MISSING**)
-6. **Generate Network Statistics** - Calculate hub notes, strongest connections
-7. **Store Network Statistics** - INSERT into network_analysis_history
+3. **Calculate Note Connections** - O(n^2) comparison, skips self-connections
+4. **Store All Connections** - Batch INSERT using transaction (atomic)
+5. **Generate Network Statistics** - Calculate hub notes, strongest connections
+6. **Store Network Statistics** - INSERT into network_analysis_history
 
 ## Common Patterns
 
@@ -94,7 +93,7 @@ cd workflows/06-connection-network
 
 ## Database Schema
 
-**Table: note_connections (DOES NOT EXIST - NEEDS TO BE CREATED)**
+**Table: note_connections (Created via migration 008)**
 ```sql
 CREATE TABLE note_connections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
