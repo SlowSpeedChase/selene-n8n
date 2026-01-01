@@ -1,8 +1,8 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2025-12-31
-**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2 Design Complete 📋
+**Last Updated:** 2026-01-01
+**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2d Complete ✅ | Phase 7.2f Design Complete 📋
 
 ---
 
@@ -66,10 +66,14 @@ Task extraction with classification - route actionable items to Things:
 - Phase 7.2c: Planning Conversations ✅ COMPLETE
 - Phase 7.2d: AI Provider Toggle ✅ COMPLETE
 - Phase 7.2e: Bidirectional Things Flow ⬜ TODO
-- Phase 7.2f: Things Project Grouping ⬜ TODO
-  - Group related tasks into Things projects
-  - Auto-create project if no suitable one exists
-  - Link planning thread to Things project for context
+- Phase 7.2f: Things Project Grouping 📋 DESIGN COMPLETE
+  - **[📋 Design Document](./docs/plans/2026-01-01-project-grouping-design.md)**
+  - 7.2f.1: Basic Project Creation - 3+ tasks with shared concept → auto-create project
+  - 7.2f.2: Auto-Assignment - New tasks auto-join matching projects
+  - 7.2f.3: Headings Within Projects - Group tasks by task_type
+  - 7.2f.4: Oversized Task Detection - Flag overwhelm > 7 for breakdown
+  - 7.2f.5: Project Completion - Track completion, log patterns, celebrate
+  - 7.2f.6: Sub-Project Suggestions - Approval-only spin-off suggestions
 
 **Key Changes:**
 - Phase 7.1: Task Extraction with Classification ✅ COMPLETE (2025-12-30)
@@ -289,6 +293,11 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2026-01-01**: Phase 7.2f design complete - Things Project Grouping with script-driven architecture
+  - Auto-create projects from concept clusters (3+ tasks)
+  - Auto-assign new tasks to existing projects
+  - Hierarchical breakdown detection
+  - See [design document](./docs/plans/2026-01-01-project-grouping-design.md)
 - **2025-12-31**: Phase 7.2d complete - AI Provider Toggle (Local/Cloud switching in Planning tab)
 - **2025-12-31**: Phase 7.2f added to roadmap - Things Project Grouping (auto-create projects for related tasks)
 - **2025-12-31**: Phase 7.2 design complete - SeleneChat Planning Integration with dual AI routing
