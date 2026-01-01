@@ -178,12 +178,13 @@ struct PlanningConversationView: View {
     @State private var isProcessing = false
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
-    @State private var isContextExpanded = false
-    @State private var currentProvider: AIProvider = AIProviderSettings.shared.defaultProvider
     @FocusState private var isInputFocused: Bool
+    @State private var currentProvider: AIProvider = .local
+    @State private var showProviderSettings = false
+    @State private var showHistoryPrompt = false
+    @State private var apiKeyMissing = false
+    @StateObject private var providerService = AIProviderService.shared
 
-    private let claudeService = ClaudeAPIService.shared
-    private let ollamaService = OllamaService.shared
     private let thingsService = ThingsURLService.shared
 
     var body: some View {
@@ -231,6 +232,11 @@ struct PlanningConversationView: View {
 
             Divider()
 
+            // API key error
+            if apiKeyMissing {
+                apiKeyErrorView
+            }
+
             // Input
             inputArea
         }
@@ -240,146 +246,138 @@ struct PlanningConversationView: View {
     }
 
     private var conversationHeader: some View {
-        VStack(spacing: 0) {
+        HStack {
+            Button(action: onBack) {
+                Label("Back", systemImage: "chevron.left")
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Provider toggle badge
+            providerBadge
+
+            if !tasksCreated.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("\(tasksCreated.count) tasks")
+                        .font(.caption)
+                }
+            }
+
+            Spacer()
+
+            // Settings gear
+            Button(action: { showProviderSettings = true }) {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showProviderSettings) {
+                AIProviderSettings(providerService: providerService)
+            }
+
+            Button("Complete") {
+                Task { await completeThread() }
+            }
+            .disabled(isProcessing)
+        }
+        .padding()
+        .alert("Switch to Cloud AI", isPresented: $showHistoryPrompt) {
+            Button("Yes, send history") {
+                currentProvider = .cloud
+            }
+            Button("No, fresh start") {
+                currentProvider = .cloud
+                conversationHistory = []
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Include conversation history? This will send previous messages to Claude API.")
+        }
+    }
+
+    private var providerBadge: some View {
+        Button(action: toggleProvider) {
+            HStack(spacing: 4) {
+                Text(currentProvider.icon)
+                Text(currentProvider.displayName)
+                    .font(.caption)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(currentProvider == .cloud ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var apiKeyErrorView: some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Button(action: onBack) {
-                    Label("Back", systemImage: "chevron.left")
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("API key not found")
+                    .font(.headline)
+                Spacer()
+                Button(action: { apiKeyMissing = false; currentProvider = .local }) {
+                    Image(systemName: "xmark")
                 }
                 .buttonStyle(.plain)
-
-                Spacer()
-
-                if !tasksCreated.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Text("\(tasksCreated.count) tasks created")
-                            .font(.caption)
-                    }
-                }
-
-                Spacer()
-
-                Button("Complete") {
-                    Task { await completeThread() }
-                }
-                .disabled(isProcessing)
             }
-            .padding(.horizontal)
-            .padding(.top)
-            .padding(.bottom, 8)
 
-            // AI Provider toggle
-            HStack(spacing: 16) {
-                Text("AI:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            Text("Set ANTHROPIC_API_KEY in your shell environment and restart SeleneChat.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
 
-                Picker("", selection: $currentProvider) {
-                    ForEach(AIProvider.allCases, id: \.self) { provider in
-                        Text(provider.privacyBadge).tag(provider)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 180)
+            Text("# Add to ~/.zshrc:\nexport ANTHROPIC_API_KEY=\"sk-ant-...\"")
+                .font(.system(.caption, design: .monospaced))
+                .padding(8)
+                .background(Color.black.opacity(0.05))
+                .cornerRadius(4)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
 
-                Spacer()
-
-                if currentProvider == .claude && !claudeService.hasAPIKey {
-                    Label("API key not set", systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+    private func toggleProvider() {
+        if currentProvider == .local {
+            // Check if cloud is available before switching
+            Task {
+                let available = await providerService.isCloudAvailable()
+                if available {
+                    showHistoryPrompt = true
+                } else {
+                    apiKeyMissing = true
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+        } else {
+            // Switching to local - no check needed
+            currentProvider = .local
         }
     }
 
     private var noteContextCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header - always visible
-            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isContextExpanded.toggle() } }) {
-                HStack {
-                    Image(systemName: "doc.text")
-                        .foregroundColor(.accentColor)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Original Note")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        if let title = thread.noteTitle {
-                            Text(title)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                        } else {
-                            Text("Untitled Note")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .italic()
-                        }
-                    }
-
-                    Spacer()
-
-                    Image(systemName: isContextExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 10)
+        VStack(alignment: .leading, spacing: 8) {
+            if let title = thread.noteTitle {
+                Text(title)
+                    .font(.headline)
             }
-            .buttonStyle(.plain)
 
-            // Expandable content
-            if isContextExpanded {
-                Divider()
-                    .padding(.horizontal)
-
-                if let content = thread.noteContent {
-                    ScrollView {
-                        Text(content)
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                    }
-                    .frame(maxHeight: 200)
-                } else {
-                    Text("No content available")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .italic()
-                        .padding()
-                }
-
-                // Related concepts if available
-                if let concepts = thread.relatedConcepts, !concepts.isEmpty {
-                    Divider()
-                        .padding(.horizontal)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(concepts, id: \.self) { concept in
-                                Text(concept)
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.accentColor.opacity(0.1))
-                                    .cornerRadius(4)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                    }
-                }
+            if let content = thread.noteContent {
+                Text(content)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
             }
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.accentColor.opacity(0.05))
     }
 
     private var inputArea: some View {
@@ -405,29 +403,40 @@ struct PlanningConversationView: View {
     }
 
     private func startConversation() async {
+        // Set initial provider from global default
+        currentProvider = providerService.globalDefault
+
         // Mark thread as active
         try? await databaseService.updateThreadStatus(thread.id, status: .active)
+
+        let systemPrompt = buildSystemPrompt()
 
         isProcessing = true
 
         do {
-            let response = try await sendToAI(message: "Start the planning session.", isInitial: true)
+            let response = try await providerService.sendPlanningMessage(
+                userMessage: "Start the planning session.",
+                conversationHistory: [],
+                systemPrompt: systemPrompt,
+                provider: currentProvider
+            )
 
             conversationHistory.append(["role": "user", "content": "Start the planning session."])
             conversationHistory.append(["role": "assistant", "content": response.message])
 
             messages.append(PlanningMessage(
                 role: .assistant,
-                content: response.cleanMessage
+                content: response.cleanMessage,
+                provider: currentProvider
             ))
 
-            // Handle any extracted tasks
             await handleExtractedTasks(response.extractedTasks)
 
         } catch {
             messages.append(PlanningMessage(
                 role: .system,
-                content: "Failed to start conversation: \(error.localizedDescription)"
+                content: "Failed to start conversation: \(error.localizedDescription)",
+                provider: currentProvider
             ))
         }
 
@@ -440,7 +449,7 @@ struct PlanningConversationView: View {
         let userInput = inputText
         inputText = ""
 
-        // Add user message
+        // Add user message (no provider tracking for user messages)
         messages.append(PlanningMessage(role: .user, content: userInput))
         conversationHistory.append(["role": "user", "content": userInput])
 
@@ -448,69 +457,33 @@ struct PlanningConversationView: View {
 
         Task {
             do {
-                let response = try await sendToAI(message: userInput, isInitial: false)
+                let response = try await providerService.sendPlanningMessage(
+                    userMessage: userInput,
+                    conversationHistory: conversationHistory,
+                    systemPrompt: buildSystemPrompt(),
+                    provider: currentProvider
+                )
 
                 conversationHistory.append(["role": "assistant", "content": response.message])
 
                 messages.append(PlanningMessage(
                     role: .assistant,
-                    content: response.cleanMessage
+                    content: response.cleanMessage,
+                    provider: currentProvider
                 ))
 
-                // Handle any extracted tasks
                 await handleExtractedTasks(response.extractedTasks)
 
             } catch {
                 messages.append(PlanningMessage(
                     role: .system,
-                    content: "Error: \(error.localizedDescription)"
+                    content: "Error: \(error.localizedDescription)",
+                    provider: currentProvider
                 ))
             }
 
             isProcessing = false
         }
-    }
-
-    private func sendToAI(message: String, isInitial: Bool) async throws -> PlanningResponse {
-        let systemPrompt = buildSystemPrompt()
-
-        switch currentProvider {
-        case .ollama:
-            // Use Ollama for local processing
-            let prompt = """
-            \(systemPrompt)
-
-            \(isInitial ? "" : "Conversation so far:\n\(formatConversationForOllama())\n\n")User: \(message)
-
-            Assistant:
-            """
-
-            let ollamaResponse = try await ollamaService.generate(prompt: prompt)
-
-            // Parse tasks from Ollama response (same format as Claude)
-            let extractedTasks = await claudeService.extractTasks(from: ollamaResponse)
-            let cleanMessage = await claudeService.removeTaskMarkers(from: ollamaResponse)
-
-            return PlanningResponse(
-                message: ollamaResponse,
-                extractedTasks: extractedTasks,
-                cleanMessage: cleanMessage
-            )
-
-        case .claude:
-            return try await claudeService.sendPlanningMessage(
-                userMessage: message,
-                conversationHistory: isInitial ? [] : conversationHistory,
-                systemPrompt: systemPrompt
-            )
-        }
-    }
-
-    private func formatConversationForOllama() -> String {
-        conversationHistory.map { msg in
-            let role = msg["role"] == "user" ? "User" : "Assistant"
-            return "\(role): \(msg["content"] ?? "")"
-        }.joined(separator: "\n\n")
     }
 
     private func handleExtractedTasks(_ tasks: [ExtractedTask]) async {
@@ -581,12 +554,19 @@ struct PlanningMessage: Identifiable {
     let role: Role
     let content: String
     let timestamp = Date()
+    let provider: AIProvider  // Track which AI generated this
 
     enum Role {
         case user
         case assistant
         case system
         case taskCreated
+    }
+
+    init(role: Role, content: String, provider: AIProvider = .local) {
+        self.role = role
+        self.content = content
+        self.provider = provider
     }
 }
 
@@ -597,11 +577,24 @@ struct PlanningMessageBubble: View {
         HStack {
             if message.role == .user { Spacer() }
 
-            content
-                .padding(12)
-                .background(backgroundColor)
-                .foregroundColor(textColor)
-                .cornerRadius(12)
+            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
+                content
+                    .padding(12)
+                    .background(backgroundColor)
+                    .foregroundColor(textColor)
+                    .cornerRadius(12)
+
+                // Provider indicator for assistant messages
+                if message.role == .assistant {
+                    HStack(spacing: 4) {
+                        Text(message.provider.icon)
+                            .font(.caption2)
+                        Text(message.provider.displayName)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
 
             if message.role != .user { Spacer() }
         }
@@ -624,10 +617,17 @@ struct PlanningMessageBubble: View {
 
     private var backgroundColor: Color {
         switch message.role {
-        case .user: return Color.accentColor
-        case .assistant: return Color(NSColor.controlBackgroundColor)
-        case .system: return Color.orange.opacity(0.2)
-        case .taskCreated: return Color.green.opacity(0.1)
+        case .user:
+            return Color.accentColor
+        case .assistant:
+            // Cloud messages get blue tint
+            return message.provider == .cloud
+                ? Color.blue.opacity(0.1)
+                : Color(NSColor.controlBackgroundColor)
+        case .system:
+            return Color.orange.opacity(0.2)
+        case .taskCreated:
+            return Color.green.opacity(0.1)
         }
     }
 

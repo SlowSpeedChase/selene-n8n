@@ -105,6 +105,30 @@ git worktree list
 
 ---
 
+## MANDATORY: Workflow Procedure Check
+
+**BEFORE taking ANY action involving n8n workflows, you MUST:**
+
+1. Read `@workflows/CLAUDE.md` (the full procedures section)
+2. Identify which procedure applies (Create, Modify, or Delete)
+3. Follow that procedure step-by-step without skipping
+
+**Trigger conditions (if ANY apply, read procedures first):**
+- User mentions: workflow, n8n, webhook, node, trigger
+- User asks to: add, modify, fix, debug, delete, remove, create
+- Files involved: `workflow.json`, `workflows/` directory
+- Actions on: ingestion, processing, export, or any numbered workflow (01-, 02-, etc.)
+
+**Examples that trigger this:**
+- "Add a new node to the ingestion workflow" → Read procedures, use MODIFY
+- "Create a workflow for daily summaries" → Read procedures, use CREATE
+- "Remove the old sentiment workflow" → Read procedures, use DELETE
+- "Fix the webhook in 02-llm-processing" → Read procedures, use MODIFY
+
+**Claude: This is not optional. Skipping procedures causes git sync issues and broken workflows.**
+
+---
+
 ## Critical Rules (Do NOT)
 
 **Workflow Modifications:**

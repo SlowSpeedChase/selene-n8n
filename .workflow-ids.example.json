@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to .workflow-ids.json and populate with your n8n workflow IDs",
+  "01-ingestion": "your-n8n-id-here",
+  "02-llm-processing": "your-n8n-id-here"
+}

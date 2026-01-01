@@ -2,25 +2,26 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var databaseService: DatabaseService
-    @ObservedObject private var aiSettings = AIProviderSettings.shared
+    @ObservedObject private var providerService = AIProviderService.shared
     @State private var tempDatabasePath: String = ""
     @State private var showingFilePicker = false
 
     var body: some View {
         Form {
             Section("AI Provider") {
-                Picker("Default Provider", selection: $aiSettings.defaultProvider) {
+                Picker("Default Provider", selection: $providerService.globalDefault) {
                     ForEach(AIProvider.allCases, id: \.self) { provider in
-                        Label(provider.displayName, systemImage: provider.icon)
+                        Label(provider.displayName, systemImage: provider.systemImage)
                             .tag(provider)
                     }
                 }
                 .pickerStyle(.radioGroup)
 
                 HStack(spacing: 8) {
-                    Image(systemName: aiSettings.defaultProvider.icon)
-                        .foregroundColor(.accentColor)
-                    Text(aiSettings.defaultProvider.description)
+                    Text(providerService.globalDefault.icon)
+                    Text(providerService.globalDefault == .local
+                        ? "Private, runs on your Mac. Best for sensitive content."
+                        : "Cloud AI, better reasoning. No personal data sent.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
