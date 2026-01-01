@@ -534,11 +534,24 @@ struct PlanningMessageBubble: View {
         HStack {
             if message.role == .user { Spacer() }
 
-            content
-                .padding(12)
-                .background(backgroundColor)
-                .foregroundColor(textColor)
-                .cornerRadius(12)
+            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
+                content
+                    .padding(12)
+                    .background(backgroundColor)
+                    .foregroundColor(textColor)
+                    .cornerRadius(12)
+
+                // Provider indicator for assistant messages
+                if message.role == .assistant {
+                    HStack(spacing: 4) {
+                        Text(message.provider.icon)
+                            .font(.caption2)
+                        Text(message.provider.displayName)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
 
             if message.role != .user { Spacer() }
         }
@@ -561,10 +574,17 @@ struct PlanningMessageBubble: View {
 
     private var backgroundColor: Color {
         switch message.role {
-        case .user: return Color.accentColor
-        case .assistant: return Color(NSColor.controlBackgroundColor)
-        case .system: return Color.orange.opacity(0.2)
-        case .taskCreated: return Color.green.opacity(0.1)
+        case .user:
+            return Color.accentColor
+        case .assistant:
+            // Cloud messages get blue tint
+            return message.provider == .cloud
+                ? Color.blue.opacity(0.1)
+                : Color(NSColor.controlBackgroundColor)
+        case .system:
+            return Color.orange.opacity(0.2)
+        case .taskCreated:
+            return Color.green.opacity(0.1)
         }
     }
 
