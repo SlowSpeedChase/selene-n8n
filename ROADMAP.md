@@ -2,7 +2,7 @@
 
 **Created:** 2025-10-18
 **Last Updated:** 2026-01-01
-**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2d Complete ✅ | Phase 7.2f Design Complete 📋
+**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2d Complete ✅ | Phase 7.2f Design Complete 📋 | n8n 2.x Upgrade Design Complete 📋
 
 ---
 
@@ -46,6 +46,11 @@ Integration details and specifications:
 Infrastructure and architectural enhancements:
 
 - **[UUID Tracking Foundation](./docs/roadmap/09-UUID-TRACKING-FOUNDATION.md)** - Draft identification and edit detection
+- **[n8n 2.x Upgrade](./docs/plans/2026-01-01-n8n-upgrade-design.md)** 📋 DESIGN COMPLETE - Upgrade from 1.110.1 to 2.1.4
+  - Security hardening (task runners, isolated Code execution)
+  - SQLite pooling (up to 10x faster queries)
+  - MCP nodes for SeleneChat integration
+  - Publish/Save workflow pattern
 
 ### 🎯 **Phase 7: Things Integration (Design Revised 2025-12-30)**
 
@@ -293,6 +298,9 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2026-01-01**: n8n 2.x Upgrade design complete - Upgrade from 1.110.1 to 2.1.4
+  - Security hardening, SQLite performance, MCP integration
+  - See [design document](./docs/plans/2026-01-01-n8n-upgrade-design.md)
 - **2026-01-01**: Phase 7.2f design complete - Things Project Grouping with script-driven architecture
   - Auto-create projects from concept clusters (3+ tasks)
   - Auto-assign new tasks to existing projects
