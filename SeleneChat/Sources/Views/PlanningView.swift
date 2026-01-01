@@ -22,6 +22,17 @@ struct PlanningView: View {
         .task {
             await loadThreads()
         }
+        .onAppear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Appeared: PlanningView")
+            ActionTracker.shared.track(action: "viewAppeared", params: ["view": "PlanningView"])
+            #endif
+        }
+        .onDisappear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Disappeared: PlanningView")
+            #endif
+        }
     }
 
     private var threadListView: some View {

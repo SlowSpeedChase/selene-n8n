@@ -13,7 +13,24 @@ struct SeleneChatApp: App {
         DispatchQueue.main.async {
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
+
+        #if DEBUG
+        setupDebugSystem()
+        #endif
     }
+
+    #if DEBUG
+    private func setupDebugSystem() {
+        DebugLogger.shared.log(.state, "App launched")
+
+        // Register snapshot providers
+        DebugSnapshotService.shared.registerProvider(named: "actions", provider: ActionTracker.shared)
+        DebugSnapshotService.shared.registerProvider(named: "chatViewModel", provider: chatViewModel)
+
+        // Start watching for snapshot requests
+        DebugSnapshotService.shared.startWatching()
+    }
+    #endif
 
     var body: some Scene {
         WindowGroup {

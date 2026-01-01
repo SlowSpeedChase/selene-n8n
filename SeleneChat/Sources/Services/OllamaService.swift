@@ -64,6 +64,10 @@ actor OllamaService {
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                #if DEBUG
+                DebugLogger.shared.log(.state, "OllamaService.isAvailable: false (status \(statusCode))")
+                #endif
                 cachedAvailability = false
                 lastAvailabilityCheck = Date()
                 return false
@@ -123,11 +127,21 @@ actor OllamaService {
             // Decode response
             let generateResponse = try JSONDecoder().decode(GenerateResponse.self, from: data)
 
+            #if DEBUG
+            DebugLogger.shared.log(.state, "OllamaService.generate: success, response length=\(generateResponse.response.count)")
+            #endif
+
             return generateResponse.response
 
         } catch let error as OllamaError {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "OllamaService.generate|\(error.localizedDescription)")
+            #endif
             throw error
         } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "OllamaService.generate|network error: \(error.localizedDescription)")
+            #endif
             print("⚠️ Ollama generate error: \(error.localizedDescription)")
             throw OllamaError.networkError(error)
         }

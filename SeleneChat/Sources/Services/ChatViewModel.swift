@@ -415,3 +415,17 @@ class ChatViewModel: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+@MainActor
+extension ChatViewModel: DebugSnapshotProvider {
+    func debugSnapshot() -> [String: Any] {
+        return [
+            "messagesCount": currentSession.messages.count,
+            "isLoading": isProcessing,
+            "currentSessionId": currentSession.id.uuidString,
+            "error": error ?? "none"
+        ]
+    }
+}
+#endif
