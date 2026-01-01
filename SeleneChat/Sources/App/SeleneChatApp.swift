@@ -25,6 +25,7 @@ struct SeleneChatApp: App {
 
         // Register snapshot providers
         DebugSnapshotService.shared.registerProvider(named: "actions", provider: ActionTracker.shared)
+        DebugSnapshotService.shared.registerProvider(named: "chatViewModel", provider: chatViewModel)
 
         // Start watching for snapshot requests
         DebugSnapshotService.shared.startWatching()
