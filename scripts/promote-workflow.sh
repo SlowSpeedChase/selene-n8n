@@ -20,6 +20,11 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 log_gate() { echo -e "${CYAN}[GATE]${NC} $1"; }
 
+# Wrapper for n8n CLI commands - filters noisy "Error tracking disabled" message
+n8n_exec() {
+    docker exec selene-n8n n8n "$@" 2>&1 | grep -v "Error tracking disabled"
+}
+
 # Navigate to project root
 cd "$(dirname "$0")/.."
 
@@ -154,7 +159,7 @@ fi
 
 # Get workflow ID from n8n (by name matching)
 log_info "Importing workflow to production n8n..."
-docker exec selene-n8n n8n import:workflow --input="/workflows/$WORKFLOW_JSON" --separate
+n8n_exec import:workflow --input="/workflows/$WORKFLOW_JSON" --separate
 
 log_info "Workflow imported to production"
 

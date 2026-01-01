@@ -37,6 +37,11 @@ log_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
 
+# Wrapper for n8n CLI commands - filters noisy "Error tracking disabled" message
+n8n_exec() {
+    docker exec "$CONTAINER_NAME" n8n "$@" 2>&1 | grep -v "Error tracking disabled"
+}
+
 # Check if container is running
 check_container() {
     if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -107,7 +112,7 @@ get_n8n_workflows() {
 # List all workflows
 list_workflows() {
     log_info "Listing all workflows..."
-    docker exec "$CONTAINER_NAME" n8n list:workflow
+    n8n_exec list:workflow
 }
 
 # Export workflow
@@ -127,7 +132,7 @@ export_workflow() {
     fi
 
     log_step "Exporting workflow ID: $workflow_id"
-    docker exec "$CONTAINER_NAME" n8n export:workflow --id="$workflow_id" --output="$output_file"
+    n8n_exec export:workflow --id="$workflow_id" --output="$output_file"
     log_info "✓ Workflow exported to: $output_file"
 }
 
@@ -144,10 +149,10 @@ import_workflow() {
     log_step "Importing workflow from: $input_file"
 
     if [ "$separate" = "--separate" ]; then
-        docker exec "$CONTAINER_NAME" n8n import:workflow --input="$input_file" --separate
+        n8n_exec import:workflow --input="$input_file" --separate
         log_info "✓ Workflow imported as separate instance"
     else
-        docker exec "$CONTAINER_NAME" n8n import:workflow --input="$input_file"
+        n8n_exec import:workflow --input="$input_file"
         log_info "✓ Workflow imported"
     fi
 }
@@ -183,7 +188,7 @@ show_workflow() {
     fi
 
     log_info "Showing details for workflow ID: $workflow_id"
-    docker exec "$CONTAINER_NAME" n8n show:workflow --id="$workflow_id"
+    n8n_exec show:workflow --id="$workflow_id"
 }
 
 # Export credentials (backup)
@@ -192,14 +197,14 @@ export_credentials() {
 
     log_step "Exporting credentials..."
     log_warn "Credentials contain sensitive data - handle with care!"
-    docker exec "$CONTAINER_NAME" n8n export:credentials --output="$output_file"
+    n8n_exec export:credentials --output="$output_file"
     log_info "✓ Credentials exported to: $output_file"
 }
 
 # Interactive workflow selection
 select_workflow() {
     log_info "Fetching workflows..."
-    docker exec "$CONTAINER_NAME" n8n list:workflow
+    n8n_exec list:workflow
 
     echo ""
     read -p "Enter workflow ID: " workflow_id
@@ -380,7 +385,7 @@ sync_single_workflow() {
 
     # Import workflow
     local import_output
-    import_output=$(docker exec "$CONTAINER_NAME" n8n import:workflow --input="$container_path" 2>&1)
+    import_output=$(n8n_exec import:workflow --input="$container_path" 2>&1)
     local import_status=$?
 
     # Cleanup temp files
