@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS feedback_notes (
     status TEXT DEFAULT 'open',
     implemented_pr TEXT,
     implemented_at DATETIME,
-    test_run TEXT DEFAULT NULL
+    test_run TEXT DEFAULT NULL,
+    processing_error TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_feedback_theme ON feedback_notes(theme);
