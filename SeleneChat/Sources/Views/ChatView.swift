@@ -63,6 +63,17 @@ struct ChatView: View {
             SessionHistoryView()
                 .environmentObject(chatViewModel)
         }
+        .onAppear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Appeared: ChatView")
+            ActionTracker.shared.track(action: "viewAppeared", params: ["view": "ChatView"])
+            #endif
+        }
+        .onDisappear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Disappeared: ChatView")
+            #endif
+        }
     }
 
     private var chatHeader: some View {

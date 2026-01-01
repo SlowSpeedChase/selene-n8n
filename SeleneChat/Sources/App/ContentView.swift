@@ -36,5 +36,16 @@ struct ContentView: View {
                 PlanningView()
             }
         }
+        .onAppear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Appeared: ContentView")
+            ActionTracker.shared.track(action: "viewAppeared", params: ["view": "ContentView"])
+            #endif
+        }
+        .onDisappear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Disappeared: ContentView")
+            #endif
+        }
     }
 }

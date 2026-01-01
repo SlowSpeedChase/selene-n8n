@@ -21,6 +21,7 @@ Native macOS app for querying and exploring notes stored in Selene SQLite databa
 - Sources/Services/ - Business logic (DatabaseService, SearchService, OllamaService)
 - Sources/Views/ - UI components (ChatView, CitationView, etc.)
 - Tests/ - Unit and integration tests
+- Sources/Debug/ - Debug logging and snapshot system (DEBUG builds only)
 
 ## Architecture
 

@@ -22,6 +22,17 @@ struct PlanningView: View {
         .task {
             await loadThreads()
         }
+        .onAppear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Appeared: PlanningView")
+            ActionTracker.shared.track(action: "viewAppeared", params: ["view": "PlanningView"])
+            #endif
+        }
+        .onDisappear {
+            #if DEBUG
+            DebugLogger.shared.log(.nav, "Disappeared: PlanningView")
+            #endif
+        }
     }
 
     private var threadListView: some View {
@@ -179,8 +190,12 @@ struct PlanningConversationView: View {
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
     @FocusState private var isInputFocused: Bool
+    @State private var currentProvider: AIProvider = .local
+    @State private var showProviderSettings = false
+    @State private var showHistoryPrompt = false
+    @State private var apiKeyMissing = false
+    @StateObject private var providerService = AIProviderService.shared
 
-    private let claudeService = ClaudeAPIService.shared
     private let thingsService = ThingsURLService.shared
 
     var body: some View {
@@ -228,6 +243,11 @@ struct PlanningConversationView: View {
 
             Divider()
 
+            // API key error
+            if apiKeyMissing {
+                apiKeyErrorView
+            }
+
             // Input
             inputArea
         }
@@ -245,16 +265,28 @@ struct PlanningConversationView: View {
 
             Spacer()
 
+            // Provider toggle badge
+            providerBadge
+
             if !tasksCreated.isEmpty {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                    Text("\(tasksCreated.count) tasks created")
+                    Text("\(tasksCreated.count) tasks")
                         .font(.caption)
                 }
             }
 
             Spacer()
+
+            // Settings gear
+            Button(action: { showProviderSettings = true }) {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showProviderSettings) {
+                AIProviderSettings(providerService: providerService)
+            }
 
             Button("Complete") {
                 Task { await completeThread() }
@@ -262,6 +294,82 @@ struct PlanningConversationView: View {
             .disabled(isProcessing)
         }
         .padding()
+        .alert("Switch to Cloud AI", isPresented: $showHistoryPrompt) {
+            Button("Yes, send history") {
+                currentProvider = .cloud
+            }
+            Button("No, fresh start") {
+                currentProvider = .cloud
+                conversationHistory = []
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Include conversation history? This will send previous messages to Claude API.")
+        }
+    }
+
+    private var providerBadge: some View {
+        Button(action: toggleProvider) {
+            HStack(spacing: 4) {
+                Text(currentProvider.icon)
+                Text(currentProvider.displayName)
+                    .font(.caption)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(currentProvider == .cloud ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var apiKeyErrorView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("API key not found")
+                    .font(.headline)
+                Spacer()
+                Button(action: { apiKeyMissing = false; currentProvider = .local }) {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text("Set ANTHROPIC_API_KEY in your shell environment and restart SeleneChat.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Text("# Add to ~/.zshrc:\nexport ANTHROPIC_API_KEY=\"sk-ant-...\"")
+                .font(.system(.caption, design: .monospaced))
+                .padding(8)
+                .background(Color.black.opacity(0.05))
+                .cornerRadius(4)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+
+    private func toggleProvider() {
+        if currentProvider == .local {
+            // Check if cloud is available before switching
+            Task {
+                let available = await providerService.isCloudAvailable()
+                if available {
+                    showHistoryPrompt = true
+                } else {
+                    apiKeyMissing = true
+                }
+            }
+        } else {
+            // Switching to local - no check needed
+            currentProvider = .local
+        }
     }
 
     private var noteContextCard: some View {
@@ -306,19 +414,22 @@ struct PlanningConversationView: View {
     }
 
     private func startConversation() async {
+        // Set initial provider from global default
+        currentProvider = providerService.globalDefault
+
         // Mark thread as active
         try? await databaseService.updateThreadStatus(thread.id, status: .active)
 
-        // Add initial AI message based on thread prompt
         let systemPrompt = buildSystemPrompt()
 
         isProcessing = true
 
         do {
-            let response = try await claudeService.sendPlanningMessage(
+            let response = try await providerService.sendPlanningMessage(
                 userMessage: "Start the planning session.",
                 conversationHistory: [],
-                systemPrompt: systemPrompt
+                systemPrompt: systemPrompt,
+                provider: currentProvider
             )
 
             conversationHistory.append(["role": "user", "content": "Start the planning session."])
@@ -326,16 +437,17 @@ struct PlanningConversationView: View {
 
             messages.append(PlanningMessage(
                 role: .assistant,
-                content: response.cleanMessage
+                content: response.cleanMessage,
+                provider: currentProvider
             ))
 
-            // Handle any extracted tasks
             await handleExtractedTasks(response.extractedTasks)
 
         } catch {
             messages.append(PlanningMessage(
                 role: .system,
-                content: "Failed to start conversation: \(error.localizedDescription)"
+                content: "Failed to start conversation: \(error.localizedDescription)",
+                provider: currentProvider
             ))
         }
 
@@ -348,7 +460,7 @@ struct PlanningConversationView: View {
         let userInput = inputText
         inputText = ""
 
-        // Add user message
+        // Add user message (no provider tracking for user messages)
         messages.append(PlanningMessage(role: .user, content: userInput))
         conversationHistory.append(["role": "user", "content": userInput])
 
@@ -356,26 +468,28 @@ struct PlanningConversationView: View {
 
         Task {
             do {
-                let response = try await claudeService.sendPlanningMessage(
+                let response = try await providerService.sendPlanningMessage(
                     userMessage: userInput,
                     conversationHistory: conversationHistory,
-                    systemPrompt: buildSystemPrompt()
+                    systemPrompt: buildSystemPrompt(),
+                    provider: currentProvider
                 )
 
                 conversationHistory.append(["role": "assistant", "content": response.message])
 
                 messages.append(PlanningMessage(
                     role: .assistant,
-                    content: response.cleanMessage
+                    content: response.cleanMessage,
+                    provider: currentProvider
                 ))
 
-                // Handle any extracted tasks
                 await handleExtractedTasks(response.extractedTasks)
 
             } catch {
                 messages.append(PlanningMessage(
                     role: .system,
-                    content: "Error: \(error.localizedDescription)"
+                    content: "Error: \(error.localizedDescription)",
+                    provider: currentProvider
                 ))
             }
 
@@ -451,12 +565,19 @@ struct PlanningMessage: Identifiable {
     let role: Role
     let content: String
     let timestamp = Date()
+    let provider: AIProvider  // Track which AI generated this
 
     enum Role {
         case user
         case assistant
         case system
         case taskCreated
+    }
+
+    init(role: Role, content: String, provider: AIProvider = .local) {
+        self.role = role
+        self.content = content
+        self.provider = provider
     }
 }
 
@@ -467,11 +588,24 @@ struct PlanningMessageBubble: View {
         HStack {
             if message.role == .user { Spacer() }
 
-            content
-                .padding(12)
-                .background(backgroundColor)
-                .foregroundColor(textColor)
-                .cornerRadius(12)
+            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
+                content
+                    .padding(12)
+                    .background(backgroundColor)
+                    .foregroundColor(textColor)
+                    .cornerRadius(12)
+
+                // Provider indicator for assistant messages
+                if message.role == .assistant {
+                    HStack(spacing: 4) {
+                        Text(message.provider.icon)
+                            .font(.caption2)
+                        Text(message.provider.displayName)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
 
             if message.role != .user { Spacer() }
         }
@@ -494,10 +628,17 @@ struct PlanningMessageBubble: View {
 
     private var backgroundColor: Color {
         switch message.role {
-        case .user: return Color.accentColor
-        case .assistant: return Color(NSColor.controlBackgroundColor)
-        case .system: return Color.orange.opacity(0.2)
-        case .taskCreated: return Color.green.opacity(0.1)
+        case .user:
+            return Color.accentColor
+        case .assistant:
+            // Cloud messages get blue tint
+            return message.provider == .cloud
+                ? Color.blue.opacity(0.1)
+                : Color(NSColor.controlBackgroundColor)
+        case .system:
+            return Color.orange.opacity(0.2)
+        case .taskCreated:
+            return Color.green.opacity(0.1)
         }
     }
 

@@ -89,14 +89,18 @@ class DatabaseService: ObservableObject {
             // Open database with write access for chat sessions
             db = try Connection(databasePath)
             isConnected = true
-            print("✅ Connected to database at: \(databasePath)")
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.connected: \(databasePath)")
+            #endif
 
             // Run migrations
             try? createChatSessionsTable()
             try? Migration001_TaskLinks.run(db: db!)
         } catch {
             isConnected = false
-            print("❌ Failed to connect to database: \(error)")
+            #if DEBUG
+            DebugLogger.shared.log(.error, "DatabaseService.connectionFailed: \(error)")
+            #endif
         }
     }
 
@@ -120,7 +124,9 @@ class DatabaseService: ObservableObject {
         // Composite index for compression queries
         try db.run("CREATE INDEX IF NOT EXISTS idx_chat_sessions_compression ON chat_sessions(compression_state, created_at)")
 
-        print("✅ Chat sessions table ready")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.chatSessionsTableReady")
+        #endif
     }
 
     func getAllNotes(limit: Int = 100) async throws -> [Note] {
@@ -162,8 +168,10 @@ class DatabaseService: ObservableObject {
                 notes.append(note)
             }
         } catch {
-            print("❌ Error in searchNotes query: \(error)")
-            print("   Query: \(query)")
+            #if DEBUG
+            DebugLogger.shared.log(.error, "DatabaseService.searchNotesError: \(error)")
+            DebugLogger.shared.log(.error, "DatabaseService.searchNotesQuery: \(query)")
+            #endif
             throw DatabaseError.queryFailed("Search failed: \(error.localizedDescription)")
         }
 
@@ -360,6 +368,9 @@ class DatabaseService: ObservableObject {
                 fullMessagesJson <- (session.compressionState == .full ? messagesJson : nil),
                 summaryText <- session.summaryText
             ))
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.sessionUpdated: \(session.id)")
+            #endif
         } else {
             // Insert new session
             try db.run(chatSessions.insert(
@@ -374,9 +385,14 @@ class DatabaseService: ObservableObject {
                 fullMessagesJson <- (session.compressionState == .full ? messagesJson : nil),
                 summaryText <- session.summaryText
             ))
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.sessionInserted: \(session.id)")
+            #endif
         }
 
-        print("✅ Saved chat session: \(session.title)")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.sessionSaved: \(session.title) (messages: \(session.messages.count))")
+        #endif
     }
 
     func loadSessions() async throws -> [ChatSession] {
@@ -422,7 +438,9 @@ class DatabaseService: ObservableObject {
             sessions.append(session)
         }
 
-        print("✅ Loaded \(sessions.count) chat sessions")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.sessionsLoaded: \(sessions.count)")
+        #endif
         return sessions
     }
 
@@ -434,7 +452,9 @@ class DatabaseService: ObservableObject {
         let sessionToDelete = chatSessions.filter(sessionId == session.id.uuidString)
         try db.run(sessionToDelete.delete())
 
-        print("✅ Deleted chat session: \(session.title)")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.sessionDeleted: \(session.id) (\(session.title))")
+        #endif
     }
 
     func updateSessionPin(sessionId: UUID, isPinned pinnedValue: Bool) async throws {
@@ -445,7 +465,9 @@ class DatabaseService: ObservableObject {
         let sessionToUpdate = chatSessions.filter(self.sessionId == sessionId.uuidString)
         try db.run(sessionToUpdate.update(isPinned <- pinnedValue ? 1 : 0))
 
-        print("✅ Updated pin status for session: \(sessionId)")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.sessionPinUpdated: \(sessionId) -> \(pinnedValue)")
+        #endif
     }
 
     // MARK: - Compression Methods
@@ -503,7 +525,9 @@ class DatabaseService: ObservableObject {
             sessions.append(session)
         }
 
-        print("✅ Found \(sessions.count) sessions ready for compression")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.sessionsReadyForCompression: \(sessions.count)")
+        #endif
         return sessions
     }
 
@@ -524,7 +548,9 @@ class DatabaseService: ObservableObject {
             fullMessagesJson <- nil  // Clear the full messages
         ))
 
-        print("✅ Compressed session: \(sessionId)")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.sessionCompressed: \(sessionId)")
+        #endif
     }
 
     func updateCompressionState(sessionId: UUID, state: ChatSession.CompressionState) async throws {
@@ -538,7 +564,9 @@ class DatabaseService: ObservableObject {
             compressionState <- state.rawValue
         ))
 
-        print("✅ Updated compression state to '\(state.rawValue)' for session: \(sessionId)")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.compressionStateUpdated: \(sessionId) -> \(state.rawValue)")
+        #endif
     }
 
     // MARK: - Hybrid Note Retrieval
@@ -663,15 +691,22 @@ class DatabaseService: ObservableObject {
 
         let query = discussionThreads
             .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
-            .filter(threadStatus == "pending" || threadStatus == "active" || threadStatus == "review")
-            .filter(threadTestRun == nil)
-            .order(threadCreatedAt.desc)
+            .filter(discussionThreads[threadStatus] == "pending" || discussionThreads[threadStatus] == "active" || discussionThreads[threadStatus] == "review")
+            .filter(discussionThreads[threadTestRun] == nil)
+            .order(discussionThreads[threadCreatedAt].desc)
 
         var threads: [DiscussionThread] = []
 
-        for row in try db.prepare(query) {
-            let thread = try parseThread(from: row)
-            threads.append(thread)
+        do {
+            for row in try db.prepare(query) {
+                let thread = try parseThread(from: row)
+                threads.append(thread)
+            }
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "DatabaseService.loadThreadsError: \(error)")
+            #endif
+            throw error
         }
 
         return threads
@@ -693,7 +728,7 @@ class DatabaseService: ObservableObject {
 
         let query = discussionThreads
             .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
-            .filter(threadId == Int64(threadIdValue))
+            .filter(discussionThreads[threadId] == Int64(threadIdValue))
 
         guard let row = try db.pluck(query) else {
             return nil
@@ -724,40 +759,56 @@ class DatabaseService: ObservableObject {
 
         try db.run(thread.update(updates))
 
-        print("Updated thread \(threadIdValue) status to \(status.rawValue)")
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.threadStatusUpdated: \(threadIdValue) -> \(status.rawValue)")
+        #endif
     }
 
     private func parseThread(from row: Row) throws -> DiscussionThread {
-        let dateFormatter = ISO8601DateFormatter()
-
-        // Parse related concepts JSON
+        // Parse related concepts JSON - use qualified reference for joined query
         var conceptsArray: [String]? = nil
-        if let conceptsStr = try? row.get(threadRelatedConcepts),
+        if let conceptsStr = try? row.get(discussionThreads[threadRelatedConcepts]),
            let data = conceptsStr.data(using: .utf8) {
             conceptsArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
-        // Parse thread type
-        let typeStr = try row.get(threadType)
+        // Parse thread type - use qualified column references for joined query
+        let typeStr = try row.get(discussionThreads[threadType])
         let threadTypeEnum = DiscussionThread.ThreadType(rawValue: typeStr) ?? .planning
 
         // Parse status
-        let statusStr = try row.get(threadStatus)
+        let statusStr = try row.get(discussionThreads[threadStatus])
         let statusEnum = DiscussionThread.Status(rawValue: statusStr) ?? .pending
 
         return DiscussionThread(
-            id: Int(try row.get(threadId)),
-            rawNoteId: Int(try row.get(threadRawNoteId)),
+            id: Int(try row.get(discussionThreads[threadId])),
+            rawNoteId: Int(try row.get(discussionThreads[threadRawNoteId])),
             threadType: threadTypeEnum,
-            prompt: try row.get(threadPrompt),
+            prompt: try row.get(discussionThreads[threadPrompt]),
             status: statusEnum,
-            createdAt: dateFormatter.date(from: try row.get(threadCreatedAt)) ?? Date(),
-            surfacedAt: (try? row.get(threadSurfacedAt)).flatMap { dateFormatter.date(from: $0) },
-            completedAt: (try? row.get(threadCompletedAt)).flatMap { dateFormatter.date(from: $0) },
+            createdAt: parseDateString(try row.get(discussionThreads[threadCreatedAt])) ?? Date(),
+            surfacedAt: (try? row.get(discussionThreads[threadSurfacedAt])).flatMap { parseDateString($0) },
+            completedAt: (try? row.get(discussionThreads[threadCompletedAt])).flatMap { parseDateString($0) },
             relatedConcepts: conceptsArray,
             noteTitle: try? row.get(rawNotes[title]),
             noteContent: try? row.get(rawNotes[content])
         )
+    }
+
+    /// Parse date string from SQLite format or ISO8601
+    private func parseDateString(_ dateString: String) -> Date? {
+        // Try SQLite format first: "YYYY-MM-DD HH:MM:SS"
+        let sqliteFormatter = DateFormatter()
+        sqliteFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        sqliteFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        if let date = sqliteFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Fall back to ISO8601
+        let iso8601Formatter = ISO8601DateFormatter()
+        return iso8601Formatter.date(from: dateString)
     }
 
     // MARK: - Error Types

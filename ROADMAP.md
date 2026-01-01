@@ -64,8 +64,12 @@ Task extraction with classification - route actionable items to Things:
 - Phase 7.2a: Foundation ✅ COMPLETE
 - Phase 7.2b: Planning Tab ✅ COMPLETE
 - Phase 7.2c: Planning Conversations ✅ COMPLETE
-- Phase 7.2d: AI Provider Toggle 📋 DESIGN COMPLETE (NEXT)
+- Phase 7.2d: AI Provider Toggle ✅ COMPLETE
 - Phase 7.2e: Bidirectional Things Flow ⬜ TODO
+- Phase 7.2f: Things Project Grouping ⬜ TODO
+  - Group related tasks into Things projects
+  - Auto-create project if no suitable one exists
+  - Link planning thread to Things project for context
 
 **Key Changes:**
 - Phase 7.1: Task Extraction with Classification ✅ COMPLETE (2025-12-30)
@@ -285,7 +289,8 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
-- **2025-12-31**: Phase 7.2d design complete - AI Provider Toggle (Local/Cloud switching)
+- **2025-12-31**: Phase 7.2d complete - AI Provider Toggle (Local/Cloud switching in Planning tab)
+- **2025-12-31**: Phase 7.2f added to roadmap - Things Project Grouping (auto-create projects for related tasks)
 - **2025-12-31**: Phase 7.2 design complete - SeleneChat Planning Integration with dual AI routing
 - **2025-12-31**: Workflow 08-Daily-Summary completed - Automated daily executive summaries with Ollama
 - **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification, new architectural layers
