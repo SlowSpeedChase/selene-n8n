@@ -17,6 +17,30 @@ A privacy-focused macOS chatbot for interacting with your Selene process notes.
 - ✅ Note detail view with metadata (concepts, themes, sentiment, energy)
 - ✅ ADHD-optimized UI with visual indicators
 
+## Debug System (Development)
+
+In DEBUG builds, SeleneChat includes a debug system for Claude Code visibility:
+
+### Files
+- `/tmp/selenechat-debug.log` - Continuous log of errors and state changes
+- `/tmp/selenechat-snapshot.json` - Full app state dump (on request)
+- `/tmp/selenechat-last-error` - Timestamp of most recent error
+
+### Triggering a Snapshot
+```bash
+touch /tmp/selenechat-snapshot-request
+sleep 2
+cat /tmp/selenechat-snapshot.json
+```
+
+### Checking for Errors
+```bash
+cat /tmp/selenechat-last-error
+tail -100 /tmp/selenechat-debug.log
+```
+
+See `docs/plans/2026-01-01-selenechat-debug-system-design.md` for full documentation.
+
 ## Privacy Model
 
 Selene Chat uses a three-tier privacy system:
