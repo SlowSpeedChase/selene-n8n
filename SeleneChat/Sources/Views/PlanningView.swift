@@ -182,6 +182,7 @@ struct PlanningConversationView: View {
     @State private var currentProvider: AIProvider = .local
     @State private var showProviderSettings = false
     @State private var showHistoryPrompt = false
+    @State private var apiKeyMissing = false
     @StateObject private var providerService = AIProviderService.shared
 
     private let thingsService = ThingsURLService.shared
@@ -230,6 +231,11 @@ struct PlanningConversationView: View {
             }
 
             Divider()
+
+            // API key error
+            if apiKeyMissing {
+                apiKeyErrorView
+            }
 
             // Input
             inputArea
@@ -308,12 +314,49 @@ struct PlanningConversationView: View {
         .buttonStyle(.plain)
     }
 
+    private var apiKeyErrorView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("API key not found")
+                    .font(.headline)
+                Spacer()
+                Button(action: { apiKeyMissing = false; currentProvider = .local }) {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text("Set ANTHROPIC_API_KEY in your shell environment and restart SeleneChat.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Text("# Add to ~/.zshrc:\nexport ANTHROPIC_API_KEY=\"sk-ant-...\"")
+                .font(.system(.caption, design: .monospaced))
+                .padding(8)
+                .background(Color.black.opacity(0.05))
+                .cornerRadius(4)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+
     private func toggleProvider() {
         if currentProvider == .local {
-            // Switching to cloud - ask about history
-            showHistoryPrompt = true
+            // Check if cloud is available before switching
+            Task {
+                let available = await providerService.isCloudAvailable()
+                if available {
+                    showHistoryPrompt = true
+                } else {
+                    apiKeyMissing = true
+                }
+            }
         } else {
-            // Switching to local - no prompt needed
+            // Switching to local - no check needed
             currentProvider = .local
         }
     }
