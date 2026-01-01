@@ -15,6 +15,7 @@ final class DebugLoggerTests: XCTestCase {
 
     override func tearDown() {
         try? FileManager.default.removeItem(atPath: testLogPath)
+        try? FileManager.default.removeItem(atPath: testLogPath + ".old")
         super.tearDown()
     }
 
@@ -56,5 +57,47 @@ final class DebugLoggerTests: XCTestCase {
         XCTAssertTrue(content?.contains("ERROR") ?? false)
         XCTAssertTrue(content?.contains("NAV") ?? false)
         XCTAssertTrue(content?.contains("ACTION") ?? false)
+    }
+
+    func test_rotation_rotatesWhenExceedsMaxSize() {
+        // Arrange - use tiny max size for testing
+        let smallLogger = DebugLogger(logPath: testLogPath, maxSizeBytes: 100)
+
+        // Act - write enough to exceed 100 bytes
+        for i in 0..<10 {
+            smallLogger.log(.state, "This is a longer message to fill up the log file quickly \(i)")
+        }
+
+        // Allow queue to flush
+        Thread.sleep(forTimeInterval: 0.1)
+
+        // Assert - backup file should exist
+        let backupPath = testLogPath + ".old"
+        XCTAssertTrue(FileManager.default.fileExists(atPath: backupPath))
+
+        // Cleanup
+        try? FileManager.default.removeItem(atPath: backupPath)
+    }
+
+    func test_rotation_deletesOldBackup() {
+        // Arrange
+        let backupPath = testLogPath + ".old"
+        FileManager.default.createFile(atPath: backupPath, contents: "old backup".data(using: .utf8))
+        let smallLogger = DebugLogger(logPath: testLogPath, maxSizeBytes: 50)
+
+        // Act - trigger rotation
+        for i in 0..<10 {
+            smallLogger.log(.state, "Message \(i) to trigger rotation")
+        }
+
+        Thread.sleep(forTimeInterval: 0.1)
+
+        // Assert - backup exists but is new content
+        let backupContent = try? String(contentsOfFile: backupPath, encoding: .utf8)
+        XCTAssertNotNil(backupContent)
+        XCTAssertFalse(backupContent?.contains("old backup") ?? true)
+
+        // Cleanup
+        try? FileManager.default.removeItem(atPath: backupPath)
     }
 }
