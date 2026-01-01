@@ -3,14 +3,17 @@
 ## Current Status
 
 **Phase:** Testing Complete
-**Last Updated:** 2025-10-30
-**Status:** ✅ Ready for Production (6/7 tests passed)
+**Last Updated:** 2025-12-31
+**Status:** ✅ Ready for Production (6/7 tests passed, feedback routing added)
 
 ---
 
 ## Overview
 
-The ingestion workflow is responsible for receiving incoming notes/drafts via webhook and storing them in the SQLite database's `raw_notes` table. It includes duplicate detection and metadata extraction.
+The ingestion workflow is responsible for receiving incoming notes/drafts via webhook and storing them in the SQLite database's `raw_notes` table. It includes duplicate detection, metadata extraction, and feedback routing.
+
+**Feedback Pipeline Feature (2025-12-31):**
+Notes tagged with `#selene-feedback` are routed to a separate `feedback_notes` table instead of `raw_notes`. This enables the Selene project to collect user feedback about the system itself for continuous improvement.
 
 ---
 
@@ -18,7 +21,7 @@ The ingestion workflow is responsible for receiving incoming notes/drafts via we
 
 - **Workflow File:** `workflows/01-ingestion/workflow.json`
 - **Database Path:** `/selene/data/selene.db`
-- **Target Table:** `raw_notes`
+- **Target Tables:** `raw_notes` (regular notes), `feedback_notes` (feedback)
 - **Webhook Endpoint:** `http://localhost:5678/webhook/api/drafts`
 - **Method:** POST
 
@@ -76,6 +79,34 @@ The ingestion workflow is responsible for receiving incoming notes/drafts via we
 ---
 
 ## Development History
+
+### 2025-12-31: Feedback Pipeline Feature Added
+
+**Changes Made:**
+- Added feedback detection: Notes with `#selene-feedback` tag are routed separately
+- New nodes added to workflow:
+  - "Check Feedback Tag" - Detects selene-feedback tag in incoming notes
+  - "Is Feedback?" - IF node to route based on feedback flag
+  - "Insert Feedback Note" - Inserts feedback to `feedback_notes` table
+- Existing nodes repositioned to accommodate new flow
+- Duplicate feedback detection: Increments `mention_count` instead of inserting duplicate
+
+**Technical Details:**
+- Feedback notes use same content hash mechanism for deduplication
+- Feedback path bypasses LLM processing (not needed for meta-feedback)
+- Test data isolation preserved via `test_run` column
+- Feedback response includes action type: `feedback_stored` or `feedback_incremented`
+
+**Data Flow:**
+```
+Webhook → Parse Note Data → Check Feedback Tag → Is Feedback?
+                                                    ├─ YES → Insert Feedback Note → Respond
+                                                    └─ NO → Check for Duplicate → (existing flow)
+```
+
+**Status:** Pending integration testing
+
+---
 
 ### 2025-10-30: Configuration Fixes & Testing Started
 
@@ -194,10 +225,14 @@ Based on Test Run #1:
 - **Drafts App:** Sends webhook POST requests with note data
 - **Other Note Sources:** Any system can POST to the webhook endpoint
 
-### Downstream
+### Downstream (Regular Notes)
 - **02-llm-processing:** Reads from `raw_notes` table where `status = 'pending'`
 - **03-pattern-detection:** Analyzes processed notes
 - **04-obsidian-export:** Exports completed notes
+
+### Downstream (Feedback Notes)
+- **05-feedback-summarization (planned):** Processes `feedback_notes` with AI
+- **SeleneChat Feedback Panel (planned):** Displays summarized feedback
 
 ---
 

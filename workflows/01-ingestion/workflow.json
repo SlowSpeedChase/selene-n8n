@@ -34,6 +34,52 @@
     },
     {
       "parameters": {
+        "functionCode": "// Check if this is feedback for Selene itself\nconst noteData = $json;\nconst tags = noteData.tags || [];\nconst isFeedback = tags.includes('selene-feedback');\n\nreturn {\n  json: {\n    ...noteData,\n    isFeedback: isFeedback\n  }\n};"
+      },
+      "id": "check-feedback-tag",
+      "name": "Check Feedback Tag",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        550,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.isFeedback }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "route-feedback",
+      "name": "Is Feedback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst noteData = $json;\n\ntry {\n  const db = new Database('/selene/data/selene.db');\n\n  // Check for duplicate feedback\n  const existing = db.prepare('SELECT id FROM feedback_notes WHERE content_hash = ?').get(noteData.contentHash);\n  \n  if (existing) {\n    // Increment mention count instead of inserting duplicate\n    db.prepare('UPDATE feedback_notes SET mention_count = mention_count + 1 WHERE id = ?').run(existing.id);\n    db.close();\n    return {\n      json: {\n        success: true,\n        action: 'feedback_incremented',\n        feedback_id: existing.id,\n        message: 'Feedback mention count incremented',\n        testRun: noteData.testRun\n      }\n    };\n  }\n\n  // Insert new feedback\n  const result = db.prepare(`\n    INSERT INTO feedback_notes (content, content_hash, created_at, test_run)\n    VALUES (?, ?, ?, ?)\n  `).run(\n    noteData.content,\n    noteData.contentHash,\n    noteData.timestamp,\n    noteData.testRun\n  );\n\n  db.close();\n\n  return {\n    json: {\n      success: true,\n      action: 'feedback_stored',\n      feedback_id: result.lastInsertRowid,\n      message: 'Feedback note stored successfully',\n      testRun: noteData.testRun\n    }\n  };\n\n} catch (error) {\n  console.error('Feedback insert error:', error);\n  throw new Error('Failed to insert feedback: ' + error.message);\n}"
+      },
+      "id": "insert-feedback",
+      "name": "Insert Feedback Note",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        950,
+        200
+      ]
+    },
+    {
+      "parameters": {
         "functionCode": "const Database = require('better-sqlite3');\n\nconst noteData = $json;\n\ntry {\n  const db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  // UUID-First Duplicate Detection Strategy\n  let result = null;\n  let duplicateType = null;\n  \n  if (noteData.sourceUuid) {\n    // Step 1: Check if UUID exists\n    const uuidQuery = `SELECT id, title, content_hash, created_at, source_uuid FROM raw_notes WHERE source_uuid = ? LIMIT 1`;\n    const uuidStmt = db.prepare(uuidQuery);\n    const uuidMatch = uuidStmt.get(noteData.sourceUuid);\n    \n    if (uuidMatch) {\n      // UUID exists - check if content changed\n      if (uuidMatch.content_hash === noteData.contentHash) {\n        // Exact duplicate (same UUID, same content)\n        result = uuidMatch;\n        duplicateType = 'uuid_exact_duplicate';\n      } else {\n        // Edit detected (same UUID, different content)\n        result = uuidMatch;\n        duplicateType = 'uuid_edit_detected';\n      }\n    } else {\n      // UUID not found - check content_hash for accidental duplicates\n      const hashQuery = `SELECT id, title, content_hash, created_at, source_uuid FROM raw_notes WHERE content_hash = ? LIMIT 1`;\n      const hashStmt = db.prepare(hashQuery);\n      const hashMatch = hashStmt.get(noteData.contentHash);\n      \n      if (hashMatch) {\n        // Same content exists with different UUID/source\n        result = hashMatch;\n        duplicateType = 'content_duplicate';\n      } else {\n        // New note\n        result = null;\n        duplicateType = 'new_note';\n      }\n    }\n  } else {\n    // No UUID provided - fall back to content_hash only (backward compatible)\n    const hashQuery = `SELECT id, title, content_hash, created_at, source_uuid FROM raw_notes WHERE content_hash = ? LIMIT 1`;\n    const hashStmt = db.prepare(hashQuery);\n    const hashMatch = hashStmt.get(noteData.contentHash);\n    \n    if (hashMatch) {\n      result = hashMatch;\n      duplicateType = 'content_duplicate';\n    } else {\n      result = null;\n      duplicateType = 'new_note';\n    }\n  }\n  \n  db.close();\n  \n  return { \n    json: result ? { \n      ...result, \n      duplicateType: duplicateType \n    } : { \n      id: null, \n      duplicateType: duplicateType \n    } \n  };\n  \n} catch (error) {\n  console.error('SQLite Duplicate Check Error:', error);\n  // If database doesn't exist or has errors, treat as new note\n  return { json: { id: null, duplicateType: 'new_note' } };\n}"
       },
       "id": "sqlite-check-duplicate",
@@ -41,8 +87,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        650,
-        300
+        950,
+        400
       ]
     },
     {
@@ -61,8 +107,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        850,
-        300
+        1150,
+        400
       ]
     },
     {
@@ -81,8 +127,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        1050,
-        400
+        1350,
+        500
       ]
     },
     {
@@ -94,8 +140,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1250,
-        350
+        1550,
+        450
       ]
     },
     {
@@ -107,8 +153,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1050,
-        200
+        1350,
+        300
       ]
     },
     {
@@ -120,8 +166,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1450,
-        350
+        1750,
+        450
       ]
     },
     {
@@ -133,8 +179,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1250,
-        200
+        1550,
+        300
       ]
     },
     {
@@ -162,8 +208,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
-        1450,
-        200
+        1750,
+        300
       ]
     },
     {
@@ -175,8 +221,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1650,
-        200
+        1950,
+        300
       ]
     },
     {
@@ -188,8 +234,8 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        1250,
-        500
+        1550,
+        600
       ]
     },
     {
@@ -202,8 +248,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1850,
-        300
+        2150,
+        400
       ]
     }
   ],
@@ -223,7 +269,47 @@
       "main": [
         [
           {
+            "node": "Check Feedback Tag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Feedback Tag": {
+      "main": [
+        [
+          {
+            "node": "Is Feedback?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Feedback?": {
+      "main": [
+        [
+          {
+            "node": "Insert Feedback Note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Check for Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Feedback Note": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
