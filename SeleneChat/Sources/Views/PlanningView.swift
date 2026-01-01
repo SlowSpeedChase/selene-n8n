@@ -451,12 +451,19 @@ struct PlanningMessage: Identifiable {
     let role: Role
     let content: String
     let timestamp = Date()
+    let provider: AIProvider  // Track which AI generated this
 
     enum Role {
         case user
         case assistant
         case system
         case taskCreated
+    }
+
+    init(role: Role, content: String, provider: AIProvider = .local) {
+        self.role = role
+        self.content = content
+        self.provider = provider
     }
 }
 
