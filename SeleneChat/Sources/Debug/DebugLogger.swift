@@ -13,17 +13,22 @@ final class DebugLogger {
     static let shared = DebugLogger()
 
     private let logPath: String
+    private let errorPath: String
     private let maxSizeBytes: Int
     private let dateFormatter: DateFormatter
+    private let isoFormatter: ISO8601DateFormatter
     private var fileHandle: FileHandle?
     private let queue = DispatchQueue(label: "com.selenechat.debuglogger")
 
-    init(logPath: String = "/tmp/selenechat-debug.log", maxSizeBytes: Int = 5 * 1024 * 1024) {
+    init(logPath: String = "/tmp/selenechat-debug.log", maxSizeBytes: Int = 5 * 1024 * 1024, errorPath: String = "/tmp/selenechat-last-error") {
         self.logPath = logPath
+        self.errorPath = errorPath
         self.maxSizeBytes = maxSizeBytes
 
         self.dateFormatter = DateFormatter()
         self.dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
+        self.isoFormatter = ISO8601DateFormatter()
 
         self.fileHandle = openLogFile()
     }
@@ -45,7 +50,17 @@ final class DebugLogger {
                 self.fileHandle?.write(data)
                 try? self.fileHandle?.synchronize()
             }
+
+            if category == .error {
+                self.writeErrorAlert(message)
+            }
         }
+    }
+
+    private func writeErrorAlert(_ message: String) {
+        let isoTimestamp = isoFormatter.string(from: Date())
+        let errorLine = "\(isoTimestamp)|\(message)"
+        try? errorLine.write(toFile: errorPath, atomically: true, encoding: .utf8)
     }
 
     private func openLogFile() -> FileHandle? {

@@ -100,4 +100,46 @@ final class DebugLoggerTests: XCTestCase {
         // Cleanup
         try? FileManager.default.removeItem(atPath: backupPath)
     }
+
+    func test_logError_writesToErrorFile() {
+        // Arrange
+        let errorPath = "/tmp/selenechat-last-error-test"
+        try? FileManager.default.removeItem(atPath: errorPath)
+        let logger = DebugLogger(logPath: testLogPath, errorPath: errorPath)
+
+        // Act
+        logger.log(.error, "OllamaService.generate|connection refused")
+
+        // Allow queue to flush
+        Thread.sleep(forTimeInterval: 0.1)
+
+        // Assert
+        let errorContent = try? String(contentsOfFile: errorPath, encoding: .utf8)
+        XCTAssertNotNil(errorContent)
+        XCTAssertTrue(errorContent?.contains("OllamaService.generate") ?? false)
+        XCTAssertTrue(errorContent?.contains("connection refused") ?? false)
+
+        // Cleanup
+        try? FileManager.default.removeItem(atPath: errorPath)
+    }
+
+    func test_logError_includesISOTimestamp() {
+        // Arrange
+        let errorPath = "/tmp/selenechat-last-error-test"
+        try? FileManager.default.removeItem(atPath: errorPath)
+        let logger = DebugLogger(logPath: testLogPath, errorPath: errorPath)
+
+        // Act
+        logger.log(.error, "TestError|test message")
+        Thread.sleep(forTimeInterval: 0.1)
+
+        // Assert
+        let errorContent = try? String(contentsOfFile: errorPath, encoding: .utf8)
+        XCTAssertNotNil(errorContent)
+        // ISO format starts with year
+        XCTAssertTrue(errorContent?.hasPrefix("202") ?? false)
+
+        // Cleanup
+        try? FileManager.default.removeItem(atPath: errorPath)
+    }
 }
