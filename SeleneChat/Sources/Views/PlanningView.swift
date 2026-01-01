@@ -179,9 +179,11 @@ struct PlanningConversationView: View {
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
     @State private var isContextExpanded = false
+    @State private var currentProvider: AIProvider = AIProviderSettings.shared.defaultProvider
     @FocusState private var isInputFocused: Bool
 
     private let claudeService = ClaudeAPIService.shared
+    private let ollamaService = OllamaService.shared
     private let thingsService = ThingsURLService.shared
 
     var body: some View {
@@ -238,31 +240,60 @@ struct PlanningConversationView: View {
     }
 
     private var conversationHeader: some View {
-        HStack {
-            Button(action: onBack) {
-                Label("Back", systemImage: "chevron.left")
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: onBack) {
+                    Label("Back", systemImage: "chevron.left")
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                if !tasksCreated.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("\(tasksCreated.count) tasks created")
+                            .font(.caption)
+                    }
+                }
+
+                Spacer()
+
+                Button("Complete") {
+                    Task { await completeThread() }
+                }
+                .disabled(isProcessing)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.top)
+            .padding(.bottom, 8)
 
-            Spacer()
+            // AI Provider toggle
+            HStack(spacing: 16) {
+                Text("AI:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
 
-            if !tasksCreated.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("\(tasksCreated.count) tasks created")
+                Picker("", selection: $currentProvider) {
+                    ForEach(AIProvider.allCases, id: \.self) { provider in
+                        Text(provider.privacyBadge).tag(provider)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 180)
+
+                Spacer()
+
+                if currentProvider == .claude && !claudeService.hasAPIKey {
+                    Label("API key not set", systemImage: "exclamationmark.triangle")
                         .font(.caption)
+                        .foregroundColor(.orange)
                 }
             }
-
-            Spacer()
-
-            Button("Complete") {
-                Task { await completeThread() }
-            }
-            .disabled(isProcessing)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
         }
-        .padding()
     }
 
     private var noteContextCard: some View {
@@ -377,17 +408,10 @@ struct PlanningConversationView: View {
         // Mark thread as active
         try? await databaseService.updateThreadStatus(thread.id, status: .active)
 
-        // Add initial AI message based on thread prompt
-        let systemPrompt = buildSystemPrompt()
-
         isProcessing = true
 
         do {
-            let response = try await claudeService.sendPlanningMessage(
-                userMessage: "Start the planning session.",
-                conversationHistory: [],
-                systemPrompt: systemPrompt
-            )
+            let response = try await sendToAI(message: "Start the planning session.", isInitial: true)
 
             conversationHistory.append(["role": "user", "content": "Start the planning session."])
             conversationHistory.append(["role": "assistant", "content": response.message])
@@ -424,11 +448,7 @@ struct PlanningConversationView: View {
 
         Task {
             do {
-                let response = try await claudeService.sendPlanningMessage(
-                    userMessage: userInput,
-                    conversationHistory: conversationHistory,
-                    systemPrompt: buildSystemPrompt()
-                )
+                let response = try await sendToAI(message: userInput, isInitial: false)
 
                 conversationHistory.append(["role": "assistant", "content": response.message])
 
@@ -449,6 +469,48 @@ struct PlanningConversationView: View {
 
             isProcessing = false
         }
+    }
+
+    private func sendToAI(message: String, isInitial: Bool) async throws -> PlanningResponse {
+        let systemPrompt = buildSystemPrompt()
+
+        switch currentProvider {
+        case .ollama:
+            // Use Ollama for local processing
+            let prompt = """
+            \(systemPrompt)
+
+            \(isInitial ? "" : "Conversation so far:\n\(formatConversationForOllama())\n\n")User: \(message)
+
+            Assistant:
+            """
+
+            let ollamaResponse = try await ollamaService.generate(prompt: prompt)
+
+            // Parse tasks from Ollama response (same format as Claude)
+            let extractedTasks = await claudeService.extractTasks(from: ollamaResponse)
+            let cleanMessage = await claudeService.removeTaskMarkers(from: ollamaResponse)
+
+            return PlanningResponse(
+                message: ollamaResponse,
+                extractedTasks: extractedTasks,
+                cleanMessage: cleanMessage
+            )
+
+        case .claude:
+            return try await claudeService.sendPlanningMessage(
+                userMessage: message,
+                conversationHistory: isInitial ? [] : conversationHistory,
+                systemPrompt: systemPrompt
+            )
+        }
+    }
+
+    private func formatConversationForOllama() -> String {
+        conversationHistory.map { msg in
+            let role = msg["role"] == "user" ? "User" : "Assistant"
+            return "\(role): \(msg["content"] ?? "")"
+        }.joined(separator: "\n\n")
     }
 
     private func handleExtractedTasks(_ tasks: [ExtractedTask]) async {
