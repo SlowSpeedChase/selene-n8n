@@ -1,6 +1,6 @@
 # Branch: phase-7.2d/ai-provider-toggle
 
-## Status: dev
+## Status: ready
 
 ## Checklist
 
@@ -20,22 +20,25 @@
 
 ### Testing
 - [x] Unit tests for AIProvider
-- [ ] Manual testing of toggle flow
-- [ ] Test local-only mode
-- [ ] Test cloud mode with API key
-- [ ] Test missing API key error
+- [x] Manual testing of toggle flow
+- [x] Test local-only mode
+- [x] Test cloud mode with API key
+- [x] Test missing API key error
+- [x] Fixed SQLite ambiguous column errors in JOIN queries
+- [x] Fixed settings popover crash (removed async task during animation)
 
 ### Documentation
-- [ ] Update SeleneChat README if needed
-- [ ] Update CLAUDE.md context files if needed
+- [x] Update SeleneChat README if needed (N/A - internal feature)
+- [ ] Update CLAUDE.md context files if needed (deferred)
 
 ### Review
-- [ ] Code review complete
-- [ ] All tests passing
+- [x] Code review complete
+- [x] All tests passing
 
 ## Files Changed
 - `SeleneChat/Sources/Models/AIProvider.swift` (new)
 - `SeleneChat/Sources/Services/AIProviderService.swift` (new)
+- `SeleneChat/Sources/Services/DatabaseService.swift` (modified - qualified column refs)
 - `SeleneChat/Sources/Views/AIProviderSettings.swift` (new)
 - `SeleneChat/Sources/Views/PlanningView.swift` (modified)
 - `SeleneChat/Tests/AIProviderTests.swift` (new)
