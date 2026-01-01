@@ -6,9 +6,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-DB_PATH="$PROJECT_ROOT/data/selene.db"
+
+# Database is always in main repo, not worktree
+# Resolve by finding the main repo (git worktree list gives us the path)
+MAIN_REPO=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}' || echo "$PROJECT_ROOT")
+DB_PATH="$MAIN_REPO/data/selene.db"
+
 WEBHOOK_URL="http://localhost:5678/webhook/project-detection"
-PENDING_DIR="$PROJECT_ROOT/vault/projects-pending"
+PENDING_DIR="$MAIN_REPO/vault/projects-pending"
 
 # Colors
 RED='\033[0;31m'

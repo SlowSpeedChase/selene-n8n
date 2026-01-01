@@ -111,13 +111,33 @@
     },
     {
       "parameters": {
-        "functionCode": "const fs = require('fs');\nconst path = require('path');\n\nconst data = $input.item.json;\n\nconsole.log('[Write Project File] Creating project file for:', data.project_name);\n\n// Generate unique filename\nconst timestamp = Date.now();\nconst random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');\nconst safeConcept = data.concept.replace(/[^a-zA-Z0-9-]/g, '-').substring(0, 30);\nconst filename = `project-${safeConcept}-${timestamp}-${random}.json`;\n\n// Build project data for host script\nconst projectData = {\n  // Project creation info\n  name: data.project_name,\n  notes: `Selene Project\\n\\nConcept: ${data.concept}\\nTasks: ${data.task_count}\\nTotal Time: ${data.total_minutes} minutes\\n\\nCreated automatically from task grouping.`,\n  \n  // Metadata for database update after creation\n  selene_metadata: {\n    primary_concept: data.concept,\n    energy_profile: data.energy_profile,\n    task_count: data.task_count,\n    total_estimated_minutes: data.total_minutes,\n    task_ids: data.task_ids.split(',').map(id => id.trim()),\n    test_run: data.test_run || null,\n    created_by_workflow: '08-project-detection',\n    created_at: new Date().toISOString()\n  }\n};\n\n// Write to pending directory\nconst pendingDir = '/selene/vault/projects-pending';\nconst filePath = path.join(pendingDir, filename);\n\n// Ensure directory exists\nif (!fs.existsSync(pendingDir)) {\n  fs.mkdirSync(pendingDir, { recursive: true });\n}\n\nfs.writeFileSync(filePath, JSON.stringify(projectData, null, 2));\n\nconsole.log('[Write Project File] Wrote to:', filePath);\n\nreturn {\n  json: {\n    success: true,\n    filename: filename,\n    project_name: data.project_name,\n    concept: data.concept,\n    task_count: data.task_count,\n    energy_profile: data.energy_profile,\n    file_path: filePath,\n    test_run: data.test_run\n  }\n};"
+        "functionCode": "const data = $input.item.json;\n\nconsole.log('[Prepare Project JSON] Creating project data for:', data.project_name);\n\n// Generate unique filename\nconst timestamp = Date.now();\nconst random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');\nconst safeConcept = data.concept.replace(/[^a-zA-Z0-9-]/g, '-').substring(0, 30);\nconst filename = `project-${safeConcept}-${timestamp}-${random}.json`;\n\n// Build project data for host script\nconst projectData = {\n  name: data.project_name,\n  notes: `Selene Project\\n\\nConcept: ${data.concept}\\nTasks: ${data.task_count}\\nTotal Time: ${data.total_minutes} minutes\\n\\nCreated automatically from task grouping.`,\n  selene_metadata: {\n    primary_concept: data.concept,\n    energy_profile: data.energy_profile,\n    task_count: data.task_count,\n    total_estimated_minutes: data.total_minutes,\n    task_ids: data.task_ids.split(',').map(id => id.trim()),\n    test_run: data.test_run || null,\n    created_by_workflow: '08-project-detection',\n    created_at: new Date().toISOString()\n  }\n};\n\nreturn {\n  json: {\n    filename: filename,\n    project_json: JSON.stringify(projectData, null, 2),\n    project_name: data.project_name,\n    concept: data.concept,\n    task_count: data.task_count,\n    energy_profile: data.energy_profile,\n    test_run: data.test_run\n  }\n};"
       },
-      "id": "write-project-file",
-      "name": "Write Project File",
+      "id": "prepare-project-json",
+      "name": "Prepare Project JSON",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [1700, 300]
+    },
+    {
+      "parameters": {
+        "command": "=mkdir -p /obsidian/projects-pending && echo '{{ $json.project_json }}' > \"/obsidian/projects-pending/{{ $json.filename }}\""
+      },
+      "id": "write-project-file",
+      "name": "Write Project File",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1900, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const prevData = $('Prepare Project JSON').first().json;\n\nconsole.log('[Post Write] File written:', prevData.filename);\n\nreturn {\n  json: {\n    success: true,\n    filename: prevData.filename,\n    project_name: prevData.project_name,\n    concept: prevData.concept,\n    task_count: prevData.task_count,\n    energy_profile: prevData.energy_profile,\n    file_path: '/obsidian/projects-pending/' + prevData.filename,\n    test_run: prevData.test_run\n  }\n};"
+      },
+      "id": "post-write",
+      "name": "Post Write",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2100, 300]
     },
     {
       "parameters": {
@@ -127,7 +147,7 @@
       "name": "Log Result",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1900, 300]
+      "position": [2300, 300]
     },
     {
       "parameters": {
@@ -139,7 +159,7 @@
       "name": "Aggregate Results",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
-      "position": [2100, 300]
+      "position": [2500, 300]
     },
     {
       "parameters": {
@@ -149,7 +169,7 @@
       "name": "Final Summary",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [2300, 300]
+      "position": [2700, 300]
     },
     {
       "parameters": {
@@ -188,9 +208,15 @@
       "main": [[{ "node": "Parse Project Name", "type": "main", "index": 0 }]]
     },
     "Parse Project Name": {
+      "main": [[{ "node": "Prepare Project JSON", "type": "main", "index": 0 }]]
+    },
+    "Prepare Project JSON": {
       "main": [[{ "node": "Write Project File", "type": "main", "index": 0 }]]
     },
     "Write Project File": {
+      "main": [[{ "node": "Post Write", "type": "main", "index": 0 }]]
+    },
+    "Post Write": {
       "main": [[{ "node": "Log Result", "type": "main", "index": 0 }]]
     },
     "Log Result": {
