@@ -3,8 +3,6 @@ import SwiftUI
 
 struct AIProviderSettings: View {
     @ObservedObject var providerService: AIProviderService
-    @State private var ollamaStatus: Bool?
-    @State private var claudeStatus: Bool?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -37,60 +35,44 @@ struct AIProviderSettings: View {
 
             Divider()
 
-            // Provider Status
+            // Provider Info
             VStack(alignment: .leading, spacing: 8) {
-                Text("Provider Status")
+                Text("Provider Info")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
                 HStack {
                     Label("Ollama", systemImage: "house.fill")
                     Spacer()
-                    statusIndicator(for: ollamaStatus, label: "Connected", errorLabel: "Offline")
+                    Text("localhost:11434")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
 
                 HStack {
                     Label("Claude API", systemImage: "cloud.fill")
                     Spacer()
-                    statusIndicator(for: claudeStatus, label: "API key configured", errorLabel: "API key not found")
+                    if ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] != nil {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("API key set")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                            Text("API key not found")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
         }
         .padding()
         .frame(width: 300)
-        .task {
-            await checkStatus()
-        }
-    }
-
-    @ViewBuilder
-    private func statusIndicator(for status: Bool?, label: String, errorLabel: String) -> some View {
-        if let status = status {
-            if status {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text(label)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            } else {
-                HStack(spacing: 4) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.red)
-                    Text(errorLabel)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-        } else {
-            ProgressView()
-                .scaleEffect(0.7)
-        }
-    }
-
-    private func checkStatus() async {
-        ollamaStatus = await providerService.isLocalAvailable()
-        claudeStatus = await providerService.isCloudAvailable()
     }
 }
