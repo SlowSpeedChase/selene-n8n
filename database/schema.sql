@@ -106,3 +106,25 @@ CREATE INDEX idx_processed_notes_sentiment ON processed_notes(sentiment_analyzed
 CREATE INDEX idx_sentiment_history_note_ids ON sentiment_history(processed_note_id, raw_note_id);
 CREATE INDEX idx_detected_patterns_active ON detected_patterns(is_active);
 CREATE INDEX idx_detected_patterns_type ON detected_patterns(pattern_type);
+
+-- Feedback Pipeline: Product feedback capture and backlog generation
+CREATE TABLE feedback_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content TEXT NOT NULL,
+    content_hash TEXT UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
+    user_story TEXT,
+    theme TEXT,
+    cluster_id INTEGER,
+    priority INTEGER DEFAULT 1,
+    mention_count INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'open',
+    implemented_pr TEXT,
+    implemented_at DATETIME,
+    test_run TEXT DEFAULT NULL
+);
+CREATE INDEX idx_feedback_theme ON feedback_notes(theme);
+CREATE INDEX idx_feedback_status ON feedback_notes(status);
+CREATE INDEX idx_feedback_cluster ON feedback_notes(cluster_id);
+CREATE INDEX idx_feedback_test_run ON feedback_notes(test_run);
