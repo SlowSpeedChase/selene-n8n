@@ -86,6 +86,16 @@
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [1250, 375]
+    },
+    {
+      "parameters": {
+        "functionCode": "const { execSync } = require('child_process');\nconst fs = require('fs');\n\ntry {\n  const result = execSync('/workflows/scripts/generate-backlog.sh', {\n    cwd: '/workflows',\n    encoding: 'utf8',\n    timeout: 30000\n  });\n  \n  // Verify output file was created\n  const outputPath = '/workflows/docs/backlog/user-stories.md';\n  if (!fs.existsSync(outputPath)) {\n    console.warn('[Generate Backlog] Warning: Output file not found at', outputPath);\n  }\n  \n  console.log('[Generate Backlog] Success');\n  \n  return {\n    json: {\n      backlog_updated: true,\n      timestamp: new Date().toISOString()\n    }\n  };\n} catch (error) {\n  console.error('[Generate Backlog] Failed:', error.message);\n  return {\n    json: {\n      backlog_updated: false,\n      error: error.message,\n      timestamp: new Date().toISOString()\n    }\n  };\n}"
+      },
+      "id": "generate-backlog",
+      "name": "Generate Backlog File",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1450, 375]
     }
   ],
   "connections": {
@@ -109,6 +119,9 @@
     },
     "Handle Ollama Error": {
       "main": [[{ "node": "Update Feedback Record", "type": "main", "index": 0 }]]
+    },
+    "Update Feedback Record": {
+      "main": [[{ "node": "Generate Backlog File", "type": "main", "index": 0 }]]
     }
   },
   "settings": {
