@@ -179,6 +179,10 @@ struct PlanningConversationView: View {
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
     @FocusState private var isInputFocused: Bool
+    @State private var currentProvider: AIProvider = .local
+    @State private var showProviderSettings = false
+    @State private var showHistoryPrompt = false
+    @StateObject private var providerService = AIProviderService.shared
 
     private let claudeService = ClaudeAPIService.shared
     private let thingsService = ThingsURLService.shared
@@ -245,16 +249,28 @@ struct PlanningConversationView: View {
 
             Spacer()
 
+            // Provider toggle badge
+            providerBadge
+
             if !tasksCreated.isEmpty {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                    Text("\(tasksCreated.count) tasks created")
+                    Text("\(tasksCreated.count) tasks")
                         .font(.caption)
                 }
             }
 
             Spacer()
+
+            // Settings gear
+            Button(action: { showProviderSettings = true }) {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showProviderSettings) {
+                AIProviderSettings(providerService: providerService)
+            }
 
             Button("Complete") {
                 Task { await completeThread() }
@@ -262,6 +278,45 @@ struct PlanningConversationView: View {
             .disabled(isProcessing)
         }
         .padding()
+        .alert("Switch to Cloud AI", isPresented: $showHistoryPrompt) {
+            Button("Yes, send history") {
+                currentProvider = .cloud
+            }
+            Button("No, fresh start") {
+                currentProvider = .cloud
+                conversationHistory = []
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Include conversation history? This will send previous messages to Claude API.")
+        }
+    }
+
+    private var providerBadge: some View {
+        Button(action: toggleProvider) {
+            HStack(spacing: 4) {
+                Text(currentProvider.icon)
+                Text(currentProvider.displayName)
+                    .font(.caption)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(currentProvider == .cloud ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggleProvider() {
+        if currentProvider == .local {
+            // Switching to cloud - ask about history
+            showHistoryPrompt = true
+        } else {
+            // Switching to local - no prompt needed
+            currentProvider = .local
+        }
     }
 
     private var noteContextCard: some View {
