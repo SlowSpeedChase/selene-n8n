@@ -663,15 +663,20 @@ class DatabaseService: ObservableObject {
 
         let query = discussionThreads
             .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
-            .filter(threadStatus == "pending" || threadStatus == "active" || threadStatus == "review")
-            .filter(threadTestRun == nil)
-            .order(threadCreatedAt.desc)
+            .filter(discussionThreads[threadStatus] == "pending" || discussionThreads[threadStatus] == "active" || discussionThreads[threadStatus] == "review")
+            .filter(discussionThreads[threadTestRun] == nil)
+            .order(discussionThreads[threadCreatedAt].desc)
 
         var threads: [DiscussionThread] = []
 
-        for row in try db.prepare(query) {
-            let thread = try parseThread(from: row)
-            threads.append(thread)
+        do {
+            for row in try db.prepare(query) {
+                let thread = try parseThread(from: row)
+                threads.append(thread)
+            }
+        } catch {
+            print("❌ Error loading threads: \(error)")
+            throw error
         }
 
         return threads
@@ -693,7 +698,7 @@ class DatabaseService: ObservableObject {
 
         let query = discussionThreads
             .join(.leftOuter, rawNotes, on: discussionThreads[threadRawNoteId] == rawNotes[id])
-            .filter(threadId == Int64(threadIdValue))
+            .filter(discussionThreads[threadId] == Int64(threadIdValue))
 
         guard let row = try db.pluck(query) else {
             return nil
@@ -728,36 +733,50 @@ class DatabaseService: ObservableObject {
     }
 
     private func parseThread(from row: Row) throws -> DiscussionThread {
-        let dateFormatter = ISO8601DateFormatter()
-
-        // Parse related concepts JSON
+        // Parse related concepts JSON - use qualified reference for joined query
         var conceptsArray: [String]? = nil
-        if let conceptsStr = try? row.get(threadRelatedConcepts),
+        if let conceptsStr = try? row.get(discussionThreads[threadRelatedConcepts]),
            let data = conceptsStr.data(using: .utf8) {
             conceptsArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
-        // Parse thread type
-        let typeStr = try row.get(threadType)
+        // Parse thread type - use qualified column references for joined query
+        let typeStr = try row.get(discussionThreads[threadType])
         let threadTypeEnum = DiscussionThread.ThreadType(rawValue: typeStr) ?? .planning
 
         // Parse status
-        let statusStr = try row.get(threadStatus)
+        let statusStr = try row.get(discussionThreads[threadStatus])
         let statusEnum = DiscussionThread.Status(rawValue: statusStr) ?? .pending
 
         return DiscussionThread(
-            id: Int(try row.get(threadId)),
-            rawNoteId: Int(try row.get(threadRawNoteId)),
+            id: Int(try row.get(discussionThreads[threadId])),
+            rawNoteId: Int(try row.get(discussionThreads[threadRawNoteId])),
             threadType: threadTypeEnum,
-            prompt: try row.get(threadPrompt),
+            prompt: try row.get(discussionThreads[threadPrompt]),
             status: statusEnum,
-            createdAt: dateFormatter.date(from: try row.get(threadCreatedAt)) ?? Date(),
-            surfacedAt: (try? row.get(threadSurfacedAt)).flatMap { dateFormatter.date(from: $0) },
-            completedAt: (try? row.get(threadCompletedAt)).flatMap { dateFormatter.date(from: $0) },
+            createdAt: parseDateString(try row.get(discussionThreads[threadCreatedAt])) ?? Date(),
+            surfacedAt: (try? row.get(discussionThreads[threadSurfacedAt])).flatMap { parseDateString($0) },
+            completedAt: (try? row.get(discussionThreads[threadCompletedAt])).flatMap { parseDateString($0) },
             relatedConcepts: conceptsArray,
             noteTitle: try? row.get(rawNotes[title]),
             noteContent: try? row.get(rawNotes[content])
         )
+    }
+
+    /// Parse date string from SQLite format or ISO8601
+    private func parseDateString(_ dateString: String) -> Date? {
+        // Try SQLite format first: "YYYY-MM-DD HH:MM:SS"
+        let sqliteFormatter = DateFormatter()
+        sqliteFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        sqliteFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        if let date = sqliteFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Fall back to ISO8601
+        let iso8601Formatter = ISO8601DateFormatter()
+        return iso8601Formatter.date(from: dateString)
     }
 
     // MARK: - Error Types

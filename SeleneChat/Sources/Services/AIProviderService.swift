@@ -2,7 +2,6 @@
 import Foundation
 import SwiftUI
 
-@MainActor
 class AIProviderService: ObservableObject {
     static let shared = AIProviderService()
 
