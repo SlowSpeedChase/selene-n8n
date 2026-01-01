@@ -14,7 +14,7 @@ final class ActionTracker: DebugSnapshotProvider {
         queue.sync { actions }
     }
 
-    init(maxActions: Int = 20) {
+    init(maxActions: Int = 50) {
         self.maxActions = maxActions
         self.isoFormatter = ISO8601DateFormatter()
     }
