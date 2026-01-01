@@ -26,6 +26,11 @@ actor ClaudeAPIService {
         ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]
     }
 
+    /// Synchronous check for API key availability (for UI)
+    nonisolated var hasAPIKey: Bool {
+        ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] != nil
+    }
+
     private init() {}
 
     // MARK: - Error Types
