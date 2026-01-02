@@ -1,31 +1,35 @@
 # Phase 7: Things Integration
 
-**Status:** 🚧 Phase 7.1 Complete ✅ | Phase 7.2 Design Complete 📋
+**Status:** 🚧 Phase 7.1 Complete ✅ | Phase 7.2 Design Revised 📋
 **Started:** 2025-11-24
 **Phase 7.1 Completed:** 2025-12-30
-**Phase 7.2 Design:** 2025-12-31
-**Goal:** Integrate Selene with Things 3 via intelligent classification - AI triages notes and routes actionable items to Things
+**Phase 7.2 Design Revised:** 2026-01-02
+**Goal:** Integrate Selene with Things 3 via user-controlled planning - ALL notes go through SeleneChat for triage before any tasks are created
 
 ---
 
 ## Overview
 
-Phase 7 brings Selene's note processing intelligence into task management via **intelligent classification**. Local AI classifies every note and routes appropriately: clear tasks to Things, ambiguous items to SeleneChat for planning, and reflections to archive.
+> **DESIGN REVISION (2026-01-02):** The original auto-routing design has been replaced with a user-controlled triage model. See `docs/plans/2026-01-02-planning-inbox-redesign.md` for the complete revised design.
+
+Phase 7 brings Selene's note processing intelligence into task management via **user-controlled triage**. Local AI enriches every note with metadata and suggests categorization, but the **user decides** what becomes a task through SeleneChat's Inbox.
 
 **Key Innovation:**
-- **Classification-based triage:** Notes classified as actionable/needs_planning/archive_only
-- **Things inbox only:** Clear actionable tasks go directly to Things inbox (no projects)
-- **SeleneChat for planning:** Ambiguous items flagged for planning conversations
-- **Full metadata:** All notes get rich metadata regardless of classification
-- **Local AI first:** Phase 7.1-7.2 use only local Ollama (private), cloud AI added in Phase 7.3+
+- **No auto-routing:** ALL notes park in SeleneChat Inbox for user triage
+- **User confirms everything:** Tasks only created after user approval
+- **Active/Parked structure:** Prevents overwhelm in planning view
+- **Classification as hint:** AI suggests note type, user decides action
+- **Context memory:** Projects preserve history when reopened with new notes
 
-**Design Document:** See `docs/plans/2025-12-30-task-extraction-planning-design.md` for complete architecture.
+**Design Documents:**
+- **Current:** `docs/plans/2026-01-02-planning-inbox-redesign.md` (this design)
+- **Superseded:** `docs/plans/2025-12-30-task-extraction-planning-design.md` (auto-routing)
 
 ---
 
 ## Architecture
 
-### Architectural Layers
+### Architectural Layers (Revised 2026-01-02)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -38,70 +42,98 @@ Phase 7 brings Selene's note processing intelligence into task management via **
 │                      PROCESSING LAYER (Local AI)                     │
 │                                                                      │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
-│  │ Extract Metadata │    │    Classify     │    │   Sanitize      │ │
-│  │ - concepts       │ →  │ - actionable    │ →  │ (for cloud AI)  │ │
-│  │ - themes         │    │ - needs_planning│    │ - context-based │ │
-│  │ - energy         │    │ - archive_only  │    │ - user rules    │ │
-│  │ - overwhelm      │    │                 │    │                 │ │
+│  │ Extract Metadata │    │  Classify       │    │  Suggest        │ │
+│  │ - concepts       │ →  │  (as UI hint)   │ →  │  - note type    │ │
+│  │ - themes         │    │ - actionable    │    │  - project link │ │
+│  │ - energy         │    │ - needs_planning│    │                 │ │
+│  │ - overwhelm      │    │ - archive_only  │    │                 │ │
 │  └─────────────────┘    └─────────────────┘    └─────────────────┘ │
 │                                                                      │
 │  Ollama (mistral:7b) - All processing stays local                   │
 └─────────────────────────────────────────────────────────────────────┘
                                    │
-                    ┌──────────────┼──────────────┐
-                    ▼              ▼              ▼
-            ┌───────────┐  ┌───────────┐  ┌───────────┐
-            │ ACTIONABLE│  │  NEEDS    │  │  ARCHIVE  │
-            │           │  │ PLANNING  │  │   ONLY    │
-            └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
-                  │              │              │
-                  ▼              ▼              ▼
-            ┌───────────┐  ┌───────────┐  ┌───────────┐
-            │  Things   │  │ SeleneChat│  │  Obsidian │
-            │   Inbox   │  │  Planning │  │  Archive  │
-            └───────────┘  └───────────┘  └───────────┘
+                                   ▼
+                    ┌─────────────────────────────┐
+                    │     ALL NOTES PARK HERE     │
+                    │                             │
+                    │   SeleneChat Planning Tab   │
+                    │        📥 Inbox             │
+                    └─────────────┬───────────────┘
+                                  │
+                           USER TRIAGE
+                                  │
+          ┌───────────────────────┼───────────────────────┐
+          ▼                       ▼                       ▼
+    ┌───────────┐          ┌───────────┐          ┌───────────┐
+    │Create Task│          │  Start    │          │   Park    │
+    │(confirm)  │          │  Project  │          │           │
+    └─────┬─────┘          └─────┬─────┘          └─────┬─────┘
+          │                      │                      │
+          ▼                      ▼                      ▼
+    ┌───────────┐          ┌───────────┐          ┌───────────┐
+    │  Things   │          │ Planning  │          │  Parked   │
+    │   Inbox   │          │   Conv    │          │   List    │
+    └───────────┘          └─────┬─────┘          └───────────┘
+                                 │
+                                 ▼
+                           ┌───────────┐
+                           │  Tasks →  │
+                           │  Things   │
+                           └───────────┘
 ```
 
 ### AI Layer Responsibilities
 
 | Layer | Tool | Responsibilities |
 |-------|------|------------------|
-| **Local AI** | Ollama | Metadata extraction, classification, organization, archiving |
-| **Cloud AI** (Phase 7.3+) | External service | Planning, scoping, breakdown (with sanitization layer) |
-| **SeleneChat** | macOS app | Knowledge queries, topic discussion, planning sessions, thread continuation |
-| **Things** | Task manager | Receives clear actionable tasks only (no projects) |
+| **Local AI** | Ollama | Metadata extraction, classification (as hint), project matching |
+| **Cloud AI** (Phase 7.3+) | External service | Planning conversations, scoping, breakdown |
+| **SeleneChat** | macOS app | **All triage + planning** - Inbox, Active/Parked projects, conversations |
+| **Things** | Task manager | Receives tasks **only after user confirmation** |
 
-### Data Flow
+### Data Flow (Revised)
 
 1. **Note Capture** (existing): Drafts → n8n → SQLite
-2. **Metadata Extraction** (NEW): Ollama extracts concepts, themes, energy, overwhelm, task_type
-3. **Classification** (NEW): Ollama classifies as actionable/needs_planning/archive_only
-4. **Routing**:
-   - `actionable` → Things inbox (with metadata)
-   - `needs_planning` → Flagged for SeleneChat planning sessions
-   - `archive_only` → Obsidian export only
-5. **Planning Sessions** (Phase 7.2): SeleneChat facilitates breakdown of flagged items
-6. **Cloud AI** (Phase 7.3): Sanitized requests to external AI for complex planning
+2. **Metadata Extraction**: Ollama extracts concepts, themes, energy, overwhelm, task_type
+3. **Classification as Hint**: Ollama suggests type (quick_task, relates_to_project, new_project, reflection)
+4. **Park in Inbox**: ALL notes go to SeleneChat Inbox (no auto-routing)
+5. **User Triage**: User sees notes with suggested types, decides action:
+   - Create Task → Confirm text → Things
+   - Start Project → Planning conversation → Tasks
+   - Add to Project → Attach to existing project
+   - Park → Save for later
+   - Archive → Store but hide from Planning
+6. **Planning Conversations** (Phase 7.2): Guided breakdown produces tasks → Things
+7. **Cloud AI** (Phase 7.3): Sanitized requests for complex planning
 
 ---
 
 ## Sub-Phases
 
-### Phase 7.1: Task Extraction with Classification (Weeks 1-2)
+### Phase 7.1: Task Extraction with Classification (Complete, Behavior Revised)
 
-**Goal:** Extract metadata and classify notes - route actionable items to Things inbox
+**Status:** ✅ Complete (workflow exists) | Behavior revised 2026-01-02
 
-**🎯 KEY CHANGE:** Notes are classified by local AI, not manually reviewed. Clear tasks go directly to Things, ambiguous items are flagged for planning.
+**Original Goal:** Extract metadata and classify notes - route actionable items to Things inbox
 
-**Design Document:** See `docs/plans/2025-12-30-task-extraction-planning-design.md` for complete specification.
+**Revised Behavior:** Workflow 07 still extracts metadata and classifies, but:
+- **No longer auto-routes to Things**
+- Classification becomes a **UI hint** for SeleneChat Inbox
+- Suggests note type and related projects
+- User decides all routing through triage
 
-**Classification Categories:**
+**Design Documents:**
+- Original: `docs/plans/2025-12-30-task-extraction-planning-design.md`
+- **Revised:** `docs/plans/2026-01-02-planning-inbox-redesign.md`
 
-| Classification | Description | Routing | Example |
-|----------------|-------------|---------|---------|
-| `actionable` | Clear, specific task | Things inbox | "Call dentist tomorrow" |
-| `needs_planning` | Goal, project idea, ambiguous | Flag for SeleneChat | "Want to redo my website" |
-| `archive_only` | Thought, reflection, no action | Obsidian only | "Thinking about how attention works" |
+**Classification Categories (now UI hints):**
+
+| Classification | UI Badge | Suggested Actions | Example |
+|----------------|----------|-------------------|---------|
+| `actionable` | 📋 Quick task | Create Task, Park | "Call dentist tomorrow" |
+| `needs_planning` | 🆕 New project | Start Project, Park | "Want to redo my website" |
+| `archive_only` | 💭 Reflection | Keep in Knowledge, Archive | "Thinking about how attention works" |
+| (concept match) | 🔗 Relates to... | Add to Project, New Project | (any note matching existing project) |
 
 **Database Changes:**
 
@@ -263,41 +295,54 @@ No push notifications. No scheduled reminders. Available when you engage.
 
 ---
 
-### Phase 7.2: SeleneChat Planning Integration (Weeks 3-4)
+### Phase 7.2: SeleneChat Planning Integration (Design Revised 2026-01-02)
 
-**Status:** 📋 DESIGN COMPLETE
-**Design Doc:** [Phase 7.2 Design](../plans/2025-12-31-phase-7.2-selenechat-planning-design.md)
+**Status:** 📋 DESIGN REVISED
+**Design Docs:**
+- **Current:** [Planning Inbox Redesign](../plans/2026-01-02-planning-inbox-redesign.md)
+- **Previous:** [Phase 7.2 Design](../plans/2025-12-31-phase-7.2-selenechat-planning-design.md)
 
-**Goal:** SeleneChat queries flagged items and facilitates planning conversations
+**Goal:** SeleneChat becomes the central hub for ALL note triage and planning
 
-**Key Design Decisions (2025-12-31):**
-- **Dual AI routing:** Ollama for sensitive notes, Claude API for planning conversations
-- **Things as task database:** No task duplication - only store relationship links in Selene
-- **Methodology layer:** Editable prompts/triggers in `prompts/planning/` directory
-- **Bidirectional Things flow:** Resurface triggers (progress/stuck/complete)
-- **Single app experience:** All planning in SeleneChat, no context switching
+**Key Design Decisions (2026-01-02):**
+- **All notes to Inbox:** No auto-routing - everything parks in SeleneChat for user triage
+- **Active/Parked structure:** Prevents overwhelm (3-5 active projects max)
+- **Buttons-first triage:** Quick actions, conversation only when needed
+- **Context memory:** Projects preserve history when reopened with new notes
+- **User confirms all tasks:** Nothing goes to Things without user approval
 
-**Scope:**
-- SeleneChat queries `needs_planning` items from database
-- New "Planning" sidebar tab with thread list
-- Guided breakdown conversations using Claude API
-- Automatic task extraction → Things via URL scheme
+**Scope (Revised):**
+- **Inbox section:** All new notes with suggested types and actions
+- **Active projects:** Currently working on (limited to 3-5)
+- **Parked projects:** Everything else - not deleted, just not in focus
+- **Quick task flow:** Confirm text → Things (no full conversation needed)
+- **Planning conversations:** For complex projects, guided breakdown
 
-**SeleneChat Features:**
+**Planning Tab Structure:**
 
-1. **Planning Queries**
-   - "What needs planning?" → Shows all `needs_planning` items
-   - "Show me threads to continue" → Shows `discussion_threads` with status='pending'
+```
+┌─────────────────────────────────────────────────────────┐
+│  Planning                                        ⚙️     │
+├─────────────────────────────────────────────────────────┤
+│  📥 Inbox (4)                                           │
+│  [New notes with triage buttons]                        │
+│                                                         │
+│  🔥 Active (2)                                          │
+│  [Projects you're currently working on]                 │
+│                                                         │
+│  🅿️ Parked (12)                              [View →]   │
+│  [Everything else]                                      │
+└─────────────────────────────────────────────────────────┘
+```
 
-2. **Planning Conversations**
-   - User selects a `needs_planning` item
-   - SeleneChat facilitates breakdown using local AI
-   - Questions like: "What's the first concrete step?"
-   - Generates actionable tasks that route to Things
+**Triage Actions:**
 
-3. **Thread Continuation**
-   - `planning_prompt` from classification surfaces as conversation starters
-   - "You had an idea about [topic]. Want to plan this out?"
+| Note Type | Primary Actions |
+|-----------|-----------------|
+| 📋 Quick task | Create Task (confirm text), Park, Archive |
+| 🔗 Relates to project | Add to Project, New Project, Park |
+| 🆕 New project idea | Start Project (→ conversation), Park |
+| 💭 Reflection | Keep in Knowledge, Link to..., Archive |
 
 **Database Queries:**
 
@@ -652,10 +697,10 @@ Local re-applies: Specifics from original note
 
 ## Related Documentation
 
-- [Task Extraction Planning Design](../plans/2025-12-30-task-extraction-planning-design.md) - Complete Phase 7.1 design (2025-12-30)
-- [SeleneChat Planning Integration Design](../plans/2025-12-31-phase-7.2-selenechat-planning-design.md) - Complete Phase 7.2 design (2025-12-31)
+- **[Planning Inbox Redesign](../plans/2026-01-02-planning-inbox-redesign.md)** - Current design (2026-01-02)
+- [Task Extraction Planning Design](../plans/2025-12-30-task-extraction-planning-design.md) - Original Phase 7.1 design (superseded for routing)
+- [SeleneChat Planning Integration Design](../plans/2025-12-31-phase-7.2-selenechat-planning-design.md) - Original Phase 7.2 design (being revised)
 - [Metadata Definitions](../architecture/metadata-definitions.md) - Field specifications for classification
-- [AI Metadata Context](.claude/METADATA.md) - AI context for metadata handling
 - [Things Integration Architecture](../architecture/things-integration.md) - Technical architecture
 - [User Stories](../user-stories/things-integration-stories.md) - User scenarios and acceptance criteria
 - [ADHD Features Integration](../planning/adhd-features-integration.md) - Deep dive into ADHD principles
@@ -668,36 +713,59 @@ Local re-applies: Specifics from original note
 
 **Design Decisions:**
 
-1. **Things as Source of Truth:**
+1. **User-Controlled Triage (NEW 2026-01-02):**
+   - All notes park in SeleneChat Inbox
+   - User confirms before any task is created
+   - Prevents inbox overwhelm and AI misinterpretation
+   - Classification is a hint, not a routing decision
+
+2. **Things as Source of Truth:**
    - Prevents data duplication
    - Leverages Things' mature task management
    - Selene focuses on intelligence, not task storage
 
-2. **MCP over URL Schemes:**
-   - Bi-directional communication
-   - Richer API access
-   - More secure (AppleScript vs. URL parsing)
-
-3. **Event-Driven Workflows:**
-   - Reduces latency (no 30-second polling)
-   - Lower resource usage
-   - Immediate task creation after note processing
+3. **Active/Parked Project Structure (NEW 2026-01-02):**
+   - Limits active projects to 3-5 to force focus
+   - Parked items not forgotten, just not in face
+   - Context preserved when reopening parked projects
 
 4. **Metadata-Only Storage:**
    - Minimal database footprint
    - Respects Things as manager
    - Enrichment lives in Selene, state in Things
 
-**Open Questions:**
+**Open Questions (Updated):**
 
-- [ ] Should project creation require user approval initially?
+- [x] Should project creation require user approval initially? → YES, all user-initiated
 - [ ] What overwhelm_factor threshold triggers intervention?
 - [ ] How to handle recurring tasks in pattern analysis?
 - [ ] Should SeleneChat sync tasks real-time or cached?
 
 ---
 
-**Phase Status:** 🚧 Phase 7.1 Complete | Phase 7.2 Design Complete
-**Next Action:** Begin Phase 7.2 implementation (SeleneChat Planning Integration)
+## Future Features (Identified 2026-01-02)
+
+These features were identified during the planning inbox redesign brainstorming but are NOT part of initial implementation:
+
+### Parking Lot Rot Detection
+Surface parked items that haven't been touched in X days. "Still relevant?"
+
+### AI Suggestions When Active Doesn't Appeal
+"Nothing clicking today? Based on your energy, try 'Home Office Setup' - mostly low-energy research."
+
+### Task Check-in Conversations
+"You created 'Call dentist' 5 days ago but haven't done it. What's getting in the way?"
+Helps identify emotional blockers and reframe tasks.
+
+### Explicit Project Suggestion Correction
+"Not this" button when AI suggests wrong project match.
+
+### Auto-Park Suggestions
+"You haven't touched this active project in 2 weeks - park it?"
+
+---
+
+**Phase Status:** 🚧 Phase 7.1 Complete | Phase 7.2 Design Revised
+**Next Action:** Implement revised Phase 7.2 (Inbox + Active/Parked structure)
 **Owner:** Chase Easterling
-**Last Updated:** 2025-12-31
+**Last Updated:** 2026-01-02

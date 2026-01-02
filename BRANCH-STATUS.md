@@ -1,19 +1,23 @@
-# Branch Status: phase-7.5/feedback-pipeline
+# Branch Status: phase-7/planning-redesign
 
-**Created:** 2025-12-31
-**Design Doc:** docs/plans/2025-12-31-feedback-pipeline-implementation.md
-**Current Stage:** testing
-**Last Rebased:** 2025-12-31
+**Created:** 2026-01-02
+**Design Doc:** docs/plans/2026-01-02-planning-inbox-redesign.md
+**Current Stage:** dev
+**Last Rebased:** 2026-01-02
 
 ## Overview
 
-Feedback pipeline that captures `#selene-feedback` tagged notes, converts them to user stories via Ollama, and auto-generates a backlog file.
+Redesigns Phase 7 planning flow: ALL notes go through SeleneChat Inbox for user triage before any tasks are created. Removes auto-task creation. Adds Active/Parked project structure.
+
+Key changes:
+- No auto-routing to Things (user confirms everything)
+- Inbox triage with quick-action buttons
+- Active vs Parked projects to prevent overwhelm
+- Classification becomes UI hint, not routing decision
 
 ## Dependencies
 
-- Docker/n8n running
-- Ollama with mistral:7b
-- Workflow 01 (ingestion) active
+- None - this is a design revision that supersedes parts of Phase 7.1/7.2
 
 ---
 
@@ -21,68 +25,60 @@ Feedback pipeline that captures `#selene-feedback` tagged notes, converts them t
 
 ### Planning
 - [x] Design doc exists and approved
-- [x] Conflict check completed
-- [x] Dependencies identified
+- [x] Conflict check completed (no overlapping work)
+- [x] Dependencies identified and noted
 - [x] Branch and worktree created
-- [x] Implementation plan written
+- [x] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
-- [x] Task 1: Database migration (feedback_notes table)
-- [x] Task 2: Ingestion workflow modification (feedback detection)
-- [x] Task 3: Feedback processing workflow (09)
-- [x] Task 4: Backlog generator script
-- [x] Task 5: Automatic backlog generation in workflow
-- [x] Task 6: End-to-end test commit
+- [x] Tests written first (superpowers:test-driven-development)
+- [x] Core implementation complete
+- [x] All tests passing
+- [x] No linting/type errors
+- [x] Code follows project patterns
 
 ### Testing
-- [x] Docker running and workflows active
-- [x] Test feedback ingestion with marker
-- [x] Test LLM processing
-- [x] Test backlog generation
-- [x] Cleanup test data
+- [ ] Unit tests pass
+- [x] Integration tests pass (if applicable)
+- [ ] Manual testing completed
+- [ ] Edge cases verified
+- [ ] Verified with superpowers:verification-before-completion
 
 ### Docs
-- [x] Workflow 09 STATUS.md updated with test results
-- [x] Workflow 01 STATUS.md updated
-- [ ] ROADMAP.md updated
+- [x] Design documents updated
+- [x] workflow STATUS.md updated (if workflow changed) - N/A, no workflow changes
+- [ ] README updated (if interface changed)
+- [x] Roadmap docs updated
+- [x] Code comments where needed
 
 ### Review
-- [x] Requested review (superpowers:requesting-code-review)
-- [x] Review feedback addressed
-- [x] Changes approved
+- [ ] Requested review (superpowers:requesting-code-review)
+- [ ] Review feedback addressed
+- [ ] Changes approved
 
 ### Ready
-- [x] Rebased on latest main
-- [x] Final test pass after rebase
-- [x] BRANCH-STATUS.md fully checked
-- [x] Ready for merge
-
----
-
-## Implementation Summary
-
-### Files Created
-- `database/migrations/009_add_feedback_notes.sql`
-- `workflows/09-feedback-processing/workflow.json`
-- `workflows/09-feedback-processing/README.md`
-- `workflows/09-feedback-processing/docs/STATUS.md`
-- `workflows/09-feedback-processing/scripts/test-with-markers.sh`
-- `prompts/feedback/user-story-conversion.md`
-- `scripts/generate-backlog.sh`
-
-### Files Modified
-- `database/schema.sql` (added feedback_notes)
-- `workflows/01-ingestion/workflow.json` (feedback detection + routing)
-- `workflows/01-ingestion/docs/STATUS.md`
-- `docs/backlog/user-stories.md` (auto-generated)
+- [ ] Rebased on latest main
+- [ ] Final test pass after rebase
+- [ ] BRANCH-STATUS.md fully checked
+- [ ] Ready for merge
 
 ---
 
 ## Notes
 
-**2025-12-31:** All 6 implementation tasks completed. Ready for testing stage.
+This redesign came from a brainstorming session (2026-01-02) discussing user stories and whether the auto-routing model made sense. Key insights:
 
-**2026-01-01:** Testing completed. PR created. Resolved merge conflict with main.
+1. User wants to verify AI understanding before tasks are created
+2. Automatic task creation could lead to Things inbox overwhelm
+3. The planning conversation itself is valuable, even for "simple" tasks
+4. Need Active/Parked distinction to prevent SeleneChat overwhelm
+5. Context memory needed for reopening old projects with new notes
+
+Future features identified:
+- Parking lot rot detection (surface stale items)
+- AI suggestions when Active doesn't appeal
+- Task check-in conversations ("why haven't you done this?")
+- Explicit "not this" correction for wrong project suggestions
 
 ---
 
