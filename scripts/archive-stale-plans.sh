@@ -256,9 +256,56 @@ clean_references() {
     done
 }
 
-# Placeholder - implemented in next task
+# Commit all changes
 commit_changes() {
-    log_info "Committing changes..."
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log_info "[DRY RUN] Would commit changes"
+        return 0
+    fi
+
+    [ ${#ARCHIVED_FILES[@]} -eq 0 ] && return 0
+
+    # Stage all changes
+    git add "$ARCHIVE_DIR"
+    git add "$INDEX_FILE"
+
+    for ctx_file in "$PROJECT_ROOT/CLAUDE.md" "$PROJECT_ROOT/.claude/PROJECT-STATUS.md" "$PROJECT_ROOT/.claude/GITOPS.md"; do
+        [ -f "$ctx_file" ] && git add "$ctx_file"
+    done
+
+    # Build commit message
+    local msg="chore: archive stale design documents"$'\n\n'
+    msg+="Archived ${#ARCHIVED_FILES[@]} documents to docs/plans/_archived/:"$'\n'
+
+    for entry in "${ARCHIVED_FILES[@]}"; do
+        local file="${entry%%:*}"
+        local reason="${entry##*:}"
+        msg+="- $file ($reason)"$'\n'
+    done
+
+    if [ ${#UPDATED_REFS[@]} -gt 0 ]; then
+        msg+=$'\n'"Updated references in:"$'\n'
+        # Get unique context files
+        local unique_files=()
+        for ref in "${UPDATED_REFS[@]}"; do
+            local ctx="${ref%%:*}"
+            local base
+            base=$(basename "$ctx")
+            if [[ ! " ${unique_files[*]} " =~ " ${base} " ]]; then
+                unique_files+=("$base")
+            fi
+        done
+        for base in "${unique_files[@]}"; do
+            msg+="- $base"$'\n'
+        done
+    fi
+
+    if ! git commit -m "$msg"; then
+        log_error "Failed to create commit"
+        return 1
+    fi
+
+    log_info "Committed archive changes"
 }
 
 # Main entry point
