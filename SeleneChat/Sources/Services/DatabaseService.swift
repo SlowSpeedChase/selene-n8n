@@ -96,6 +96,7 @@ class DatabaseService: ObservableObject {
             // Run migrations
             try? createChatSessionsTable()
             try? Migration001_TaskLinks.run(db: db!)
+            try? Migration002_PlanningInbox.run(db: db!)
         } catch {
             isConnected = false
             #if DEBUG
