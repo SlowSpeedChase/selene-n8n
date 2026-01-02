@@ -1,0 +1,52 @@
+#!/bin/bash
+# Documentation validation pre-commit hook
+# Warns about documentation pattern violations
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+echo "Running documentation validation..."
+
+warnings=0
+
+# Check 1: Warn if creating new markdown in root
+new_root_md=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+\.md$' | grep -v -E '^(CLAUDE|ROADMAP|BRANCH-STATUS)\.md$' || true)
+if [ -n "$new_root_md" ]; then
+    echo -e "${YELLOW}WARNING: Creating markdown file(s) in root directory:${NC}"
+    echo "$new_root_md"
+    echo "  → Should this go in .claude/ or docs/ instead?"
+    echo ""
+    warnings=$((warnings + 1))
+fi
+
+# Check 2: Warn if design doc created without INDEX update
+new_plans=$(git diff --cached --name-only --diff-filter=A | grep 'docs/plans/.*\.md' | grep -v INDEX.md || true)
+index_updated=$(git diff --cached --name-only | grep 'docs/plans/INDEX.md' || true)
+if [ -n "$new_plans" ] && [ -z "$index_updated" ]; then
+    echo -e "${YELLOW}WARNING: New design doc without INDEX update:${NC}"
+    echo "$new_plans"
+    echo "  → Update docs/plans/INDEX.md with new entry"
+    echo ""
+    warnings=$((warnings + 1))
+fi
+
+# Check 3: Block if recreating deleted files
+blocked_files=(".claude/README.md" ".claude/QUICK-REFERENCE.md" "docs/README.md")
+for file in "${blocked_files[@]}"; do
+    if git diff --cached --name-only --diff-filter=A | grep -q "^$file$"; then
+        echo -e "${RED}ERROR: Attempting to recreate deleted file: $file${NC}"
+        echo "  → This file was consolidated. See root CLAUDE.md for canonical locations."
+        exit 1
+    fi
+done
+
+if [ $warnings -gt 0 ]; then
+    echo -e "${YELLOW}$warnings warning(s) found. Commit proceeding anyway.${NC}"
+else
+    echo -e "${GREEN}✓ Documentation validation passed${NC}"
+fi

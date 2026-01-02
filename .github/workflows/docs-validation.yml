@@ -1,0 +1,77 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'docs/**'
+      - '.claude/**'
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for redundant docs
+        run: |
+          # These files were consolidated and should not be recreated
+
+          if [ -f ".claude/README.md" ]; then
+            echo "ERROR: .claude/README.md should not exist"
+            echo "  → Content merged into root CLAUDE.md"
+            exit 1
+          fi
+
+          if [ -f ".claude/QUICK-REFERENCE.md" ]; then
+            echo "ERROR: .claude/QUICK-REFERENCE.md should not exist"
+            echo "  → Use .claude/OPERATIONS.md instead"
+            exit 1
+          fi
+
+          if [ -f "docs/README.md" ]; then
+            echo "ERROR: docs/README.md should not exist"
+            echo "  → Use docs/INDEX.md instead"
+            exit 1
+          fi
+
+          echo "✓ No redundant documentation files found"
+
+      - name: Check design doc index
+        run: |
+          # Warn if design docs are missing from INDEX
+          missing=0
+
+          for doc in docs/plans/20*.md; do
+            if [ -f "$doc" ]; then
+              docname=$(basename "$doc")
+              if [ "$docname" != "INDEX.md" ]; then
+                if ! grep -q "$docname" docs/plans/INDEX.md 2>/dev/null; then
+                  echo "WARNING: $docname not listed in docs/plans/INDEX.md"
+                  missing=$((missing + 1))
+                fi
+              fi
+            fi
+          done
+
+          if [ $missing -gt 0 ]; then
+            echo ""
+            echo "⚠ $missing design doc(s) missing from INDEX"
+            echo "  → Update docs/plans/INDEX.md with new entries"
+          else
+            echo "✓ All design docs are indexed"
+          fi
+
+      - name: Check canonical locations
+        run: |
+          # Check for documentation in wrong locations
+
+          # New markdown in root (except CLAUDE.md, ROADMAP.md, BRANCH-STATUS.md)
+          root_md=$(find . -maxdepth 1 -name "*.md" ! -name "CLAUDE.md" ! -name "ROADMAP.md" ! -name "BRANCH-STATUS.md" -type f 2>/dev/null | head -5)
+          if [ -n "$root_md" ]; then
+            echo "WARNING: Markdown files in root directory:"
+            echo "$root_md"
+            echo "  → Consider moving to .claude/ or docs/"
+          fi
+
+          echo "✓ Canonical location check complete"

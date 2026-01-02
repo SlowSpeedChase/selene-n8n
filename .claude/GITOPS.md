@@ -320,6 +320,62 @@ git branch -d phase-X.Y/name
 
 ---
 
+## GitHub Conventions
+
+### Commit Message Format
+
+```
+type(scope): description
+
+[optional body]
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+**Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+
+**Scopes:** workflow number (01, 07), component name (selenechat, scripts), or `docs`
+
+**Examples:**
+```
+feat(07): add task classification node
+fix(selenechat): resolve database connection timeout
+docs: update GITOPS with commit conventions
+refactor(scripts): simplify workflow export logic
+```
+
+### Pull Request Format
+
+```markdown
+## Summary
+- [1-3 bullet points describing the change]
+
+## Changes
+- List of files/components changed
+- Any breaking changes
+
+## Test Plan
+- [ ] Tests pass
+- [ ] Manual verification completed
+
+## Design Doc
+Link: docs/plans/YYYY-MM-DD-*.md (if applicable)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+### Branch Merge Process
+
+1. Ensure all stage checklists are complete
+2. Create PR with format above
+3. Request review if significant changes
+4. Squash merge to main (keeps history clean)
+5. Complete closure ritual (see Stage 3 above)
+
+---
+
 ## Related Documents
 
 - `@templates/BRANCH-STATUS.md` - Full template for branch status

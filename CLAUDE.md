@@ -1,6 +1,6 @@
 # Selene-n8n Project Context
 
-> **For Claude:** This is a high-level overview. For detailed context, see the Context Guide below and load specific files as needed.
+> **This is THE single entry point.** Claude Code loads this automatically. Use the Context Navigation table below to find what you need.
 
 ---
 
@@ -23,9 +23,7 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 
 ## Context Navigation
 
-**New to this project? Start here:** `@.claude/README.md`
-
-**Quick reference for common tasks:**
+**Load only what you need for the task:**
 
 | Task | Primary Context | Supporting Context |
 |------|-----------------|-------------------|
@@ -235,27 +233,26 @@ sqlite3 data/selene.db ".schema raw_notes"
 
 ```
 selene-n8n/
+├── CLAUDE.md                # THIS FILE - single entry point
 ├── .claude/                 # Context files for AI development
-│   ├── README.md           # Context navigation guide (START HERE)
+│   ├── OPERATIONS.md       # Commands, testing, debugging
 │   ├── DEVELOPMENT.md      # Architecture and decisions
-│   ├── OPERATIONS.md       # Daily commands and procedures
-│   ├── ADHD_Principles.md  # ADHD design framework
-│   └── PROJECT-STATUS.md   # Current state
+│   ├── PROJECT-STATUS.md   # Current state (update every session)
+│   ├── GITOPS.md           # Branch workflow, git conventions
+│   └── ADHD_Principles.md  # ADHD design framework
 ├── workflows/              # n8n workflows
-│   ├── CLAUDE.md          # Workflow development patterns
+│   ├── CLAUDE.md          # Workflow procedures
 │   └── XX-name/           # Individual workflows
 │       ├── workflow.json  # Source of truth
 │       ├── README.md      # Quick start
-│       ├── docs/STATUS.md # Test results
-│       └── scripts/       # Test utilities
+│       └── STATUS.md      # Test results
 ├── scripts/                # Project-wide utilities
 │   ├── CLAUDE.md          # Script documentation
 │   └── manage-workflow.sh # Workflow CLI tool
-├── database/              # Database schema
-│   └── schema.sql
-├── docs/                  # User documentation
-│   ├── README.md          # Documentation index
-│   └── roadmap/           # Phase documents
+├── docs/                  # Reference documentation
+│   ├── INDEX.md           # Documentation navigation
+│   └── plans/             # Design documents
+│       └── INDEX.md       # Design doc status tracker
 ├── SeleneChat/            # macOS app
 └── data/                  # SQLite database
     └── selene.db
@@ -307,34 +304,8 @@ selene-n8n/
 
 ---
 
-## Learning Resources
+## Troubleshooting
 
-**Getting oriented:**
-1. Read `@.claude/README.md` (context navigation)
-2. Read `@.claude/DEVELOPMENT.md` (architecture)
-3. Read `@.claude/ADHD_Principles.md` (design philosophy)
-4. Read `@.claude/PROJECT-STATUS.md` (current state)
-
-**Working on specific tasks:**
-- Workflows: `@workflows/CLAUDE.md`
-- Scripts: `@scripts/CLAUDE.md`
-- Operations: `@.claude/OPERATIONS.md`
-
-**Deep dives:**
-- Database schema: `@database/schema.sql`
-- Phase details: `@docs/roadmap/`
-- Project roadmap: `@ROADMAP.md`
-
----
-
-## Support
-
-**Documentation Questions:**
-- Start with `@.claude/README.md` (context guide)
-- Check relevant context file for your task
-- Review `@docs/README.md` (user documentation)
-
-**Technical Issues:**
 - Check `@.claude/OPERATIONS.md` (Troubleshooting section)
 - Review workflow STATUS.md files
 - Check Docker logs: `docker-compose logs -f n8n`
@@ -343,6 +314,7 @@ selene-n8n/
 
 ## Version History
 
+- **2026-01-02**: Documentation consolidation - single entry point, removed redundant files
 - **2025-12-30**: Added GitOps development practices (.claude/GITOPS.md)
 - **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification
 - **2025-11-27**: Reorganized into modular context structure
@@ -353,6 +325,26 @@ selene-n8n/
 
 ---
 
-**This is a living document. Update after major changes or architectural decisions.**
+## Before Creating Documentation
 
-**For detailed context on any topic, see the navigation guide:** `@.claude/README.md`
+**STOP. Check these rules before creating any new markdown file:**
+
+1. **Does this info already exist?** Check `.claude/*.md`, `workflows/CLAUDE.md`, `docs/INDEX.md`
+
+2. **What type of information is this?**
+   | Type | Canonical Location |
+   |------|-------------------|
+   | Current status | `.claude/PROJECT-STATUS.md` |
+   | Commands/testing | `.claude/OPERATIONS.md` |
+   | Architecture/patterns | `.claude/DEVELOPMENT.md` |
+   | Git/branch workflow | `.claude/GITOPS.md` |
+   | Workflow-specific | `workflows/XX/STATUS.md` |
+   | Design planning | `docs/plans/YYYY-MM-DD-topic-design.md` |
+
+3. **Update existing file, don't create new one.**
+
+4. **If creating a design doc:** Add entry to `docs/plans/INDEX.md`
+
+---
+
+**This is a living document. Update after major changes or architectural decisions.**
