@@ -1,9 +1,26 @@
 # Task Extraction and Planning Architecture Design
 
 **Created:** 2025-12-30
-**Status:** Approved
+**Status:** Partially Superseded (routing logic revised)
+**Revised:** 2026-01-02
 **Phase:** 7.1 Revision - Supersedes previous task extraction design
 **Context:** Brainstorming session on project identification, planning, and task extraction
+
+---
+
+> **⚠️ ROUTING LOGIC REVISED (2026-01-02)**
+>
+> The **auto-routing** behavior described in this document has been changed:
+> - **Before:** `actionable` notes auto-created tasks in Things
+> - **After:** ALL notes park in SeleneChat Inbox for user triage
+>
+> **See:** `docs/plans/2026-01-02-planning-inbox-redesign.md` for the current routing design.
+>
+> The sections below remain useful for:
+> - Metadata extraction (still applies)
+> - Classification logic (now used as UI hints)
+> - Database schema (foundation still valid)
+> - LLM prompts (still applicable)
 
 ---
 

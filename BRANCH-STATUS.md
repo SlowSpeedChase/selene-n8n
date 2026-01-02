@@ -1,19 +1,17 @@
-# Branch Status: phase-7.5/feedback-pipeline
+# Branch Status: infra/auto-builder
 
-**Created:** 2025-12-31
-**Design Doc:** docs/plans/2025-12-31-feedback-pipeline-implementation.md
-**Current Stage:** testing
-**Last Rebased:** 2025-12-31
+**Created:** 2026-01-02
+**Design Doc:** docs/plans/2026-01-02-selenechat-auto-builder-design.md
+**Current Stage:** review
+**Last Rebased:** 2026-01-02
 
 ## Overview
 
-Feedback pipeline that captures `#selene-feedback` tagged notes, converts them to user stories via Ollama, and auto-generates a backlog file.
+Git post-merge hook that automatically builds and installs SeleneChat to /Applications when SeleneChat/ files change, with macOS notifications for feedback.
 
 ## Dependencies
 
-- Docker/n8n running
-- Ollama with mistral:7b
-- Workflow 01 (ingestion) active
+- None
 
 ---
 
@@ -21,71 +19,54 @@ Feedback pipeline that captures `#selene-feedback` tagged notes, converts them t
 
 ### Planning
 - [x] Design doc exists and approved
-- [x] Conflict check completed
-- [x] Dependencies identified
+- [x] Conflict check completed (no overlapping work)
+- [x] Dependencies identified and noted
 - [x] Branch and worktree created
-- [x] Implementation plan written
+- [x] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
-- [x] Task 1: Database migration (feedback_notes table)
-- [x] Task 2: Ingestion workflow modification (feedback detection)
-- [x] Task 3: Feedback processing workflow (09)
-- [x] Task 4: Backlog generator script
-- [x] Task 5: Automatic backlog generation in workflow
-- [x] Task 6: End-to-end test commit
+- [x] Tests written first (superpowers:test-driven-development)
+- [x] Core implementation complete
+- [x] All tests passing
+- [x] No linting/type errors
+- [x] Code follows project patterns
 
 ### Testing
-- [x] Docker running and workflows active
-- [x] Test feedback ingestion with marker
-- [x] Test LLM processing
-- [x] Test backlog generation
-- [x] Cleanup test data
+- [x] Unit tests pass (bash -n syntax validation)
+- [x] Integration tests pass (merge trigger test)
+- [x] Manual testing completed
+- [x] Edge cases verified (idempotent setup, no-change skip)
+- [x] Verified with superpowers:verification-before-completion
 
 ### Docs
-- [x] Workflow 09 STATUS.md updated with test results
-- [x] Workflow 01 STATUS.md updated
-- [ ] ROADMAP.md updated
+- [x] workflow STATUS.md updated (N/A - not a workflow)
+- [x] README updated (N/A - no interface change)
+- [x] Roadmap docs updated (N/A - infrastructure)
+- [x] Code comments where needed (scripts self-documenting)
 
 ### Review
-- [x] Requested review (superpowers:requesting-code-review)
-- [x] Review feedback addressed
-- [x] Changes approved
+- [ ] Requested review (superpowers:requesting-code-review)
+- [ ] Review feedback addressed
+- [ ] Changes approved
 
 ### Ready
-- [x] Rebased on latest main
-- [x] Final test pass after rebase
-- [x] BRANCH-STATUS.md fully checked
-- [x] Ready for merge
-
----
-
-## Implementation Summary
-
-### Files Created
-- `database/migrations/009_add_feedback_notes.sql`
-- `workflows/09-feedback-processing/workflow.json`
-- `workflows/09-feedback-processing/README.md`
-- `workflows/09-feedback-processing/docs/STATUS.md`
-- `workflows/09-feedback-processing/scripts/test-with-markers.sh`
-- `prompts/feedback/user-story-conversion.md`
-- `scripts/generate-backlog.sh`
-
-### Files Modified
-- `database/schema.sql` (added feedback_notes)
-- `workflows/01-ingestion/workflow.json` (feedback detection + routing)
-- `workflows/01-ingestion/docs/STATUS.md`
-- `docs/backlog/user-stories.md` (auto-generated)
+- [ ] Rebased on latest main
+- [ ] Final test pass after rebase
+- [ ] BRANCH-STATUS.md fully checked
+- [ ] Ready for merge
 
 ---
 
 ## Notes
 
-**2025-12-31:** All 6 implementation tasks completed. Ready for testing stage.
+Simple shell scripts - no dependencies to install, no compilation.
 
-**2026-01-01:** Testing completed. PR created. Resolved merge conflict with main.
+Files to create:
+- scripts/hooks/post-merge
+- scripts/setup-hooks.sh
 
 ---
 
 ## Blocked Items
 
-None currently.
+None
