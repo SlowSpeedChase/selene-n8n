@@ -16,6 +16,7 @@ Status legend:
 | 2025-12-31 | ai-provider-toggle-design.md | 7.2d | Local/cloud AI toggle for SeleneChat |
 | 2026-01-01 | project-grouping-design.md | 7.2f | Things project grouping |
 | 2026-01-01 | n8n-upgrade-design.md | infra | n8n 1.x to 2.x upgrade |
+| 2026-01-02 | plan-archive-agent-design.md | infra | Auto-archive stale design docs |
 
 ---
 
