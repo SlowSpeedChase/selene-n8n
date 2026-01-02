@@ -125,14 +125,95 @@ get_stale_uncategorized() {
     printf '%s\n' "${files[@]}"
 }
 
-# Main entry point (implemented in later tasks)
+# Archive a single file
+archive_file() {
+    local filename="$1"
+    local reason="$2"
+    local source="$PLANS_DIR/$filename"
+    local dest="$ARCHIVE_DIR/$filename"
+
+    # Check KEEP marker
+    if has_keep_marker "$filename"; then
+        log_warn "Skipping $filename (has KEEP marker)"
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log_info "[DRY RUN] Would archive: $filename ($reason)"
+        return 0
+    fi
+
+    # Move file
+    git mv "$source" "$dest"
+    ARCHIVED_FILES+=("$filename:$reason")
+    log_info "Archived: $filename ($reason)"
+}
+
+# Placeholder - implemented in next task
+update_index() {
+    log_info "Updating INDEX.md..."
+}
+
+# Placeholder - implemented in next task
+clean_references() {
+    log_info "Cleaning stale references..."
+}
+
+# Placeholder - implemented in next task
+commit_changes() {
+    log_info "Committing changes..."
+}
+
+# Main entry point
 main() {
     if should_skip; then
         exit 0
     fi
 
+    # Ensure archive directory exists
+    mkdir -p "$ARCHIVE_DIR"
+
     log_info "Checking for stale plans..."
-    # Implementation continues in next tasks
+
+    # Collect files to archive
+    local to_archive=()
+
+    # Get completed files
+    while IFS= read -r file; do
+        [ -n "$file" ] && to_archive+=("$file:completed")
+    done < <(get_files_by_status "Completed")
+
+    # Get superseded files
+    while IFS= read -r file; do
+        [ -n "$file" ] && to_archive+=("$file:superseded")
+    done < <(get_files_by_status "Superseded")
+
+    # Get stale uncategorized files
+    while IFS= read -r file; do
+        [ -n "$file" ] && to_archive+=("$file:stale-uncategorized")
+    done < <(get_stale_uncategorized)
+
+    # Nothing to archive
+    if [ ${#to_archive[@]} -eq 0 ]; then
+        log_info "No stale plans to archive"
+        exit 0
+    fi
+
+    log_info "Found ${#to_archive[@]} files to archive"
+
+    # Archive each file
+    for entry in "${to_archive[@]}"; do
+        local file="${entry%%:*}"
+        local reason="${entry##*:}"
+        archive_file "$file" "$reason"
+    done
+
+    # Continue to update INDEX and commit (next tasks)
+    if [ ${#ARCHIVED_FILES[@]} -gt 0 ]; then
+        update_index
+        clean_references
+        commit_changes
+    fi
 }
 
 main "$@"
