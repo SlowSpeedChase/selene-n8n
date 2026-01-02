@@ -152,9 +152,66 @@ archive_file() {
     log_info "Archived: $filename ($reason)"
 }
 
-# Placeholder - implemented in next task
+# Update INDEX.md - remove archived entries, add to Archived section
 update_index() {
     log_info "Updating INDEX.md..."
+
+    local today
+    today=$(date +%Y-%m-%d)
+    local temp_file
+    temp_file=$(mktemp)
+
+    # Remove archived files from their original sections
+    local index_content
+    index_content=$(cat "$INDEX_FILE")
+
+    for entry in "${ARCHIVED_FILES[@]}"; do
+        local file="${entry%%:*}"
+        # Extract short name (without date prefix) for matching INDEX.md format
+        local short_name
+        short_name=$(echo "$file" | sed 's/^[0-9-]*-//')
+        # Remove line containing this filename
+        index_content=$(echo "$index_content" | grep -v "$short_name")
+    done
+
+    # Check if Archived section exists
+    if echo "$index_content" | grep -q "^<details>"; then
+        # Update existing Archived section
+        # Insert new entries before </details>
+        local new_entries=""
+        for entry in "${ARCHIVED_FILES[@]}"; do
+            local file="${entry%%:*}"
+            local date_prefix
+            date_prefix=$(echo "$file" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || echo "unknown")
+            local name
+            name=$(echo "$file" | sed 's/^[0-9-]*-//')
+            new_entries+="| $date_prefix | $name | $today |"$'\n'
+        done
+
+        index_content=$(echo "$index_content" | sed "s|</details>|$new_entries</details>|")
+    else
+        # Add new Archived section at end
+        local archived_section
+        archived_section=$'\n---\n\n<details>\n<summary>Archived</summary>\n\n| Date | Document | Archived |\n|------|----------|----------|\n'
+
+        for entry in "${ARCHIVED_FILES[@]}"; do
+            local file="${entry%%:*}"
+            local date_prefix
+            date_prefix=$(echo "$file" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || echo "unknown")
+            local name
+            name=$(echo "$file" | sed 's/^[0-9-]*-//')
+            archived_section+="| $date_prefix | $name | $today |"$'\n'
+        done
+
+        archived_section+=$'\n</details>\n'
+        index_content+="$archived_section"
+    fi
+
+    # Update summary count
+    local count=${#ARCHIVED_FILES[@]}
+    index_content=$(echo "$index_content" | sed -E "s/<summary>Archived \([0-9]+ documents\)<\/summary>/<summary>Archived ($count documents)<\/summary>/")
+
+    echo "$index_content" > "$INDEX_FILE"
 }
 
 # Placeholder - implemented in next task
