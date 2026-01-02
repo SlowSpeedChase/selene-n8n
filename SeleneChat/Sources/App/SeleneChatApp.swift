@@ -14,9 +14,21 @@ struct SeleneChatApp: App {
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
 
+        // Configure services with database connection
+        configureServices()
+
         #if DEBUG
         setupDebugSystem()
         #endif
+    }
+
+    private func configureServices() {
+        // Configure InboxService and ProjectService with database connection
+        // These services need the db connection to query inbox notes and projects
+        if let db = DatabaseService.shared.db {
+            InboxService.shared.configure(with: db)
+            ProjectService.shared.configure(with: db)
+        }
     }
 
     #if DEBUG

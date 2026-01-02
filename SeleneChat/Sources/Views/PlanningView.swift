@@ -3,10 +3,9 @@ import SwiftUI
 
 struct PlanningView: View {
     @EnvironmentObject var databaseService: DatabaseService
-    @State private var threads: [DiscussionThread] = []
+
     @State private var selectedThread: DiscussionThread?
-    @State private var isLoading = true
-    @State private var error: String?
+    @State private var selectedProject: Project?
 
     var body: some View {
         Group {
@@ -15,12 +14,14 @@ struct PlanningView: View {
                     thread: thread,
                     onBack: { selectedThread = nil }
                 )
+            } else if let project = selectedProject {
+                ProjectDetailView(
+                    project: project,
+                    onBack: { selectedProject = nil }
+                )
             } else {
-                threadListView
+                mainPlanningView
             }
-        }
-        .task {
-            await loadThreads()
         }
         .onAppear {
             #if DEBUG
@@ -35,7 +36,7 @@ struct PlanningView: View {
         }
     }
 
-    private var threadListView: some View {
+    private var mainPlanningView: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
@@ -43,83 +44,44 @@ struct PlanningView: View {
                     Text("Planning")
                         .font(.title2)
                         .fontWeight(.semibold)
-
-                    Text("Threads to continue")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
-                Button(action: { Task { await loadThreads() } }) {
-                    Image(systemName: "arrow.clockwise")
+                Button(action: {}) {
+                    Image(systemName: "gearshape")
                 }
-                .disabled(isLoading)
+                .buttonStyle(.plain)
             }
             .padding()
 
             Divider()
 
-            // Content
-            if isLoading {
-                Spacer()
-                ProgressView("Loading threads...")
-                Spacer()
-            } else if let error = error {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
-                        .foregroundColor(.orange)
-                    Text(error)
-                        .foregroundColor(.secondary)
-                    Button("Try Again") {
-                        Task { await loadThreads() }
-                    }
+            // Three sections: Inbox, Active Projects, Parked Projects
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Inbox section - notes pending triage
+                    InboxView()
+
+                    Divider()
+                        .padding(.horizontal)
+
+                    // Active projects section - limited to 5 for ADHD focus
+                    ActiveProjectsList(onSelectProject: { project in
+                        selectedProject = project
+                    })
+
+                    Divider()
+                        .padding(.horizontal)
+
+                    // Parked projects section - collapsed by default
+                    ParkedProjectsList(onSelectProject: { project in
+                        selectedProject = project
+                    })
                 }
-                Spacer()
-            } else if threads.isEmpty {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 48))
-                        .foregroundColor(.green)
-                    Text("Nothing to plan right now")
-                        .font(.headline)
-                    Text("Notes flagged as 'needs planning' will appear here")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
-                Spacer()
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(threads) { thread in
-                            PlanningThreadRow(thread: thread)
-                                .onTapGesture {
-                                    selectedThread = thread
-                                }
-                        }
-                    }
-                    .padding()
-                }
+                .padding(.bottom)
             }
         }
-    }
-
-    private func loadThreads() async {
-        isLoading = true
-        error = nil
-
-        do {
-            threads = try await databaseService.getPendingThreads()
-        } catch {
-            self.error = error.localizedDescription
-        }
-
-        isLoading = false
     }
 }
 

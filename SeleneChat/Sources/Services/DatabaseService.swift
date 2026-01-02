@@ -12,7 +12,7 @@ class DatabaseService: ObservableObject {
         }
     }
 
-    private var db: Connection?
+    private(set) var db: Connection?
 
     // Table references
     private let rawNotes = Table("raw_notes")
