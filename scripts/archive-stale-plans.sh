@@ -215,9 +215,45 @@ $new_rows
     fi
 }
 
-# Placeholder - implemented in next task
+# Clean stale references from context files
 clean_references() {
+    [ ${#ARCHIVED_FILES[@]} -eq 0 ] && return 0
+
     log_info "Cleaning stale references..."
+
+    local context_files=(
+        "$PROJECT_ROOT/CLAUDE.md"
+        "$PROJECT_ROOT/.claude/PROJECT-STATUS.md"
+        "$PROJECT_ROOT/.claude/GITOPS.md"
+    )
+
+    for ctx_file in "${context_files[@]}"; do
+        [ ! -f "$ctx_file" ] && continue
+
+        local modified=0
+        local content
+        content=$(cat "$ctx_file")
+
+        for entry in "${ARCHIVED_FILES[@]}"; do
+            local file="${entry%%:*}"
+
+            # Check if file is referenced (use grep -F for literal matching)
+            if echo "$content" | grep -Fq "$file"; then
+                # Remove lines containing reference to this file
+                content=$(echo "$content" | grep -Fv "$file")
+                modified=1
+                UPDATED_REFS+=("$ctx_file:$file")
+                log_info "Removed reference to $file from $(basename "$ctx_file")"
+            fi
+        done
+
+        if [ $modified -eq 1 ]; then
+            if ! echo "$content" > "$ctx_file"; then
+                log_error "Failed to write $ctx_file"
+                return 1
+            fi
+        fi
+    done
 }
 
 # Placeholder - implemented in next task
