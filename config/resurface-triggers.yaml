@@ -1,0 +1,56 @@
+# resurface-triggers.yaml
+# Configuration for when to resurface planning threads in SeleneChat
+#
+# Phase 7.2e: Bidirectional Things Flow
+# These triggers determine when a "completed" thread should be
+# brought back to "review" state for user attention.
+
+# Trigger when tasks show good progress
+progress_trigger:
+  enabled: true
+  threshold_percent: 50
+  message: "Good progress! Ready to plan next steps?"
+  # Only trigger once per thread
+  trigger_once: true
+
+# Trigger when no task activity for N days
+stuck_trigger:
+  enabled: true
+  days_inactive: 3
+  message: "This seems stuck. Want to rethink the approach?"
+  # Can trigger multiple times
+  trigger_once: false
+  # Minimum days between triggers
+  cooldown_days: 7
+
+# Trigger when all tasks are completed
+completion_trigger:
+  enabled: true
+  threshold_percent: 100
+  message: "All tasks done! Want to reflect or plan what's next?"
+  # Celebrate completion
+  celebration: true
+
+# Trigger based on deadline proximity
+deadline_trigger:
+  enabled: true
+  days_before: 2
+  message: "Deadline approaching! Review your tasks?"
+  # Only if tasks are incomplete
+  require_incomplete: true
+
+# Status mapping from Things to Selene
+status_mapping:
+  # Things status -> Selene thread status
+  open: active
+  completed: review
+  canceled: archived
+
+# Sync frequency (for background sync)
+sync:
+  # Minutes between automatic syncs (0 = disabled)
+  interval_minutes: 0
+  # Only sync on app launch
+  on_launch: true
+  # Only sync when Planning tab opened
+  on_tab_open: true
