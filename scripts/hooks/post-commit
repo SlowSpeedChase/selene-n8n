@@ -1,0 +1,17 @@
+#!/bin/bash
+# Post-commit hook: Archive stale design documents
+# Installed by scripts/setup-hooks.sh
+
+# Skip if this is an archive commit (prevent recursion)
+if git log -1 --format=%s | grep -q "^chore: archive stale"; then
+    exit 0
+fi
+
+# Skip merge commits
+if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Run archival (failures are non-blocking)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/../../scripts/archive-stale-plans.sh" || true
