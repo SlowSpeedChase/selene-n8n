@@ -2,7 +2,7 @@
 
 **Created:** 2026-01-02
 **Design Doc:** docs/plans/2026-01-02-selenechat-auto-builder-design.md
-**Current Stage:** testing
+**Current Stage:** review
 **Last Rebased:** 2026-01-02
 
 ## Overview
@@ -33,16 +33,16 @@ Git post-merge hook that automatically builds and installs SeleneChat to /Applic
 
 ### Testing
 - [x] Unit tests pass (bash -n syntax validation)
-- [ ] Integration tests pass (if applicable)
-- [ ] Manual testing completed
-- [ ] Edge cases verified
-- [ ] Verified with superpowers:verification-before-completion
+- [x] Integration tests pass (merge trigger test)
+- [x] Manual testing completed
+- [x] Edge cases verified (idempotent setup, no-change skip)
+- [x] Verified with superpowers:verification-before-completion
 
 ### Docs
-- [ ] workflow STATUS.md updated (if workflow changed)
-- [ ] README updated (if interface changed)
-- [ ] Roadmap docs updated
-- [ ] Code comments where needed
+- [x] workflow STATUS.md updated (N/A - not a workflow)
+- [x] README updated (N/A - no interface change)
+- [x] Roadmap docs updated (N/A - infrastructure)
+- [x] Code comments where needed (scripts self-documenting)
 
 ### Review
 - [ ] Requested review (superpowers:requesting-code-review)
