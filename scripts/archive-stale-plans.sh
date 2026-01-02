@@ -144,7 +144,10 @@ archive_file() {
     fi
 
     # Move file
-    git mv "$source" "$dest"
+    if ! git mv "$source" "$dest" 2>/dev/null; then
+        log_error "Failed to archive: $filename"
+        return 1
+    fi
     ARCHIVED_FILES+=("$filename:$reason")
     log_info "Archived: $filename ($reason)"
 }
@@ -205,7 +208,10 @@ main() {
     for entry in "${to_archive[@]}"; do
         local file="${entry%%:*}"
         local reason="${entry##*:}"
-        archive_file "$file" "$reason"
+        if ! archive_file "$file" "$reason"; then
+            log_error "Aborting: failed to archive $file"
+            exit 1
+        fi
     done
 
     # Continue to update INDEX and commit (next tasks)
