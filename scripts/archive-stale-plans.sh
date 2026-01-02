@@ -73,7 +73,7 @@ get_files_by_status() {
             # Try to extract date and short filename from table row
             local row_date short_name full_filename
             row_date=$(echo "$line" | grep -oE '\| *[0-9]{4}-[0-9]{2}-[0-9]{2} *\|' | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
-            short_name=$(echo "$line" | grep -oE '[a-zA-Z0-9_-]+\.md' | head -1)
+            short_name=$(echo "$line" | grep -oE '[a-zA-Z0-9_.-]+\.md' | head -1)
 
             if [ -n "$row_date" ] && [ -n "$short_name" ]; then
                 # Construct full filename with date prefix
@@ -105,7 +105,7 @@ get_stale_uncategorized() {
         # Actual file:  2025-11-15-selenechat-icon-design.md
         local row_date short_name full_filename
         row_date=$(echo "$line" | grep -oE '\| *[0-9]{4}-[0-9]{2}-[0-9]{2} *\|' | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
-        short_name=$(echo "$line" | grep -oE '[a-zA-Z0-9_-]+\.md' | head -1)
+        short_name=$(echo "$line" | grep -oE '[a-zA-Z0-9_.-]+\.md' | head -1)
 
         if [ -n "$row_date" ] && [ -n "$short_name" ]; then
             full_filename="${row_date}-${short_name}"
