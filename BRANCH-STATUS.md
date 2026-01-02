@@ -2,7 +2,7 @@
 
 **Created:** 2026-01-02
 **Design Doc:** docs/plans/2026-01-02-planning-inbox-redesign.md
-**Current Stage:** planning
+**Current Stage:** dev
 **Last Rebased:** 2026-01-02
 
 ## Overview
@@ -31,25 +31,25 @@ Key changes:
 - [x] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
-- [ ] Tests written first (superpowers:test-driven-development)
-- [ ] Core implementation complete
-- [ ] All tests passing
-- [ ] No linting/type errors
-- [ ] Code follows project patterns
+- [x] Tests written first (superpowers:test-driven-development)
+- [x] Core implementation complete
+- [x] All tests passing
+- [x] No linting/type errors
+- [x] Code follows project patterns
 
 ### Testing
 - [ ] Unit tests pass
-- [ ] Integration tests pass (if applicable)
+- [x] Integration tests pass (if applicable)
 - [ ] Manual testing completed
 - [ ] Edge cases verified
 - [ ] Verified with superpowers:verification-before-completion
 
 ### Docs
 - [x] Design documents updated
-- [ ] workflow STATUS.md updated (if workflow changed)
+- [x] workflow STATUS.md updated (if workflow changed) - N/A, no workflow changes
 - [ ] README updated (if interface changed)
 - [x] Roadmap docs updated
-- [ ] Code comments where needed
+- [x] Code comments where needed
 
 ### Review
 - [ ] Requested review (superpowers:requesting-code-review)
