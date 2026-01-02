@@ -22,6 +22,23 @@ else
     echo "  post-merge: source not found (skipping)"
 fi
 
+ln -sf "../../scripts/hooks/pre-commit" "$PROJECT_ROOT/.git/hooks/pre-commit"
+
+echo "✓ Pre-commit hook installed"
+
+# Create symlink for post-commit hook
+if [ -f "$PROJECT_ROOT/.git/hooks/post-commit" ] && [ ! -L "$PROJECT_ROOT/.git/hooks/post-commit" ]; then
+    echo "Backing up existing post-commit hook..."
+    mv "$PROJECT_ROOT/.git/hooks/post-commit" "$PROJECT_ROOT/.git/hooks/post-commit.backup"
+fi
+
+ln -sf "../../scripts/hooks/post-commit" "$PROJECT_ROOT/.git/hooks/post-commit"
+
+echo "✓ Post-commit hook installed (plan archival)"
+
 echo ""
 echo "Hook setup complete!"
-echo "The post-merge hook will auto-build SeleneChat when its files change."
+echo "Hooks installed:"
+echo "  - pre-commit: documentation validation"
+echo "  - post-commit: archive stale plans"
+echo "  - post-merge: auto-build SeleneChat when its files change"

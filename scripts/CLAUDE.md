@@ -21,6 +21,7 @@ Bash automation scripts for testing, cleanup, workflow management, and database 
 - **cleanup-production-database.sh** - Production data maintenance
 - **run-doc-agent.sh** - Execute documentation agent
 - **test-with-markers.sh** (in workflow dirs) - Workflow-specific testing
+- **archive-stale-plans.sh** - Archive completed/superseded design documents
 
 ## Common Patterns
 
@@ -483,6 +484,31 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     ../../scripts/cleanup-tests.sh "$TEST_RUN"
 fi
 ```
+
+## archive-stale-plans.sh
+
+### Purpose
+Automatically archive completed/superseded design documents to prevent context rot.
+
+### Usage
+```bash
+# Dry run - see what would be archived
+ARCHIVE_DRY_RUN=1 ./scripts/archive-stale-plans.sh
+
+# Manual run (normally triggered by post-commit hook)
+./scripts/archive-stale-plans.sh
+```
+
+### Behavior
+- Parses `docs/plans/INDEX.md` for Completed/Superseded status
+- Checks uncategorized files for staleness (14+ days unmodified)
+- Moves files to `docs/plans/_archived/`
+- Updates INDEX.md with Archived section
+- Cleans references in CLAUDE.md, PROJECT-STATUS.md
+- Auto-commits all changes
+
+### Override
+Add `<!-- KEEP: reason -->` to any plan file to prevent archival.
 
 ## Common Utility Functions
 
