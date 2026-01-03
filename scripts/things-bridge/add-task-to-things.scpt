@@ -9,7 +9,8 @@
 --   "title": "Task title",          -- required
 --   "notes": "Task description",    -- optional
 --   "tags": ["tag1", "tag2"],       -- optional
---   "project": "Project Name"       -- optional: assign to this project/area
+--   "project": "Project Name",      -- optional: assign to this project/area
+--   "heading": "Heading Name"       -- optional: documented in notes (AppleScript limitation)
 -- }
 --
 -- Returns: The Things task ID on success, or error message on failure
@@ -71,6 +72,9 @@ on run argv
         -- Extract project name (optional)
         set projectName to do shell script jqPath & " -r '.project // \"\"' " & quoted form of jsonFilePath
 
+        -- Extract heading name (optional)
+        set headingName to do shell script jqPath & " -r '.heading // \"\"' " & quoted form of jsonFilePath
+
     on error errMsg
         return "ERROR: Failed to parse JSON: " & errMsg
     end try
@@ -107,6 +111,11 @@ on run argv
                         set notes of newToDo to taskNotes & linefeed & linefeed & "[Note: Project '" & projectName & "' not found in Things]"
                     end try
                 end try
+            end if
+
+            -- Document heading in notes (Things 3 AppleScript doesn't support headings directly)
+            if headingName is not "" then
+                set notes of newToDo to notes of newToDo & linefeed & "[Heading: " & headingName & "]"
             end if
 
             -- Add tags if any
