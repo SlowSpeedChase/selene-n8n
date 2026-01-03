@@ -40,6 +40,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 |
 
 ---
 

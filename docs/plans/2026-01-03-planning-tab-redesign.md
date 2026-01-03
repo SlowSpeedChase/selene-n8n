@@ -313,10 +313,46 @@ ALTER TABLE task_links ADD COLUMN things_heading TEXT;
 
 ## Migration Path
 
-### Existing Data
+### Smart Auto-Grouping Migration
 
-1. **Standalone threads** → Move to Scratch Pad project
-2. **Existing projects** → Keep as-is, threads attach to them
+On first launch after update, run one-time migration:
+
+1. **Query orphan threads** — All `discussion_threads` without `project_id`
+2. **Analyze topic similarity** — Reuse SubprojectSuggestionService clustering logic
+3. **Auto-create projects** — For each cluster of 2+ related threads
+4. **Scratch Pad remainder** — Orphans with no clear grouping
+5. **Show summary banner** — Non-blocking: "Organized 18 threads into 4 projects. 3 in Scratch Pad."
+
+```swift
+// Migration runs once (check UserDefaults flag)
+func migrateOrphanThreads() async {
+    guard !UserDefaults.standard.bool(forKey: "didMigrateThreadsToProjects") else { return }
+
+    let orphans = try await db.fetchThreadsWithoutProject()
+    let clusters = suggestionService.clusterByTopic(orphans)
+
+    for cluster in clusters where cluster.count >= 2 {
+        let project = try await createProject(name: cluster.suggestedName)
+        for thread in cluster.threads {
+            try await assignThread(thread, to: project)
+        }
+    }
+
+    // Remainder → Scratch Pad
+    let scratchPad = try await getScratchPad()
+    for thread in orphans where thread.projectId == nil {
+        try await assignThread(thread, to: scratchPad)
+    }
+
+    UserDefaults.standard.set(true, forKey: "didMigrateThreadsToProjects")
+    showMigrationBanner(projectsCreated: clusters.count, scratchPadCount: ...)
+}
+```
+
+### Existing Data Handling
+
+1. **Standalone threads** → Smart-grouped into projects or Scratch Pad
+2. **Existing projects** → Keep as-is, threads already attached
 3. **Resurfaced threads** → Convert to badge on parent project
 
 ### Code Changes
@@ -332,14 +368,14 @@ ALTER TABLE task_links ADD COLUMN things_heading TEXT;
 
 ## Success Criteria
 
-- [ ] Active Projects appears at top of Planning tab
-- [ ] Inbox appears second-to-last
-- [ ] Projects show sub-topic threads when opened
-- [ ] No standalone conversations exist
-- [ ] Scratch Pad catches loose threads
-- [ ] Review badges appear on projects (not separate section)
-- [ ] Smart grouping suggestions work with confirmation
-- [ ] Tasks go to Things with correct heading
+- [x] Active Projects appears at top of Planning tab
+- [x] Inbox appears second-to-last
+- [x] Projects show sub-topic threads when opened
+- [x] No standalone conversations exist
+- [x] Scratch Pad catches loose threads
+- [x] Review badges appear on projects (not separate section)
+- [x] Smart grouping suggestions work with confirmation
+- [x] Tasks go to Things with correct heading
 
 ---
 
@@ -358,6 +394,8 @@ ALTER TABLE task_links ADD COLUMN things_heading TEXT;
 2. **Thread limits:** No limit. Let projects grow organically. User can archive/merge threads manually if it gets messy.
 
 3. **Scratch Pad visibility:** Hidden until it has items. Keeps UI clean when you're organized. Appears between Active Projects and Suggestions only when populated.
+
+4. **Large-scale thread migration:** Use smart auto-grouping. Analyze existing orphan threads for topic similarity, auto-create projects for clusters of 2+, put remainder in Scratch Pad. Show non-blocking summary banner. User can rename/reorganize after. Chosen over manual migration prompts to reduce ADHD decision fatigue.
 
 ---
 
