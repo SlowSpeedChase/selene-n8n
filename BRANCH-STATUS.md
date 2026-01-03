@@ -3,12 +3,12 @@
 **Created:** 2026-01-02
 **Design Doc:** docs/plans/2026-01-02-feedback-pipeline-design.md
 **Implementation Plan:** docs/plans/2026-01-02-feedback-pipeline-implementation.md
-**Current Stage:** planning
-**Last Rebased:** 2026-01-02
+**Current Stage:** testing
+**Last Rebased:** 2026-01-03
 
 ## Overview
 
-Extend Workflow 01 to classify `#selene-feedback` notes using Ollama and append structured items to `docs/backlog/user-stories.md`. Categories: user_story, feature_request, bug, improvement, noise.
+Extend Workflow 01 to classify `#selene-feedback` notes using Ollama and append structured items to backlog. Categories: user_story, feature_request, bug, improvement, noise.
 
 ## Dependencies
 
@@ -28,18 +28,18 @@ Extend Workflow 01 to classify `#selene-feedback` notes using Ollama and append 
 - [x] Implementation plan written
 
 ### Dev
-- [ ] Migration 012 created and applied
-- [ ] Backlog file format created
-- [ ] Classification prompt template created
-- [ ] Workflow 01 nodes added (7 new nodes)
-- [ ] Workflow updated in n8n
-- [ ] All builds/imports succeed
-- [ ] Code follows project patterns
+- [x] Migration 012 created and applied
+- [x] Backlog file format created
+- [x] Classification prompt template created
+- [x] Workflow 01 nodes added (8 new nodes)
+- [x] Workflow updated in n8n
+- [x] All builds/imports succeed
+- [x] Code follows project patterns
 
 ### Testing
-- [ ] Test script created
+- [x] Test script created
+- [x] Feature request classification works (verified: FR-001)
 - [ ] User story classification works
-- [ ] Feature request classification works
 - [ ] Bug report classification works
 - [ ] Noise filtering works
 - [ ] Duplicate detection works
@@ -67,15 +67,15 @@ Extend Workflow 01 to classify `#selene-feedback` notes using Ollama and append 
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Create migration 012 | Pending |
-| 2 | Create backlog file format | Pending |
-| 3 | Create classification prompt | Pending |
-| 4 | Export Workflow 01 (backup) | Pending |
-| 5 | Add classification nodes | Pending |
-| 6 | Update workflow in n8n | Pending |
-| 7 | Create test script | Pending |
-| 8 | Run tests and verify | Pending |
-| 9 | Update documentation | Pending |
+| 1 | Create migration 012 | Done |
+| 2 | Create backlog file format | Done |
+| 3 | Create classification prompt | Done |
+| 4 | Export Workflow 01 (backup) | Done |
+| 5 | Add classification nodes | Done |
+| 6 | Update workflow in n8n | Done |
+| 7 | Create test script | Done |
+| 8 | Run tests and verify | In Progress |
+| 9 | Update documentation | In Progress |
 | 10 | Final verification and PR | Pending |
 
 ---
@@ -83,8 +83,10 @@ Extend Workflow 01 to classify `#selene-feedback` notes using Ollama and append 
 ## Notes
 
 - Using test_run markers for all testing
-- Test backlog writes to user-stories-test.md (not production)
-- Noise/duplicate items logged but not added to backlog
+- Backlog data stored in database, generate-backlog.sh exports to markdown
+- 8 new nodes added (was planned as 7, added Skip Classification? node)
+- Fixed IF node conditions to use boolean expressions instead of string operations
+- Fixed Ollama HTTP node to use POST method
 
 ---
 
