@@ -837,8 +837,10 @@ class DatabaseService: ObservableObject {
 
         let now = ISO8601DateFormatter().string(from: Date())
 
+        // Use correct column name: discussion_thread_id (from Migration001)
         let query = """
-            INSERT INTO task_links (things_task_id, thread_id, raw_note_id, created_at, things_status)
+            INSERT OR REPLACE INTO task_links
+            (things_task_id, discussion_thread_id, raw_note_id, created_at, things_status)
             VALUES (?, ?, ?, ?, 'open')
         """
 
