@@ -8,7 +8,8 @@
 -- {
 --   "title": "Task title",          -- required
 --   "notes": "Task description",    -- optional
---   "tags": ["tag1", "tag2"]        -- optional
+--   "tags": ["tag1", "tag2"],       -- optional
+--   "project": "Project Name"       -- optional: assign to this project/area
 -- }
 --
 -- Returns: The Things task ID on success, or error message on failure
@@ -67,6 +68,9 @@ on run argv
         -- jq outputs each tag on a line, we join them
         set tagsList to do shell script jqPath & " -r '.tags // [] | .[]' " & quoted form of jsonFilePath
 
+        -- Extract project name (optional)
+        set projectName to do shell script jqPath & " -r '.project // \"\"' " & quoted form of jsonFilePath
+
     on error errMsg
         return "ERROR: Failed to parse JSON: " & errMsg
     end try
@@ -83,8 +87,27 @@ on run argv
     -- Create the task in Things 3
     try
         tell application "Things3"
-            -- Create new to-do in inbox
+            -- Create new to-do (initially in inbox)
             set newToDo to make new to do with properties {name:taskTitle, notes:taskNotes}
+
+            -- Move to project if specified
+            if projectName is not "" then
+                try
+                    -- Try to find the project by name
+                    set targetProject to project projectName
+                    move newToDo to targetProject
+                on error
+                    -- Project not found, try as an area
+                    try
+                        set targetArea to area projectName
+                        move newToDo to targetArea
+                    on error
+                        -- Neither project nor area found - stays in inbox
+                        -- Add note about missing project
+                        set notes of newToDo to taskNotes & linefeed & linefeed & "[Note: Project '" & projectName & "' not found in Things]"
+                    end try
+                end try
+            end if
 
             -- Add tags if any
             repeat with tagName in tagsArray

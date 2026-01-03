@@ -500,6 +500,24 @@ sync:
 
 ## Future Enhancements
 
+### Project Selection for Pending Tasks
+
+Allow users to select which Things project to send tasks to from the pending tasks sidebar:
+
+- **Project picker dropdown** - Select from existing Things projects
+- **Default project per thread** - Remember last used project for conversation
+- **"Send to Inbox" option** - Explicit inbox choice (current default)
+- **Foundation ready** - `add-task-to-things.scpt` already supports `project` parameter
+- **Links to 7.2f** - Auto-assignment can set default, user can override
+
+**Implementation:**
+1. Add project field to `PendingTask` struct
+2. Add `ThingsURLService.createTask(project:)` parameter (already added)
+3. Add project picker UI in pending tasks sidebar
+4. Query Things for project list (via new AppleScript or things-mcp)
+
+### Other Enhancements
+
 - **Deadline trigger** - Requires task deadline tracking
 - **macOS notifications** - Alert when triggers fire (background sync needed)
 - **Menu bar indicator** - Show pending resurface count

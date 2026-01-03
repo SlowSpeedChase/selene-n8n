@@ -117,7 +117,8 @@ class ThingsURLService {
         tags: [String] = [],
         energy: String? = nil,
         sourceNoteId: Int? = nil,
-        threadId: Int? = nil
+        threadId: Int? = nil,
+        project: String? = nil  // Things project name to assign to
     ) async throws -> String {
         guard FileManager.default.fileExists(atPath: addTaskScriptPath) else {
             throw ThingsError.scriptNotFound
@@ -146,11 +147,16 @@ class ThingsURLService {
         let tempDir = FileManager.default.temporaryDirectory
         let jsonFile = tempDir.appendingPathComponent("selene-task-\(UUID().uuidString).json")
 
-        let taskData: [String: Any] = [
+        var taskData: [String: Any] = [
             "title": title,
             "notes": notesContent,
             "tags": allTags
         ]
+
+        // Add project if specified
+        if let project = project, !project.isEmpty {
+            taskData["project"] = project
+        }
 
         let jsonData = try JSONSerialization.data(withJSONObject: taskData)
         try jsonData.write(to: jsonFile)
