@@ -197,21 +197,21 @@ class ThingsURLService {
 
         // Record in task_links if we have a thread ID
         if let tid = threadId, let noteId = sourceNoteId {
-            try await recordTaskLink(thingsTaskId: thingsTaskId, threadId: tid, noteId: noteId)
+            try await recordTaskLink(thingsTaskId: thingsTaskId, threadId: tid, noteId: noteId, heading: heading)
         }
 
         return thingsTaskId
     }
 
     /// Record a task link in the database
-    private func recordTaskLink(thingsTaskId: String, threadId: Int, noteId: Int) async throws {
+    private func recordTaskLink(thingsTaskId: String, threadId: Int, noteId: Int, heading: String? = nil) async throws {
         guard let db = databaseService else {
             print("[ThingsURLService] Warning: Database not configured, skipping task_links insert")
             return
         }
 
-        try await db.insertTaskLink(thingsTaskId: thingsTaskId, threadId: threadId, noteId: noteId)
-        print("[ThingsURLService] Recorded task link: \(thingsTaskId) -> thread \(threadId)")
+        try await db.insertTaskLink(thingsTaskId: thingsTaskId, threadId: threadId, noteId: noteId, heading: heading)
+        print("[ThingsURLService] Recorded task link: \(thingsTaskId) -> thread \(threadId), heading: \(heading ?? "none")")
     }
 
     /// Open Things to show a specific item

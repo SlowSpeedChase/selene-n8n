@@ -843,7 +843,7 @@ class DatabaseService: ObservableObject {
     }
 
     /// Insert a new task link when a task is created in Things
-    func insertTaskLink(thingsTaskId: String, threadId: Int, noteId: Int) async throws {
+    func insertTaskLink(thingsTaskId: String, threadId: Int, noteId: Int, heading: String? = nil) async throws {
         guard let db = db else { throw DatabaseError.notConnected }
 
         let now = ISO8601DateFormatter().string(from: Date())
@@ -851,14 +851,14 @@ class DatabaseService: ObservableObject {
         // Use correct column name: discussion_thread_id (from Migration001)
         let query = """
             INSERT OR REPLACE INTO task_links
-            (things_task_id, discussion_thread_id, raw_note_id, created_at, things_status)
-            VALUES (?, ?, ?, ?, 'open')
+            (things_task_id, discussion_thread_id, raw_note_id, created_at, things_status, things_heading)
+            VALUES (?, ?, ?, ?, 'open', ?)
         """
 
-        try db.run(query, thingsTaskId, threadId, noteId, now)
+        try db.run(query, thingsTaskId, threadId, noteId, now, heading)
 
         #if DEBUG
-        print("[DatabaseService] Inserted task_link: \(thingsTaskId) -> thread \(threadId)")
+        print("[DatabaseService] Inserted task_link: \(thingsTaskId) -> thread \(threadId), heading: \(heading ?? "none")")
         #endif
     }
 
