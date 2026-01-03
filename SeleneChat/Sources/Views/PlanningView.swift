@@ -19,11 +19,17 @@ struct PlanningView: View {
     @State private var isSuggestionsExpanded = true
 
     // Section collapsed states
-    @State private var isNeedsReviewExpanded = true    // Start expanded - needs attention
+    @State private var isActiveProjectsExpanded = true // Start expanded - primary focus
+    @State private var isScratchPadExpanded = true     // Start expanded
     @State private var isInboxExpanded = true          // Start expanded - primary triage
-    @State private var isConversationsExpanded = true  // Start expanded - active work
-    @State private var isActiveProjectsExpanded = true // Start expanded
     @State private var isParkedProjectsExpanded = false // Start collapsed - less priority
+
+    // Legacy section states (kept for backward compatibility with unused sections)
+    @State private var isNeedsReviewExpanded = true
+    @State private var isConversationsExpanded = true
+
+    // Scratch Pad project
+    @State private var scratchPad: Project?
 
     var body: some View {
         Group {
@@ -97,33 +103,27 @@ struct PlanningView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 16) {
-                            // Phase 7.2e: Resurfaced threads needing review
-                            if !resurfacedThreads.isEmpty {
-                                needsReviewSection
-                                    .id("needsReview")
+                            // 1. Active projects section - primary focus, limited to 5 for ADHD
+                            activeProjectsSection
+                                .id("activeProjects")
+
+                            // 2. Scratch Pad section (only if has threads)
+                            if let pad = scratchPad, pad.threadCount > 0 {
+                                scratchPadSection
+                                    .id("scratchPad")
                             }
 
-                            // Phase 7.2f: Sub-project suggestions
+                            // 3. Sub-project suggestions
                             if !suggestionService.suggestions.isEmpty {
                                 suggestionsSection
                                     .id("suggestions")
                             }
 
-                            // Inbox section - notes pending triage
+                            // 4. Inbox section - notes pending triage
                             inboxSection
                                 .id("inbox")
 
-                            // Planning threads section - active conversations
-                            if !activeThreads.isEmpty {
-                                planningThreadsSection
-                                    .id("conversations")
-                            }
-
-                            // Active projects section - limited to 5 for ADHD focus
-                            activeProjectsSection
-                                .id("activeProjects")
-
-                            // Parked projects section - collapsed by default
+                            // 5. Parked projects section - collapsed by default
                             parkedProjectsSection
                                 .id("parkedProjects")
                         }
@@ -148,16 +148,27 @@ struct PlanningView: View {
                 .padding(.horizontal, 12)
                 .padding(.top, 12)
 
-            if !resurfacedThreads.isEmpty {
+            // 1. Active Projects (always visible)
+            sidebarButton(
+                icon: "star.fill",
+                label: "Active Projects",
+                count: nil,
+                color: .yellow,
+                isExpanded: $isActiveProjectsExpanded
+            )
+
+            // 2. Scratch Pad (only if has threads)
+            if let pad = scratchPad, pad.threadCount > 0 {
                 sidebarButton(
-                    icon: "arrow.triangle.2.circlepath",
-                    label: "Needs Review",
-                    count: resurfacedThreads.count,
-                    color: .orange,
-                    isExpanded: $isNeedsReviewExpanded
+                    icon: "note.text",
+                    label: "Scratch Pad",
+                    count: pad.threadCount,
+                    color: .gray,
+                    isExpanded: $isScratchPadExpanded
                 )
             }
 
+            // 3. Suggestions (if any)
             if !suggestionService.suggestions.isEmpty {
                 sidebarButton(
                     icon: "lightbulb.fill",
@@ -168,6 +179,7 @@ struct PlanningView: View {
                 )
             }
 
+            // 4. Inbox
             sidebarButton(
                 icon: "tray",
                 label: "Inbox",
@@ -176,24 +188,7 @@ struct PlanningView: View {
                 isExpanded: $isInboxExpanded
             )
 
-            if !activeThreads.isEmpty {
-                sidebarButton(
-                    icon: "bubble.left.and.bubble.right",
-                    label: "Conversations",
-                    count: activeThreads.count,
-                    color: .blue,
-                    isExpanded: $isConversationsExpanded
-                )
-            }
-
-            sidebarButton(
-                icon: "star.fill",
-                label: "Active Projects",
-                count: nil,
-                color: .yellow,
-                isExpanded: $isActiveProjectsExpanded
-            )
-
+            // 5. Parked
             sidebarButton(
                 icon: "moon.zzz",
                 label: "Parked",
@@ -341,7 +336,46 @@ struct PlanningView: View {
         }
     }
 
-    // MARK: - Phase 7.2e: Needs Review Section
+    // MARK: - Scratch Pad Section
+
+    private var scratchPadSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isScratchPadExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "note.text")
+                        .foregroundColor(.gray)
+                    Text("Scratch Pad")
+                        .font(.headline)
+
+                    if let pad = scratchPad {
+                        Text("(\(pad.threadCount))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isScratchPadExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isScratchPadExpanded, let pad = scratchPad {
+                Divider()
+                ThreadListView(projectId: pad.id) { thread in
+                    selectedThread = thread
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    // MARK: - Phase 7.2e: Needs Review Section (legacy - now shown as badges on projects)
 
     private var needsReviewSection: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -501,6 +535,9 @@ struct PlanningView: View {
         defer { isSyncing = false }
 
         do {
+            // Load Scratch Pad project
+            scratchPad = try await ProjectService.shared.getScratchPad()
+
             // Load resurfaced threads (needing review)
             resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
 

@@ -60,6 +60,8 @@ class ProjectService: ObservableObject {
         for row in try db.prepare(query) {
             var project = try parseProject(from: row)
             project.noteCount = try await getNoteCount(for: project.id)
+            project.threadCount = try await getThreadCount(for: project.id)
+            project.hasReviewBadge = try await hasReviewBadge(for: project.id)
             projectList.append(project)
         }
 
@@ -81,6 +83,8 @@ class ProjectService: ObservableObject {
         for row in try db.prepare(query) {
             var project = try parseProject(from: row)
             project.noteCount = try await getNoteCount(for: project.id)
+            project.threadCount = try await getThreadCount(for: project.id)
+            project.hasReviewBadge = try await hasReviewBadge(for: project.id)
             projectList.append(project)
         }
 
@@ -94,6 +98,32 @@ class ProjectService: ObservableObject {
             projectNotes.filter(pnProjectId == Int64(projectIdValue)).count
         )
         return count
+    }
+
+    private func getThreadCount(for projectIdValue: Int) async throws -> Int {
+        guard let db = db else { return 0 }
+
+        let threads = Table("discussion_threads")
+        let threadProjectId = Expression<Int64?>("project_id")
+        let threadTestRun = Expression<String?>("test_run")
+
+        let count = try db.scalar(
+            threads.filter(threadProjectId == Int64(projectIdValue)).filter(threadTestRun == nil).count
+        )
+        return count
+    }
+
+    private func hasReviewBadge(for projectIdValue: Int) async throws -> Bool {
+        guard let db = db else { return false }
+
+        let threads = Table("discussion_threads")
+        let threadProjectId = Expression<Int64?>("project_id")
+        let status = Expression<String>("status")
+
+        let count = try db.scalar(
+            threads.filter(threadProjectId == Int64(projectIdValue)).filter(status == "review").count
+        )
+        return count > 0
     }
 
     private func parseProject(from row: Row) throws -> Project {
@@ -212,6 +242,24 @@ class ProjectService: ObservableObject {
 
         // Notify observers that projects changed
         await MainActor.run { lastUpdated = Date() }
+    }
+
+    // MARK: - Scratch Pad
+
+    func getScratchPad() async throws -> Project? {
+        guard let db = db else {
+            throw DatabaseService.DatabaseError.notConnected
+        }
+
+        let isSystem = Expression<Int64>("is_system")
+        let query = projects.filter(isSystem == 1).limit(1)
+
+        guard let row = try db.pluck(query) else { return nil }
+
+        var project = try parseProject(from: row)
+        project.isSystem = true
+        project.threadCount = try await getThreadCount(for: project.id)
+        return project
     }
 
     // MARK: - Error Types

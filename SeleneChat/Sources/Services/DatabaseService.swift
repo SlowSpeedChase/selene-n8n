@@ -74,6 +74,8 @@ class DatabaseService: ObservableObject {
     private let threadCompletedAt = Expression<String?>("completed_at")
     private let threadRelatedConcepts = Expression<String?>("related_concepts")
     private let threadTestRun = Expression<String?>("test_run")
+    private let threadProjectId = Expression<Int64?>("project_id")
+    private let threadName = Expression<String?>("thread_name")
 
     init() {
         // Try to load saved path, otherwise use default
@@ -99,6 +101,7 @@ class DatabaseService: ObservableObject {
             try? Migration002_PlanningInbox.run(db: db!)
             try? Migration003_BidirectionalThings.run(db: db!)
             try? Migration004_SubprojectSuggestions.run(db: db!)
+            try? Migration005_ProjectThreads.run(db: db!)
 
             // Configure services that need database access
             if let db = db {
@@ -987,6 +990,135 @@ class DatabaseService: ObservableObject {
             noteTitle: noteTitle,
             noteContent: noteContent
         )
+    }
+
+    // MARK: - Thread-Project Operations
+
+    func fetchThreadsForProject(_ projectIdValue: Int) async throws -> [DiscussionThread] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = discussionThreads
+            .filter(threadProjectId == Int64(projectIdValue))
+            .filter(threadTestRun == nil)
+            .order(threadCreatedAt.desc)
+
+        var threads: [DiscussionThread] = []
+        let dateFormatter = ISO8601DateFormatter()
+
+        for row in try db.prepare(query) {
+            var thread = DiscussionThread(
+                id: Int(row[threadId]),
+                rawNoteId: Int(row[threadRawNoteId]),
+                threadType: DiscussionThread.ThreadType(rawValue: row[threadType]) ?? .planning,
+                projectId: row[threadProjectId].map { Int($0) },
+                threadName: row[threadName],
+                prompt: row[threadPrompt],
+                status: DiscussionThread.Status(rawValue: row[threadStatus]) ?? .pending,
+                createdAt: dateFormatter.date(from: row[threadCreatedAt]) ?? Date(),
+                surfacedAt: row[threadSurfacedAt].flatMap { dateFormatter.date(from: $0) },
+                completedAt: row[threadCompletedAt].flatMap { dateFormatter.date(from: $0) },
+                relatedConcepts: row[threadRelatedConcepts].flatMap { try? JSONDecoder().decode([String].self, from: $0.data(using: .utf8)!) }
+            )
+            threads.append(thread)
+        }
+
+        return threads
+    }
+
+    func createThread(
+        projectId: Int,
+        rawNoteId: Int,
+        threadType: DiscussionThread.ThreadType,
+        prompt: String
+    ) async throws -> DiscussionThread {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateFormatter = ISO8601DateFormatter()
+        let now = dateFormatter.string(from: Date())
+
+        let insertId = try db.run(discussionThreads.insert(
+            threadRawNoteId <- Int64(rawNoteId),
+            self.threadType <- threadType.rawValue,
+            threadPrompt <- prompt,
+            threadStatus <- "pending",
+            threadCreatedAt <- now,
+            threadProjectId <- Int64(projectId)
+        ))
+
+        return DiscussionThread(
+            id: Int(insertId),
+            rawNoteId: rawNoteId,
+            threadType: threadType,
+            projectId: projectId,
+            threadName: nil,
+            prompt: prompt,
+            status: .pending,
+            createdAt: Date(),
+            surfacedAt: nil,
+            completedAt: nil,
+            relatedConcepts: nil
+        )
+    }
+
+    func updateThreadName(_ threadIdValue: Int, name: String) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let thread = discussionThreads.filter(threadId == Int64(threadIdValue))
+        try db.run(thread.update(threadName <- name))
+    }
+
+    func moveThreadToProject(_ threadIdValue: Int, projectId: Int) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let thread = discussionThreads.filter(threadId == Int64(threadIdValue))
+        try db.run(thread.update(threadProjectId <- Int64(projectId)))
+    }
+
+    func getScratchPadProject() async throws -> Project? {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let projects = Table("projects")
+        let isSystem = Expression<Int64>("is_system")
+        let query = projects.filter(isSystem == 1).limit(1)
+
+        guard let row = try db.pluck(query) else { return nil }
+
+        let dateFormatter = ISO8601DateFormatter()
+        let projectId = Expression<Int64>("id")
+        let projectName = Expression<String>("name")
+        let projectStatus = Expression<String>("status")
+        let projectCreatedAt = Expression<String>("created_at")
+
+        return Project(
+            id: Int(row[projectId]),
+            name: row[projectName],
+            status: Project.Status(rawValue: row[projectStatus]) ?? .active,
+            createdAt: dateFormatter.date(from: row[projectCreatedAt]) ?? Date(),
+            isSystem: true
+        )
+    }
+
+    func hasProjectReviewBadge(_ projectIdValue: Int) async throws -> Bool {
+        guard let db = db else { return false }
+
+        // Check if any thread in this project has status = 'review'
+        let count = try db.scalar(
+            discussionThreads
+                .filter(threadProjectId == Int64(projectIdValue))
+                .filter(threadStatus == "review")
+                .count
+        )
+        return count > 0
     }
 
     // MARK: - Error Types
