@@ -3,31 +3,10 @@
 
 set -e
 
-# Only proceed if SeleneChat files changed in the merge
-if ! git diff-tree -r --name-only ORIG_HEAD HEAD 2>/dev/null | grep -q "^SeleneChat/"; then
-    exit 0
+SCRIPT_DIR="$(dirname "$0")"
+# Handle symlinked hooks
+if [ -L "$0" ]; then
+    SCRIPT_DIR="$(dirname "$(readlink "$0")")"
 fi
 
-echo "SeleneChat files changed - triggering auto-build..."
-
-# Get repo root and set paths
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-LOG_FILE="$HOME/.selenechat-build.log"
-APP_SOURCE="$REPO_ROOT/SeleneChat/.build/release/SeleneChat.app"
-APP_DEST="/Applications/SeleneChat.app"
-
-# Build SeleneChat
-cd "$REPO_ROOT/SeleneChat"
-
-if ./build-app.sh > "$LOG_FILE" 2>&1; then
-    # Success: install to Applications
-    rm -rf "$APP_DEST"
-    cp -R "$APP_SOURCE" "$APP_DEST"
-    osascript -e 'display notification "Build complete" with title "SeleneChat Updated ✓"'
-    echo "SeleneChat installed to $APP_DEST"
-else
-    # Failure: keep old app, notify with error
-    osascript -e 'display notification "Check ~/.selenechat-build.log" with title "SeleneChat Build Failed ✗"'
-    echo "Build failed - see $LOG_FILE for details"
-    exit 1
-fi
+"$SCRIPT_DIR/selenechat-auto-build.sh" "ORIG_HEAD" "HEAD"
