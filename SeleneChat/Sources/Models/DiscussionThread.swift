@@ -10,7 +10,8 @@ struct DiscussionThread: Identifiable, Hashable {
     var surfacedAt: Date?
     var completedAt: Date?
     let relatedConcepts: [String]?
-    var resurfaceReason: ResurfaceReason?
+    var resurfaceReasonCode: String?      // Raw code like "progress_50", "stuck_3d"
+    var lastResurfacedAt: Date?
 
     // Associated note content (loaded separately)
     var noteTitle: String?
@@ -66,16 +67,44 @@ struct DiscussionThread: Identifiable, Hashable {
         }
     }
 
-    enum ResurfaceReason: String {
-        case progress = "progress"
-        case stuck = "stuck"
-        case completion = "completion"
+    /// Parsed resurface reason from code
+    var resurfaceReason: ResurfaceReason? {
+        guard let code = resurfaceReasonCode else { return nil }
+        return ResurfaceReason(from: code)
+    }
 
-        var message: String {
-            switch self {
-            case .progress: return "Good progress! Ready to plan next steps?"
-            case .stuck: return "This seems stuck. Want to rethink the approach?"
-            case .completion: return "All tasks done! Want to reflect or plan what's next?"
+    struct ResurfaceReason {
+        let type: ReasonType
+        let message: String
+
+        enum ReasonType {
+            case progress(percent: Int)
+            case stuck(days: Int)
+            case completion
+            case deadline(days: Int)
+        }
+
+        init?(from code: String) {
+            if code.starts(with: "progress_") {
+                let percentStr = code.replacingOccurrences(of: "progress_", with: "")
+                let percent = Int(percentStr) ?? 50
+                self.type = .progress(percent: percent)
+                self.message = "Good progress! Ready to plan next steps?"
+            } else if code.starts(with: "stuck_") {
+                let daysStr = code.replacingOccurrences(of: "stuck_", with: "").replacingOccurrences(of: "d", with: "")
+                let days = Int(daysStr) ?? 3
+                self.type = .stuck(days: days)
+                self.message = "This seems stuck. Want to rethink the approach?"
+            } else if code == "completion" {
+                self.type = .completion
+                self.message = "All tasks done! Want to reflect or plan what's next?"
+            } else if code.starts(with: "deadline_") {
+                let daysStr = code.replacingOccurrences(of: "deadline_", with: "").replacingOccurrences(of: "d", with: "")
+                let days = Int(daysStr) ?? 2
+                self.type = .deadline(days: days)
+                self.message = "Deadline approaching! Review your tasks?"
+            } else {
+                return nil
             }
         }
     }
