@@ -42,6 +42,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-03 | new-thread-button-fix.md | 2026-01-03 |
 
 ---
 
