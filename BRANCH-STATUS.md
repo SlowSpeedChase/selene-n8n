@@ -1,7 +1,7 @@
 # Branch: phase-7.2/planning-tab-redesign
 
 **Created:** 2026-01-03
-**Status:** Development
+**Status:** Testing
 **Design:** `docs/plans/2026-01-03-planning-tab-redesign.md`
 **Implementation Plan:** `docs/plans/2026-01-03-planning-tab-implementation.md`
 **Last Rebased:** 2026-01-03
@@ -32,21 +32,21 @@ Restructure Planning tab so projects contain threads, Active Projects appears fi
 - [x] Implementation plan written
 
 ### Development
-- [ ] Task 1: Database migration (Migration005_ProjectThreads)
-- [ ] Task 2: Update DiscussionThread model
-- [ ] Task 3: Update Project model
-- [ ] Task 4: Add thread CRUD to DatabaseService
-- [ ] Task 5: Update ProjectService
-- [ ] Task 6: Create ThreadListView
-- [ ] Task 7: Create StartConversationSheet
-- [ ] Task 8: Update ProjectDetailView
-- [ ] Task 9: Update PlanningView sections
-- [ ] Task 10: Update ActiveProjectsList
-- [ ] Task 11: Update sidebar navigation
-- [ ] Task 12: Final build and test
+- [x] Task 1: Database migration (Migration005_ProjectThreads)
+- [x] Task 2: Update DiscussionThread model
+- [x] Task 3: Update Project model
+- [x] Task 4: Add thread CRUD to DatabaseService
+- [x] Task 5: Update ProjectService
+- [x] Task 6: Create ThreadListView
+- [x] Task 7: Create StartConversationSheet
+- [x] Task 8: Update ProjectDetailView
+- [x] Task 9: Update PlanningView sections
+- [x] Task 10: Update ActiveProjectsList
+- [x] Task 11: Update sidebar navigation
+- [x] Task 12: Final build and test
 
 ### Testing
-- [ ] Build passes
+- [x] Build passes
 - [ ] Manual testing complete
 - [ ] Edge cases verified
 
@@ -64,24 +64,23 @@ Restructure Planning tab so projects contain threads, Active Projects appears fi
 
 ---
 
-## Files to Modify
+## Implementation Summary
 
-### Database
-- `Migration005_ProjectThreads.swift` - New migration for thread structure
+### Commits (12)
+1. `69e358a` - feat(db): add Migration005 for thread-project relationship
+2. `9279372` - feat(model): add projectId and threadName to DiscussionThread
+3. `570b135` - feat(model): add isSystem, threadCount, hasReviewBadge to Project
+4. `9eadf84` - feat(db): add thread-project CRUD operations
+5. `1d9ef31` - feat(service): add thread count and review badge to ProjectService
+6. `6e7af6f` - feat(view): add ThreadListView component
+7. `498ae55` - feat(view): add StartConversationSheet for project picker
+8. `e6308b9` - feat(view): add thread list to ProjectDetailView
+9. `08cc1be` - feat(view): reorder Planning tab sections, add Scratch Pad
+10. `15bdbc4` - feat(view): add review badge and thread count to project rows
 
-### Models
-- `DiscussionThread.swift` - Add project_id, thread_name
-- `Project.swift` - Add isSystem, threadCount, hasReviewBadge
-
-### Services
-- `DatabaseService.swift` - Thread CRUD operations
-- `ProjectService.swift` - Thread management
-
-### Views
-- `PlanningView.swift` - Reorder sections, remove standalone threads section
-- `ProjectDetailView.swift` - Add thread list
-- `ThreadListView.swift` - New component
-- `StartConversationSheet.swift` - New component for project picker
+### Files Changed
+- **New files:** Migration005_ProjectThreads.swift, ThreadListView.swift, StartConversationSheet.swift
+- **Modified:** DiscussionThread.swift, Project.swift, DatabaseService.swift, ProjectService.swift, ProjectDetailView.swift, PlanningView.swift, ActiveProjectsList.swift
 
 ---
 
@@ -89,3 +88,4 @@ Restructure Planning tab so projects contain threads, Active Projects appears fi
 
 - Existing standalone threads will migrate to Scratch Pad project
 - System Scratch Pad project created in migration (is_system = 1)
+- Legacy needsReviewSection and planningThreadsSection kept for backward compatibility but no longer shown in main view
