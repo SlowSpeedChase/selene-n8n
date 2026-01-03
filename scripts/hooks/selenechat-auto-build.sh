@@ -18,12 +18,8 @@ echo "SeleneChat files changed - triggering auto-build..."
 # Get repo root and set paths
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 LOG_FILE="$HOME/.selenechat-build.log"
+# Note: .build/release is a symlink but cp -R follows symlinks, so no resolution needed
 APP_SOURCE="$REPO_ROOT/SeleneChat/.build/release/SeleneChat.app"
-
-# Resolve symlink - Swift PM uses a symlink for .build/release
-if [ -L "$REPO_ROOT/SeleneChat/.build/release" ]; then
-    APP_SOURCE="$(readlink "$REPO_ROOT/SeleneChat/.build/release")/SeleneChat.app"
-fi
 APP_DEST="/Applications/SeleneChat.app"
 
 # Build SeleneChat
