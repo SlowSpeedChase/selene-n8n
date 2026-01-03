@@ -7,6 +7,11 @@ struct PlanningView: View {
     @State private var selectedThread: DiscussionThread?
     @State private var selectedProject: Project?
 
+    // Phase 7.2e: Bidirectional Things sync
+    @StateObject private var thingsStatusService = ThingsStatusService.shared
+    @StateObject private var triggerService = ResurfaceTriggerService.shared
+    @State private var isSyncing = false
+
     var body: some View {
         Group {
             if let thread = selectedThread {
@@ -48,6 +53,17 @@ struct PlanningView: View {
 
                 Spacer()
 
+                // Phase 7.2e: Sync indicator
+                if isSyncing {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                        Text("Syncing...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 Button(action: {}) {
                     Image(systemName: "gearshape")
                 }
@@ -81,6 +97,87 @@ struct PlanningView: View {
                 }
                 .padding(.bottom)
             }
+        }
+        .task {
+            // Phase 7.2e: Sync Things statuses when Planning tab opens
+            await syncThingsAndEvaluateTriggers()
+        }
+    }
+
+    // MARK: - Phase 7.2e: Bidirectional Things Sync
+
+    /// Sync task statuses from Things and evaluate resurface triggers
+    private func syncThingsAndEvaluateTriggers() async {
+        guard thingsStatusService.isAvailable else {
+            #if DEBUG
+            print("[PlanningView] Things status script not available, skipping sync")
+            #endif
+            return
+        }
+
+        isSyncing = true
+        defer { isSyncing = false }
+
+        do {
+            // 1. Get all tracked task IDs
+            let taskIds = try await databaseService.getAllTaskLinkIds()
+            guard !taskIds.isEmpty else {
+                #if DEBUG
+                print("[PlanningView] No task links to sync")
+                #endif
+                return
+            }
+
+            #if DEBUG
+            print("[PlanningView] Syncing \(taskIds.count) task statuses from Things")
+            #endif
+
+            // 2. Sync each task status from Things to database
+            let result = await thingsStatusService.syncAllTaskStatuses(taskIds: taskIds) { thingsId, status in
+                try await databaseService.updateTaskLinkStatus(
+                    thingsId: thingsId,
+                    status: status.status,
+                    completedAt: status.completionDate
+                )
+            }
+
+            #if DEBUG
+            print("[PlanningView] Sync complete: \(result.synced)/\(result.total) synced, \(result.newlyCompleted) newly completed")
+            #endif
+
+            // 3. Evaluate triggers for active planning threads
+            let activeThreads = try await databaseService.fetchThreadsByStatus([.active, .pending])
+
+            for thread in activeThreads where thread.threadType == .planning {
+                // Get task statuses for this thread
+                let threadTaskIds = try await databaseService.fetchTaskIdsForThread(thread.id)
+                guard !threadTaskIds.isEmpty else { continue }
+
+                // Build ThingsTaskStatus array from synced data
+                var taskStatuses: [ThingsTaskStatus] = []
+                for taskId in threadTaskIds {
+                    if let status = try? await thingsStatusService.getTaskStatus(thingsId: taskId) {
+                        taskStatuses.append(status)
+                    }
+                }
+
+                guard !taskStatuses.isEmpty else { continue }
+
+                // Evaluate triggers
+                if let trigger = triggerService.evaluateTriggers(thread: thread, tasks: taskStatuses) {
+                    #if DEBUG
+                    print("[PlanningView] Trigger fired for thread \(thread.id): \(trigger.reasonCode)")
+                    #endif
+
+                    // Resurface the thread
+                    try await databaseService.resurfaceThread(thread.id, reason: trigger.reasonCode)
+                }
+            }
+
+        } catch {
+            #if DEBUG
+            print("[PlanningView] Sync error: \(error)")
+            #endif
         }
     }
 }
