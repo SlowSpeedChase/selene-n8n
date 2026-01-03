@@ -24,6 +24,7 @@ Status legend:
 | 2026-01-02 | planning-persistence-refinement-design.md | 7.2g | Conversation persistence + task refinement |
 | 2025-12-31 | selenechat-vision-and-feedback-loop-design.md | vision | Core vision + feedback loop design |
 | 2025-12-31 | workflow-standardization-design.md | infra | Bring workflows 02-06 to production standard |
+| 2026-01-03 | process-gap-fixes-design.md | infra | Closure ritual, doc drift, pre-commit enhancements |
 
 ---
 

@@ -14,12 +14,23 @@ echo "Running documentation validation..."
 
 warnings=0
 
-# Check 1: Warn if creating new markdown in root
-new_root_md=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+\.md$' | grep -v -E '^(CLAUDE|ROADMAP|BRANCH-STATUS)\.md$' || true)
-if [ -n "$new_root_md" ]; then
-    echo -e "${YELLOW}WARNING: Creating markdown file(s) in root directory:${NC}"
-    echo "$new_root_md"
-    echo "  → Should this go in .claude/ or docs/ instead?"
+# Check 1: Warn if creating new markdown or scripts in root
+new_root_files=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+\.(md|sh)$' | grep -v -E '^(CLAUDE|ROADMAP|README)\.md$' || true)
+if [ -n "$new_root_files" ]; then
+    echo -e "${YELLOW}WARNING: Creating file(s) in root directory:${NC}"
+    echo "$new_root_files"
+    echo "  → Scripts (.sh) should go in scripts/"
+    echo "  → Documentation (.md) should go in docs/ or .claude/"
+    echo ""
+    warnings=$((warnings + 1))
+fi
+
+# Check 1b: Warn if BRANCH-STATUS.md exists in root on main branch
+current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+if [ "$current_branch" = "main" ] && [ -f "BRANCH-STATUS.md" ]; then
+    echo -e "${YELLOW}WARNING: BRANCH-STATUS.md found in root on main branch${NC}"
+    echo "  → This should have been removed after merge (closure ritual)"
+    echo "  → Delete it: rm BRANCH-STATUS.md"
     echo ""
     warnings=$((warnings + 1))
 fi

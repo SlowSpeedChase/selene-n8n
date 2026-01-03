@@ -279,6 +279,19 @@ git branch -d phase-X.Y/feature-name  # optional
 ### Step 6: Announce
 Claude summarizes: "Phase X.Y complete. [Brief summary]. Archived to docs/completed/."
 
+### Post-Merge Verification Checklist
+
+**Claude MUST verify all items before announcing completion:**
+
+- [ ] Archive summary created in `docs/completed/`
+- [ ] `docs/plans/INDEX.md` updated - design doc moved to "Completed" section
+- [ ] `.claude/PROJECT-STATUS.md` updated
+- [ ] Worktree removed
+- [ ] No `BRANCH-STATUS.md` in main root: `ls BRANCH-STATUS.md` should fail
+- [ ] No orphaned files left in project root
+
+**If any item is missed, complete it before announcing.**
+
 ---
 
 ## Commands Cheat Sheet
@@ -405,6 +418,33 @@ Link: docs/plans/YYYY-MM-DD-*.md (if applicable)
 3. Request review if significant changes
 4. Squash merge to main (keeps history clean)
 5. Complete closure ritual (see Stage 3 above)
+
+---
+
+## Documentation Maintenance
+
+### Preventing Documentation Drift
+
+When changing how a process works, **search for all references before updating**:
+
+```bash
+# Before changing a pattern, find all docs that reference it
+grep -r "old-pattern-name" docs/ .claude/ workflows/ scripts/
+
+# Example: before removing workflow-test.json pattern
+grep -r "workflow-test" docs/ .claude/ workflows/
+```
+
+**Rule:** Don't leave old patterns documented alongside new ones. Update or delete ALL references.
+
+### When to Update Documentation
+
+| Trigger | Action |
+|---------|--------|
+| Process changes | Search and update all references |
+| File moves | Update all path references |
+| Feature completes | Move design doc to "Completed" in INDEX.md |
+| Pattern deprecated | Remove from all docs, not just primary one |
 
 ---
 

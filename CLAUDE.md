@@ -172,6 +172,7 @@ git worktree list
 
 **Documentation:**
 - ❌ **NEVER modify workflow.json without updating STATUS.md**
+- ❌ **NEVER create *_COMPLETE.md or *_STATUS.md files** - Use design doc status and `docs/completed/` archive
 - ✅ **ALWAYS update documentation** after changes
 
 **Security:**
