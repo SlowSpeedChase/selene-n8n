@@ -13,7 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
-| 2025-12-31 | ai-provider-toggle-design.md | 7.2d | Local/cloud AI toggle for SeleneChat |
+| 2026-01-02 | bidirectional-things-flow-design.md | 7.2e | Things status sync + resurface triggers |
 | 2026-01-01 | project-grouping-design.md | 7.2f | Things project grouping |
 | 2026-01-01 | n8n-upgrade-design.md | infra | n8n 1.x to 2.x upgrade |
 | 2026-01-02 | plan-archive-agent-design.md | infra | Auto-archive stale design docs |
@@ -34,6 +34,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2025-12-31 | ai-provider-toggle-design.md | 2025-12-31 (Phase 7.2d) |
 | 2025-12-30 | task-extraction-planning-design.md | 2025-12-30 |
 | 2025-12-30 | daily-summary-design.md | 2025-12-31 |
 | 2025-12-31 | phase-7.2-selenechat-planning-design.md | Design complete |
