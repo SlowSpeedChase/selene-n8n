@@ -1,17 +1,17 @@
-# Branch Status: infra/auto-builder
+# Branch Status: phase-7.2e/bidirectional-things
 
 **Created:** 2026-01-02
-**Design Doc:** docs/plans/2026-01-02-selenechat-auto-builder-design.md
-**Current Stage:** review
+**Design Doc:** docs/plans/2026-01-02-bidirectional-things-flow-design.md
+**Current Stage:** planning
 **Last Rebased:** 2026-01-02
 
 ## Overview
 
-Git post-merge hook that automatically builds and installs SeleneChat to /Applications when SeleneChat/ files change, with macOS notifications for feedback.
+Implement bidirectional Things 3 integration for SeleneChat Planning tab. Query task status from Things via AppleScript, evaluate resurface triggers (progress/stuck/completion), and bring planning threads back to "review" status when action is needed.
 
 ## Dependencies
 
-- None
+- None (builds on existing Phase 7.2a-d work already in main)
 
 ---
 
@@ -22,27 +22,27 @@ Git post-merge hook that automatically builds and installs SeleneChat to /Applic
 - [x] Conflict check completed (no overlapping work)
 - [x] Dependencies identified and noted
 - [x] Branch and worktree created
-- [x] Implementation plan written (superpowers:writing-plans)
+- [ ] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
-- [x] Tests written first (superpowers:test-driven-development)
-- [x] Core implementation complete
-- [x] All tests passing
-- [x] No linting/type errors
-- [x] Code follows project patterns
+- [ ] Tests written first (superpowers:test-driven-development)
+- [ ] Core implementation complete
+- [ ] All tests passing
+- [ ] No linting/type errors
+- [ ] Code follows project patterns
 
 ### Testing
-- [x] Unit tests pass (bash -n syntax validation)
-- [x] Integration tests pass (merge trigger test)
-- [x] Manual testing completed
-- [x] Edge cases verified (idempotent setup, no-change skip)
-- [x] Verified with superpowers:verification-before-completion
+- [ ] Unit tests pass
+- [ ] Integration tests pass (if applicable)
+- [ ] Manual testing completed
+- [ ] Edge cases verified
+- [ ] Verified with superpowers:verification-before-completion
 
 ### Docs
-- [x] workflow STATUS.md updated (N/A - not a workflow)
-- [x] README updated (N/A - no interface change)
-- [x] Roadmap docs updated (N/A - infrastructure)
-- [x] Code comments where needed (scripts self-documenting)
+- [ ] workflow STATUS.md updated (if workflow changed)
+- [ ] README updated (if interface changed)
+- [ ] Roadmap docs updated
+- [ ] Code comments where needed
 
 ### Review
 - [ ] Requested review (superpowers:requesting-code-review)
@@ -59,14 +59,12 @@ Git post-merge hook that automatically builds and installs SeleneChat to /Applic
 
 ## Notes
 
-Simple shell scripts - no dependencies to install, no compilation.
-
-Files to create:
-- scripts/hooks/post-merge
-- scripts/setup-hooks.sh
+- Sync on tab open only (no background polling)
+- Reuses existing get-task-status.scpt AppleScript
+- Config via existing resurface-triggers.yaml
 
 ---
 
 ## Blocked Items
 
-None
+(none)
