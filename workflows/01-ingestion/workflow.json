@@ -248,8 +248,140 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
+        2550,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst feedbackResult = $json;\n\nconsole.log('[Build Classification Prompt] Received:', feedbackResult.action);\n\n// If this was just an increment, skip classification\nif (feedbackResult.action === 'feedback_incremented') {\n  console.log('[Build Classification Prompt] Skipping - increment only');\n  return {\n    json: {\n      ...feedbackResult,\n      skipClassification: true\n    }\n  };\n}\n\nconst feedbackId = feedbackResult.feedback_id;\nconsole.log('[Build Classification Prompt] Processing feedback ID:', feedbackId);\n\n// Read the feedback content from database\nconst db = new Database('/selene/data/selene.db', { readonly: true });\nconst feedback = db.prepare('SELECT content FROM feedback_notes WHERE id = ?').get(feedbackId);\n\n// Get existing backlog titles from database for duplicate detection\nconst existingItems = db.prepare(`\n  SELECT backlog_id, substr(content, 1, 60) as title\n  FROM feedback_notes\n  WHERE backlog_id IS NOT NULL AND status = 'added_to_backlog'\n  ORDER BY backlog_id\n`).all();\n\ndb.close();\n\nif (!feedback) {\n  throw new Error('Feedback not found: ' + feedbackId);\n}\n\nconst existingTitles = existingItems.map(i => i.backlog_id + ': ' + i.title);\n\n// Build the prompt\nconst promptTemplate = `You are classifying user feedback about the Selene app into backlog items.\n\nFEEDBACK:\n\"\"\"\n${feedback.content}\n\"\"\"\n\nEXISTING BACKLOG TITLES (for duplicate detection):\n${existingTitles.length > 0 ? existingTitles.join('\\n') : '(none)'}\n\nClassify this feedback into exactly ONE category:\n- user_story: A need expressed from user perspective (\"I wanted...\", \"I couldn't...\")\n- feature_request: A specific new capability (\"Add X\", \"Support Y\")\n- bug: Something broken or producing wrong results\n- improvement: Enhancement to existing functionality\n- noise: Not actionable (test messages, incomplete thoughts, off-topic)\n\nRespond in JSON only:\n{\n  \"category\": \"user_story|feature_request|bug|improvement|noise\",\n  \"title\": \"Brief title (max 60 chars, starts with verb for bugs/improvements)\",\n  \"description\": \"One sentence explaining the need or issue\",\n  \"confidence\": 0.0-1.0,\n  \"duplicate_of\": \"ID if matches existing item, null otherwise\",\n  \"reasoning\": \"Why this category and title\"\n}`;\n\nconsole.log('[Build Classification Prompt] Built prompt for feedback:', feedbackId);\n\nreturn {\n  json: {\n    feedbackId: feedbackId,\n    feedbackContent: feedback.content,\n    prompt: promptTemplate,\n    existingTitles: existingTitles,\n    testRun: feedbackResult.testRun,\n    skipClassification: false\n  }\n};"
+      },
+      "id": "build-classification-prompt",
+      "name": "Build Classification Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1150,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skipClassification }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-skip-classification",
+      "name": "Skip Classification?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1350,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"mistral:7b\",\n  \"prompt\": {{ JSON.stringify($json.prompt) }},\n  \"stream\": false,\n  \"format\": \"json\"\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ollama-classify",
+      "name": "Ollama: Classify Feedback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1550,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const ollamaResponse = $json;\nconst prevData = $('Build Classification Prompt').item.json;\n\nlet classification;\ntry {\n  const responseText = ollamaResponse.response || '';\n  classification = JSON.parse(responseText);\n} catch (e) {\n  classification = {\n    category: 'noise',\n    title: 'Unparseable feedback',\n    description: 'AI could not classify this feedback',\n    confidence: 0,\n    duplicate_of: null,\n    reasoning: 'JSON parse error: ' + e.message\n  };\n}\n\nconst validCategories = ['user_story', 'feature_request', 'bug', 'improvement', 'noise'];\nif (!validCategories.includes(classification.category)) {\n  classification.category = 'noise';\n}\n\nif (classification.confidence < 0.5) {\n  classification.category = 'noise';\n  classification.reasoning = 'Low confidence (' + classification.confidence + '): ' + classification.reasoning;\n}\n\nreturn {\n  json: {\n    feedbackId: prevData.feedbackId,\n    feedbackContent: prevData.feedbackContent,\n    existingTitles: prevData.existingTitles,\n    testRun: prevData.testRun,\n    classification: classification\n  }\n};"
+      },
+      "id": "parse-classification",
+      "name": "Parse Classification",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.classification.category === 'noise' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "route-by-category",
+      "name": "Is Noise?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1950,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.classification.duplicate_of !== null && $json.classification.duplicate_of !== '' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-duplicate-backlog",
+      "name": "Is Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
         2150,
         400
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst data = $json;\nconst classification = data.classification;\nconst testRun = data.testRun;\n\nconst categoryMap = {\n  'user_story': 'US',\n  'feature_request': 'FR',\n  'bug': 'BUG',\n  'improvement': 'IMP'\n};\n\nconst prefix = categoryMap[classification.category];\nif (!prefix) {\n  throw new Error('Invalid category for backlog: ' + classification.category);\n}\n\nconst db = new Database('/selene/data/selene.db');\n\n// Get max existing backlog_id for this category prefix\nconst maxResult = db.prepare(`\n  SELECT backlog_id FROM feedback_notes\n  WHERE backlog_id LIKE ? || '-%'\n  ORDER BY CAST(SUBSTR(backlog_id, LENGTH(?) + 2) AS INTEGER) DESC\n  LIMIT 1\n`).get(prefix, prefix);\n\nlet nextNum = 1;\nif (maxResult && maxResult.backlog_id) {\n  const match = maxResult.backlog_id.match(new RegExp(prefix + '-(\\\\d+)'));\n  if (match) {\n    nextNum = parseInt(match[1]) + 1;\n  }\n}\n\nconst newId = prefix + '-' + String(nextNum).padStart(3, '0');\n\ndb.close();\n\nconsole.log('[Append to Backlog] Generated ID:', newId, 'for category:', classification.category);\n\nreturn {\n  json: {\n    feedbackId: data.feedbackId,\n    backlogId: newId,\n    category: classification.category,\n    title: classification.title,\n    testRun: testRun\n  }\n};"
+      },
+      "id": "append-to-backlog",
+      "name": "Append to Backlog",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2350,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const Database = require('better-sqlite3');\n\nconst data = $json;\nlet status, backlogId, category, confidence, reasoning, feedbackId;\n\nif (data.backlogId) {\n  status = 'added_to_backlog';\n  backlogId = data.backlogId;\n  category = data.category;\n  confidence = null;\n  reasoning = null;\n  feedbackId = data.feedbackId;\n} else if (data.classification) {\n  const c = data.classification;\n  if (c.duplicate_of) {\n    status = 'duplicate';\n    backlogId = c.duplicate_of;\n  } else {\n    status = 'noise';\n    backlogId = null;\n  }\n  category = c.category;\n  confidence = c.confidence;\n  reasoning = c.reasoning;\n  feedbackId = data.feedbackId;\n} else if (data.skipClassification) {\n  return {\n    json: {\n      success: true,\n      action: 'feedback_incremented',\n      message: 'Feedback mention count incremented (no classification needed)',\n      feedbackId: data.feedback_id\n    }\n  };\n} else {\n  throw new Error('Unknown data path');\n}\n\nconst db = new Database('/selene/data/selene.db');\n\ndb.prepare(`\n  UPDATE feedback_notes\n  SET status = ?, category = ?, backlog_id = ?,\n      classified_at = datetime('now'),\n      ai_confidence = ?, ai_reasoning = ?\n  WHERE id = ?\n`).run(\n  status,\n  category,\n  backlogId,\n  confidence,\n  reasoning,\n  feedbackId\n);\n\ndb.close();\n\nreturn {\n  json: {\n    success: true,\n    action: 'feedback_classified',\n    feedbackId: feedbackId,\n    status: status,\n    category: category,\n    backlogId: backlogId,\n    testRun: data.testRun\n  }\n};"
+      },
+      "id": "update-feedback-status",
+      "name": "Update Feedback Status",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2350,
+        200
       ]
     }
   ],
@@ -306,6 +438,115 @@
       ]
     },
     "Insert Feedback Note": {
+      "main": [
+        [
+          {
+            "node": "Build Classification Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Classification Prompt": {
+      "main": [
+        [
+          {
+            "node": "Skip Classification?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Classification?": {
+      "main": [
+        [
+          {
+            "node": "Update Feedback Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama: Classify Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama: Classify Feedback": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Is Noise?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Noise?": {
+      "main": [
+        [
+          {
+            "node": "Update Feedback Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Update Feedback Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append to Backlog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Backlog": {
+      "main": [
+        [
+          {
+            "node": "Update Feedback Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Feedback Status": {
       "main": [
         [
           {
