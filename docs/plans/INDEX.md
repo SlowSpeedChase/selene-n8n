@@ -14,7 +14,6 @@ Status legend:
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
 | 2026-01-03 | planning-tab-redesign.md | 7.2 | Projects contain threads, Active first, no standalone conversations |
-| 2026-01-02 | bidirectional-things-flow-design.md | 7.2e | Things status sync + resurface triggers |
 | 2026-01-01 | project-grouping-design.md | 7.2f | Things project grouping |
 | 2026-01-01 | n8n-upgrade-design.md | infra | n8n 1.x to 2.x upgrade |
 | 2026-01-02 | plan-archive-agent-design.md | infra | Auto-archive stale design docs |
@@ -32,7 +31,6 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
-| 2026-01-02 | bidirectional-things-implementation.md | Implementation plan for 7.2e |
 | 2026-01-01 | project-grouping-7.2f.1-implementation.md | Implementation plan for 7.2f |
 | 2026-01-02 | subproject-suggestions-implementation.md | Implementation plan for 7.2f sub-project suggestions |
 
@@ -42,6 +40,8 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-02 | bidirectional-things-flow-design.md | 2026-01-03 |
+| 2026-01-02 | bidirectional-things-implementation.md | 2026-01-03 |
 
 ---
 
