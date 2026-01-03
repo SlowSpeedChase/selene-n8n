@@ -31,6 +31,9 @@ Planning Tab
 ⭐ Active Projects (2)        ← TOP: Current focus
    [Projects with review badges inline]
 
+📝 Scratch Pad (1)            ← Only shows if populated
+   [Loose threads not yet in a project]
+
 💡 Suggestions (1)            ← Grouping proposals
    [Smart groupings to approve]
 
@@ -44,6 +47,7 @@ Planning Tab
 ### Why This Order
 
 - **Active Projects first:** What you're working on should be immediately visible
+- **Scratch Pad second (when visible):** Loose threads need a home — reminds you to organize
 - **Suggestions before Inbox:** Grouping proposals help you triage faster
 - **Inbox second-to-last:** Important but not the primary focus
 - **Parked last:** Out of sight, prevents overwhelm
@@ -347,11 +351,13 @@ ALTER TABLE task_links ADD COLUMN things_heading TEXT;
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. **Thread naming:** Should Selene auto-name threads based on conversation, or require user input?
-2. **Thread limits:** Should projects have a max thread count to prevent sprawl?
-3. **Scratch Pad visibility:** Should it appear in Active Projects or be a special section?
+1. **Thread naming:** Auto-name from first message. User can rename later if needed. Lowest friction.
+
+2. **Thread limits:** No limit. Let projects grow organically. User can archive/merge threads manually if it gets messy.
+
+3. **Scratch Pad visibility:** Hidden until it has items. Keeps UI clean when you're organized. Appears between Active Projects and Suggestions only when populated.
 
 ---
 
