@@ -963,7 +963,9 @@ struct PlanningConversationView: View {
                     tags: [],
                     energy: task.energy,
                     sourceNoteId: thread.rawNoteId,
-                    threadId: thread.id
+                    threadId: thread.id,
+                    project: nil,
+                    heading: thread.threadName ?? String(thread.prompt.prefix(50))
                 )
 
                 await MainActor.run {
