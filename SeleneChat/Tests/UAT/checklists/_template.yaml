@@ -1,0 +1,104 @@
+# [ViewName] UAT Checklist
+# Copy this template and fill in view-specific checks
+
+view: ViewName
+description: Brief description of what this view does
+last_updated: YYYY-MM-DD
+
+# --------------------------------------------------------------------------
+# STATES - Different data/loading conditions
+# --------------------------------------------------------------------------
+states:
+  - name: Empty state
+    prompt: |
+      Open the view with no data.
+      Do you see an appropriate empty state message?
+
+  - name: Loading state
+    prompt: |
+      Trigger a data load.
+      Do you see a loading indicator?
+
+  - name: Error state
+    prompt: |
+      Trigger an error condition (e.g., disconnect service).
+      Do you see an error message (not a crash)?
+
+  - name: Populated state
+    prompt: |
+      With normal data present, does everything display correctly?
+
+  # Add edge cases as needed:
+  # - name: Long content
+  # - name: Many items
+  # - name: Special characters
+
+# --------------------------------------------------------------------------
+# INTERACTIONS - User actions
+# --------------------------------------------------------------------------
+interactions:
+  - name: Primary action
+    prompt: |
+      Perform the main action (e.g., send, create, submit).
+      Does it work as expected?
+
+  - name: Secondary action
+    prompt: |
+      Perform a secondary action (e.g., edit, delete, cancel).
+      Does it work as expected?
+
+  # Add more interactions as needed:
+  # - name: Keyboard shortcut
+  # - name: Focus behavior
+  # - name: Navigation
+
+# --------------------------------------------------------------------------
+# BINDINGS - State/data reactivity
+# --------------------------------------------------------------------------
+bindings:
+  - name: Add item updates UI
+    prompt: |
+      Add a new item.
+      Does it appear in the UI immediately (without refresh)?
+
+  - name: Update item reflects
+    prompt: |
+      Modify an existing item.
+      Does the UI reflect the change immediately?
+
+  - name: Delete item removes
+    prompt: |
+      Delete an item.
+      Is it removed from the UI immediately?
+
+  # Add more binding checks as needed:
+  # - name: External data change
+  # - name: Counter updates
+  # - name: Status changes
+
+# --------------------------------------------------------------------------
+# VISUAL - Appearance and layout
+# --------------------------------------------------------------------------
+visual:
+  - name: Layout correct
+    prompt: |
+      Does the overall layout look correct?
+      (Spacing, alignment, hierarchy)
+
+  - name: Text readable
+    prompt: |
+      Is all text readable and not clipped?
+
+  - name: Indicators visible
+    prompt: |
+      Are status indicators (badges, icons) clearly visible?
+
+  - name: Window resize
+    prompt: |
+      Resize the window smaller and larger.
+      Does the layout adapt without breaking?
+
+  # Add more visual checks as needed:
+  # - name: Dark mode
+  # - name: Accessibility
+  # - name: Animation smoothness

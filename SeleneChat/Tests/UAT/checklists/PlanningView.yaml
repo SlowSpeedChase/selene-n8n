@@ -1,0 +1,177 @@
+# PlanningView UAT Checklist
+# Covers: Main planning view, conversation view, project views
+
+view: PlanningView
+description: Planning tab for guided task breakdown with AI assistance
+last_updated: 2026-01-02
+
+# --------------------------------------------------------------------------
+# STATES
+# --------------------------------------------------------------------------
+states:
+  - name: Empty inbox
+    prompt: |
+      Open the Planning tab with no pending notes in inbox.
+      Do you see an empty state message (not a loading spinner)?
+
+  - name: Empty active projects
+    prompt: |
+      With no active projects, does the Active Projects section show an empty state?
+
+  - name: Loading state
+    prompt: |
+      Force a refresh (close and reopen the tab).
+      Do you briefly see a loading indicator before content appears?
+
+  - name: Populated inbox
+    prompt: |
+      With notes pending triage, do they appear in the Inbox section as cards?
+
+  - name: Populated active projects
+    prompt: |
+      With active projects, do they appear in the Active Projects section (max 5)?
+
+  - name: Parked projects collapsed
+    prompt: |
+      Is the Parked Projects section collapsed by default?
+
+  - name: Error state - Ollama offline
+    prompt: |
+      Stop Ollama and try to start a planning conversation.
+      Do you see an appropriate error message (not a crash)?
+
+# --------------------------------------------------------------------------
+# INTERACTIONS - Main View
+# --------------------------------------------------------------------------
+interactions:
+  - name: Select inbox item
+    prompt: |
+      Click on an inbox card.
+      Does it navigate to the triage/conversation view?
+
+  - name: Select active project
+    prompt: |
+      Click on an active project.
+      Does it navigate to the project detail view?
+
+  - name: Expand parked projects
+    prompt: |
+      Click to expand the Parked Projects section.
+      Does it reveal the parked projects list?
+
+  - name: Back navigation
+    prompt: |
+      From a conversation or project detail, click Back.
+      Do you return to the main Planning view?
+
+# --------------------------------------------------------------------------
+# INTERACTIONS - Conversation View
+# --------------------------------------------------------------------------
+conversation_interactions:
+  - name: Send message
+    prompt: |
+      In a planning conversation, type a message and press Enter (or click send).
+      Does the message appear in the conversation?
+
+  - name: Input clears after send
+    prompt: |
+      After sending a message, is the input field cleared?
+
+  - name: AI responds
+    prompt: |
+      After sending a message, does an AI response appear?
+      (May take a few seconds with loading indicator)
+
+  - name: Toggle AI provider
+    prompt: |
+      Click the AI provider badge (Local/Cloud) in the header.
+      Does it show the toggle option or prompt for API key?
+
+  - name: Cloud provider switch - with history prompt
+    prompt: |
+      Switch from Local to Cloud AI.
+      Do you see "Include conversation history?" prompt?
+
+  - name: Settings gear opens popover
+    prompt: |
+      Click the gear icon in the conversation header.
+      Does the AI Provider Settings popover appear?
+
+  - name: Complete button
+    prompt: |
+      Click the "Complete" button.
+      Does it mark the thread complete and return to main view?
+
+  - name: Task creation
+    prompt: |
+      In a conversation, provide a clear actionable task.
+      Does a "Task created" confirmation appear in the chat?
+
+# --------------------------------------------------------------------------
+# BINDINGS
+# --------------------------------------------------------------------------
+bindings:
+  - name: Message list updates
+    prompt: |
+      Send multiple messages in a conversation.
+      Do they all appear in order without refresh?
+
+  - name: Tasks counter updates
+    prompt: |
+      Create a task in a conversation.
+      Does the "X tasks" counter in the header increment?
+
+  - name: Thread status persists
+    prompt: |
+      Complete a thread, then reopen the Planning tab.
+      Is the thread no longer in the inbox (moved to completed)?
+
+  - name: Provider badge reflects selection
+    prompt: |
+      Toggle between Local and Cloud AI.
+      Does the badge update immediately to show current provider?
+
+  - name: Scroll follows new messages
+    prompt: |
+      In a long conversation, send a new message.
+      Does the view auto-scroll to show the new message?
+
+# --------------------------------------------------------------------------
+# VISUAL
+# --------------------------------------------------------------------------
+visual:
+  - name: AI provider badge visible
+    prompt: |
+      In a conversation, is the AI provider badge (Local/Cloud) clearly visible in the header?
+
+  - name: Message styling differs by role
+    prompt: |
+      Are user messages visually distinct from AI messages?
+      (Different colors, alignment, or styling)
+
+  - name: Cloud messages styled differently
+    prompt: |
+      Switch to Cloud AI and send a message.
+      Do Cloud AI responses have a blue tint (vs gray for local)?
+
+  - name: Task created styling
+    prompt: |
+      When a task is created, does it show with green checkmark styling?
+
+  - name: Processing indicator
+    prompt: |
+      After sending a message, do you see "Thinking..." indicator while AI responds?
+
+  - name: Note context card
+    prompt: |
+      In a conversation, is the original note context visible at the top?
+
+  - name: API key error styling
+    prompt: |
+      Without ANTHROPIC_API_KEY, try to switch to Cloud.
+      Is the error message clearly visible with orange/warning styling?
+
+  - name: Window resize
+    prompt: |
+      Resize the window smaller and larger.
+      Does the layout adapt without breaking?
