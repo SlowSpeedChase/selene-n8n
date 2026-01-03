@@ -10,6 +10,10 @@ struct ProjectDetailView: View {
     let project: Project
     let onBack: () -> Void
 
+    @EnvironmentObject var databaseService: DatabaseService
+    @State private var selectedThread: DiscussionThread?
+    @State private var showNewThreadSheet = false
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -82,26 +86,32 @@ struct ProjectDetailView: View {
 
             Divider()
 
-            // Placeholder content
-            Spacer()
+            // Threads section
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .foregroundColor(.blue)
+                    Text("Threads")
+                        .font(.headline)
+                    Text("(\(project.threadCount))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button(action: { showNewThreadSheet = true }) {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding()
 
-            VStack(spacing: 12) {
-                Image(systemName: "hammer.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(.secondary.opacity(0.5))
+                Divider()
 
-                Text("Project detail view coming soon")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-
-                Text("This will show project notes, tasks, and planning threads.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                ScrollView {
+                    ThreadListView(projectId: project.id) { thread in
+                        selectedThread = thread
+                    }
+                }
             }
-            .padding()
-
-            Spacer()
         }
         .onAppear {
             #if DEBUG
