@@ -72,6 +72,9 @@ struct ParkedProjectsList: View {
         .task {
             await loadProjects()
         }
+        .onChange(of: projectService.lastUpdated) {
+            Task { await loadProjects() }
+        }
     }
 
     private func loadProjects() async {

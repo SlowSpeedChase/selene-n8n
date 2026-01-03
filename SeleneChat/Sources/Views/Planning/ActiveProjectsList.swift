@@ -55,6 +55,9 @@ struct ActiveProjectsList: View {
         .task {
             await loadProjects()
         }
+        .onChange(of: projectService.lastUpdated) {
+            Task { await loadProjects() }
+        }
     }
 
     private var emptyState: some View {

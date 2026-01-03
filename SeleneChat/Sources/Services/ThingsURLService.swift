@@ -8,12 +8,32 @@ class ThingsURLService {
         ProcessInfo.processInfo.environment["THINGS_AUTH_TOKEN"]
     }
 
-    private init() {}
+    // Path to AppleScript for creating tasks
+    private let addTaskScriptPath: String
+
+    // Database service for recording task links
+    private var databaseService: DatabaseService?
+
+    private init() {
+        // Find script relative to project root
+        let paths = [
+            "/Users/chaseeasterling/selene-n8n/scripts/things-bridge/add-task-to-things.scpt",
+            "/Users/chaseeasterling/selene-n8n/.worktrees/bidirectional-things/scripts/things-bridge/add-task-to-things.scpt",
+        ]
+        self.addTaskScriptPath = paths.first { FileManager.default.fileExists(atPath: $0) } ?? paths[0]
+    }
+
+    func configure(with db: DatabaseService) {
+        self.databaseService = db
+    }
 
     enum ThingsError: Error, LocalizedError {
         case invalidURL
         case missingAuthToken
         case openFailed
+        case scriptNotFound
+        case scriptFailed(String)
+        case databaseNotConfigured
 
         var errorDescription: String? {
             switch self {
@@ -23,6 +43,12 @@ class ThingsURLService {
                 return "THINGS_AUTH_TOKEN environment variable not set"
             case .openFailed:
                 return "Failed to open Things"
+            case .scriptNotFound:
+                return "add-task-to-things.scpt not found"
+            case .scriptFailed(let msg):
+                return "AppleScript failed: \(msg)"
+            case .databaseNotConfigured:
+                return "Database service not configured"
             }
         }
     }
@@ -82,7 +108,9 @@ class ThingsURLService {
         return components?.url
     }
 
-    /// Create a task in Things and return success
+    /// Create a task in Things using AppleScript and record in task_links
+    /// Returns the Things task ID
+    @discardableResult
     func createTask(
         title: String,
         notes: String? = nil,
@@ -90,33 +118,88 @@ class ThingsURLService {
         energy: String? = nil,
         sourceNoteId: Int? = nil,
         threadId: Int? = nil
-    ) async throws {
+    ) async throws -> String {
+        guard FileManager.default.fileExists(atPath: addTaskScriptPath) else {
+            throw ThingsError.scriptNotFound
+        }
+
         // Build energy tag if provided
         var allTags = tags
         if let energy = energy {
             allTags.append("\(energy)-energy")
         }
-
-        guard let url = buildAddTaskURL(
-            title: title,
-            notes: notes,
-            tags: allTags,
-            sourceNoteId: sourceNoteId,
-            threadId: threadId
-        ) else {
-            throw ThingsError.invalidURL
+        // Always include selene tag
+        if !allTags.contains("selene") {
+            allTags.append("selene")
         }
 
-        // Open Things URL
-        let success = await MainActor.run {
-            NSWorkspace.shared.open(url)
+        // Build notes with selene metadata
+        var notesContent = notes ?? ""
+        if let noteId = sourceNoteId, let tid = threadId {
+            if !notesContent.isEmpty {
+                notesContent += "\n\n"
+            }
+            notesContent += "[selene:note-\(noteId):thread-\(tid)]"
         }
 
-        if !success {
-            throw ThingsError.openFailed
+        // Create temporary JSON file for the AppleScript
+        let tempDir = FileManager.default.temporaryDirectory
+        let jsonFile = tempDir.appendingPathComponent("selene-task-\(UUID().uuidString).json")
+
+        let taskData: [String: Any] = [
+            "title": title,
+            "notes": notesContent,
+            "tags": allTags
+        ]
+
+        let jsonData = try JSONSerialization.data(withJSONObject: taskData)
+        try jsonData.write(to: jsonFile)
+
+        defer {
+            try? FileManager.default.removeItem(at: jsonFile)
         }
 
-        print("Created task in Things: \(title)")
+        // Execute AppleScript
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = [addTaskScriptPath, jsonFile.path]
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        // Check for errors
+        if output.hasPrefix("ERROR:") || process.terminationStatus != 0 {
+            throw ThingsError.scriptFailed(output)
+        }
+
+        let thingsTaskId = output
+        print("[ThingsURLService] Created task in Things: \(title) (ID: \(thingsTaskId))")
+
+        // Record in task_links if we have a thread ID
+        if let tid = threadId, let noteId = sourceNoteId {
+            try await recordTaskLink(thingsTaskId: thingsTaskId, threadId: tid, noteId: noteId)
+        }
+
+        return thingsTaskId
+    }
+
+    /// Record a task link in the database
+    private func recordTaskLink(thingsTaskId: String, threadId: Int, noteId: Int) async throws {
+        guard let db = databaseService else {
+            print("[ThingsURLService] Warning: Database not configured, skipping task_links insert")
+            return
+        }
+
+        try await db.insertTaskLink(thingsTaskId: thingsTaskId, threadId: threadId, noteId: noteId)
+        print("[ThingsURLService] Recorded task link: \(thingsTaskId) -> thread \(threadId)")
     }
 
     /// Open Things to show a specific item

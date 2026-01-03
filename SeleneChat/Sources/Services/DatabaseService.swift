@@ -831,6 +831,24 @@ class DatabaseService: ObservableObject {
         return ids
     }
 
+    /// Insert a new task link when a task is created in Things
+    func insertTaskLink(thingsTaskId: String, threadId: Int, noteId: Int) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        let query = """
+            INSERT INTO task_links (things_task_id, thread_id, raw_note_id, created_at, things_status)
+            VALUES (?, ?, ?, ?, 'open')
+        """
+
+        try db.run(query, thingsTaskId, threadId, noteId, now)
+
+        #if DEBUG
+        print("[DatabaseService] Inserted task_link: \(thingsTaskId) -> thread \(threadId)")
+        #endif
+    }
+
     /// Update task_links with status from Things
     func updateTaskLinkStatus(
         thingsId: String,
