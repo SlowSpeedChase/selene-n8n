@@ -99,6 +99,9 @@ class DatabaseService: ObservableObject {
             try? Migration002_PlanningInbox.run(db: db!)
             try? Migration003_BidirectionalThings.run(db: db!)
             try? Migration004_SubprojectSuggestions.run(db: db!)
+
+            // Configure services that need database access
+            SubprojectSuggestionService.shared.configure(with: db!)
         } catch {
             isConnected = false
             #if DEBUG
