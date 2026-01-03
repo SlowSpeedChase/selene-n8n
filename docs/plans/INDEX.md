@@ -30,6 +30,7 @@ Status legend:
 |------|----------|-------|
 | 2026-01-02 | bidirectional-things-implementation.md | Implementation plan for 7.2e |
 | 2026-01-01 | project-grouping-7.2f.1-implementation.md | Implementation plan for 7.2f |
+| 2026-01-02 | subproject-suggestions-implementation.md | Implementation plan for 7.2f sub-project suggestions |
 
 ---
 
