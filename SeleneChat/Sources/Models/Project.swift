@@ -10,11 +10,14 @@ struct Project: Identifiable, Hashable, Codable {
     var lastActiveAt: Date?
     var completedAt: Date?
     var testRun: String?
+    var isSystem: Bool = false
 
     // Computed from joins
     var noteCount: Int = 0
     var taskCount: Int = 0
     var completedTaskCount: Int = 0
+    var threadCount: Int = 0
+    var hasReviewBadge: Bool = false
 
     enum Status: String, CaseIterable, Codable {
         case active
