@@ -2,7 +2,7 @@ import Foundation
 
 struct DiscussionThread: Identifiable, Hashable {
     let id: Int
-    let rawNoteId: Int
+    let rawNoteId: Int?
     let threadType: ThreadType
     var projectId: Int?
     var threadName: String?
