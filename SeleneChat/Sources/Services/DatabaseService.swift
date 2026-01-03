@@ -99,6 +99,7 @@ class DatabaseService: ObservableObject {
             try? Migration002_PlanningInbox.run(db: db!)
             try? Migration003_BidirectionalThings.run(db: db!)
             try? Migration004_SubprojectSuggestions.run(db: db!)
+            try? Migration005_ProjectThreads.run(db: db!)
 
             // Configure services that need database access
             if let db = db {
