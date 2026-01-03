@@ -1,17 +1,25 @@
-# Branch Status: phase-7.2e/bidirectional-things
+# Branch Status: phase-7.2f/sub-project-suggestions
 
 **Created:** 2026-01-02
-**Design Doc:** docs/plans/2026-01-02-bidirectional-things-flow-design.md
-**Current Stage:** dev
-**Last Rebased:** 2026-01-02
+**Design Doc:** docs/plans/2026-01-01-project-grouping-design.md (Phase 7.2f section)
+**Current Stage:** planning
+**Last Rebased:** 2026-01-02 (fresh from main)
 
 ## Overview
 
-Implement bidirectional Things 3 integration for SeleneChat Planning tab. Query task status from Things via AppleScript, evaluate resurface triggers (progress/stuck/completion), and bring planning threads back to "review" status when action is needed.
+Sub-project suggestions feature: When a heading within a Things project accumulates 5+ tasks with a distinct sub-concept, surface a suggestion in SeleneChat for the user to spin it off as its own project.
+
+Key behaviors:
+- Detection: 5+ tasks in heading with distinct sub-concept
+- Surfacing: Show suggestion card in SeleneChat
+- Approval: Create new project, move tasks to it
+- Decline: Suppress future suggestions for that heading
 
 ## Dependencies
 
-- None (builds on existing Phase 7.2a-d work already in main)
+- Phase 7.2a-e should be complete (project creation, headings, etc.)
+- SeleneChat with PlanningView infrastructure
+- Things bridge scripts
 
 ---
 
@@ -22,30 +30,22 @@ Implement bidirectional Things 3 integration for SeleneChat Planning tab. Query 
 - [x] Conflict check completed (no overlapping work)
 - [x] Dependencies identified and noted
 - [x] Branch and worktree created
-- [x] Implementation plan written (superpowers:writing-plans)
+- [ ] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
-- [x] Tests written first (superpowers:test-driven-development) - N/A: SwiftUI view integration, no unit tests applicable
-- [x] Core implementation complete
-- [x] All tests passing - swift build succeeds
-- [x] No linting/type errors
-- [x] Code follows project patterns
-
-**Implementation Summary:**
-- Migration003_BidirectionalThings.swift - adds status tracking columns
-- ThingsTaskStatus.swift - model for Things task status
-- ThingsStatusService.swift - AppleScript bridge
-- ResurfaceTriggerService.swift - trigger evaluation with embedded config
-- DatabaseService.swift - added sync/resurface methods
-- PlanningView.swift - sync on tab open, Needs Review section
-- DiscussionThread.swift - added resurface fields
+- [ ] Tests written first (superpowers:test-driven-development)
+- [ ] Core implementation complete
+- [ ] All tests passing
+- [ ] No linting/type errors
+- [ ] Code follows project patterns
 
 ### Testing
-- [x] Unit tests pass - swift build succeeds, no unit tests for this feature
+- [ ] Unit tests pass
 - [ ] Integration tests pass (if applicable)
 - [ ] Manual testing completed
 - [ ] Edge cases verified
 - [ ] Verified with superpowers:verification-before-completion
+- [ ] UAT sign-off (SeleneChat)
 
 ### Docs
 - [ ] workflow STATUS.md updated (if workflow changed)
@@ -68,12 +68,10 @@ Implement bidirectional Things 3 integration for SeleneChat Planning tab. Query 
 
 ## Notes
 
-- Sync on tab open only (no background polling)
-- Reuses existing get-task-status.scpt AppleScript
-- Config via existing resurface-triggers.yaml
+**2026-01-02:** Branch created fresh from main. Starting planning stage.
 
 ---
 
 ## Blocked Items
 
-(none)
+None currently.
