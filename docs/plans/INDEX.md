@@ -18,6 +18,7 @@ Status legend:
 | 2026-01-01 | n8n-upgrade-design.md | infra | n8n 1.x to 2.x upgrade |
 | 2026-01-02 | plan-archive-agent-design.md | infra | Auto-archive stale design docs |
 | 2026-01-02 | selenechat-auto-builder-design.md | infra | Post-merge hook for auto builds |
+| 2026-01-02 | feedback-pipeline-design.md | infra | AI classification of #selene-feedback → backlog |
 
 ---
 

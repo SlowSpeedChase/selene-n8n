@@ -1,8 +1,8 @@
-# Selene Backlog
+# Selene Development Backlog
 
-Last updated: 2026-01-01 15:46 UTC
+Last updated: 2026-01-02
 
-*This file is auto-generated from #selene-feedback notes. Do not edit manually.*
+*Auto-generated from #selene-feedback notes. Manual edits to items are preserved.*
 
 ---
 
@@ -15,17 +15,41 @@ The task suggestion felt wrong - it gave me a high-energy
 task when I said I was tired #selene-feedback
 ```
 
-The note will be processed into a user story and added here automatically.
+The note will be classified and added here automatically.
 
 ---
 
-## Open Stories
+## User Stories
 
-*No feedback captured yet. Start using Selene and log your thoughts!*
+| ID | Story | Priority | Status | Source Date |
+|----|-------|----------|--------|-------------|
+
+---
+
+## Feature Requests
+
+| ID | Request | Priority | Status | Source Date |
+|----|---------|----------|--------|-------------|
+
+---
+
+## Bugs
+
+| ID | Issue | Priority | Status | Source Date |
+|----|-------|----------|--------|-------------|
+
+---
+
+## Improvements
+
+| ID | Enhancement | Priority | Status | Source Date |
+|----|-------------|----------|--------|-------------|
 
 ---
 
 ## Completed
 
-*Stories move here after implementation.*
+*Items move here after implementation. Include PR/commit reference.*
 
+| ID | Description | Completed | Reference |
+|----|-------------|-----------|-----------|
