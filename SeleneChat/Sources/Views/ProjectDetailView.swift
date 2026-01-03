@@ -113,6 +113,19 @@ struct ProjectDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showNewThreadSheet) {
+            NewThreadSheet(
+                projectId: project.id,
+                projectName: project.name,
+                onCreate: { thread in
+                    showNewThreadSheet = false
+                    selectedThread = thread
+                },
+                onCancel: {
+                    showNewThreadSheet = false
+                }
+            )
+        }
         .onAppear {
             #if DEBUG
             DebugLogger.shared.log(.nav, "Appeared: ProjectDetailView - \(project.name)")
