@@ -1,0 +1,31 @@
+You are classifying user feedback about the Selene app into backlog items.
+
+FEEDBACK:
+"""
+{{feedback_content}}
+"""
+
+EXISTING BACKLOG TITLES (for duplicate detection):
+{{existing_titles}}
+
+Classify this feedback into exactly ONE category:
+- user_story: A need expressed from user perspective ("I wanted...", "I couldn't...")
+- feature_request: A specific new capability ("Add X", "Support Y")
+- bug: Something broken or producing wrong results
+- improvement: Enhancement to existing functionality
+- noise: Not actionable (test messages, incomplete thoughts, off-topic)
+
+Respond in JSON only:
+{
+  "category": "user_story|feature_request|bug|improvement|noise",
+  "title": "Brief title (max 60 chars, starts with verb for bugs/improvements)",
+  "description": "One sentence explaining the need or issue",
+  "confidence": 0.0-1.0,
+  "duplicate_of": "ID if matches existing item, null otherwise",
+  "reasoning": "Why this category and title"
+}
+
+Rules:
+- If confidence < 0.5, default to "noise"
+- If feedback closely matches an existing title, set duplicate_of
+- Titles should be scannable and specific, not generic
