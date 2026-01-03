@@ -29,6 +29,9 @@ struct SeleneChatApp: App {
             InboxService.shared.configure(with: db)
             ProjectService.shared.configure(with: db)
         }
+
+        // Configure ThingsURLService with DatabaseService for task_links recording
+        ThingsURLService.shared.configure(with: DatabaseService.shared)
     }
 
     #if DEBUG

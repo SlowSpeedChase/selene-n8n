@@ -154,14 +154,18 @@ struct InboxView: View {
     private func startProject(from note: InboxNote) {
         Task {
             do {
-                let _ = try await projectService.createProject(
+                print("[InboxView] Starting project from note: \(note.title)")
+                let project = try await projectService.createProject(
                     name: note.title,
                     fromNoteId: note.id,
                     concept: note.concepts?.first
                 )
+                print("[InboxView] Created project: \(project.name) (id: \(project.id))")
                 try await inboxService.markTriaged(noteId: note.id)
+                print("[InboxView] Marked note as triaged")
                 await loadNotes()
             } catch {
+                print("[InboxView] Error creating project: \(error)")
                 self.error = error.localizedDescription
             }
         }

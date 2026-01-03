@@ -97,6 +97,7 @@ class DatabaseService: ObservableObject {
             try? createChatSessionsTable()
             try? Migration001_TaskLinks.run(db: db!)
             try? Migration002_PlanningInbox.run(db: db!)
+            try? Migration003_BidirectionalThings.run(db: db!)
         } catch {
             isConnected = false
             #if DEBUG
@@ -810,6 +811,176 @@ class DatabaseService: ObservableObject {
         // Fall back to ISO8601
         let iso8601Formatter = ISO8601DateFormatter()
         return iso8601Formatter.date(from: dateString)
+    }
+
+    // MARK: - Bidirectional Things Sync
+
+    /// Get all Things task IDs from task_links table
+    func getAllTaskLinkIds() async throws -> [String] {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        var ids: [String] = []
+        let query = "SELECT things_task_id FROM task_links WHERE things_task_id IS NOT NULL AND things_task_id != ''"
+
+        for row in try db.prepare(query) {
+            if let id = row[0] as? String {
+                ids.append(id)
+            }
+        }
+
+        return ids
+    }
+
+    /// Insert a new task link when a task is created in Things
+    func insertTaskLink(thingsTaskId: String, threadId: Int, noteId: Int) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        // Use correct column name: discussion_thread_id (from Migration001)
+        let query = """
+            INSERT OR REPLACE INTO task_links
+            (things_task_id, discussion_thread_id, raw_note_id, created_at, things_status)
+            VALUES (?, ?, ?, ?, 'open')
+        """
+
+        try db.run(query, thingsTaskId, threadId, noteId, now)
+
+        #if DEBUG
+        print("[DatabaseService] Inserted task_link: \(thingsTaskId) -> thread \(threadId)")
+        #endif
+    }
+
+    /// Update task_links with status from Things
+    func updateTaskLinkStatus(
+        thingsId: String,
+        status: String,
+        completedAt: Date?
+    ) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let completedStr: String? = completedAt.map { ISO8601DateFormatter().string(from: $0) }
+
+        let query = """
+            UPDATE task_links SET
+                things_status = ?,
+                things_completed_at = ?,
+                last_synced_at = ?
+            WHERE things_task_id = ?
+        """
+
+        try db.run(query, status, completedStr, now, thingsId)
+    }
+
+    /// Get Things task IDs for a specific thread
+    func fetchTaskIdsForThread(_ threadId: Int) async throws -> [String] {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        var ids: [String] = []
+        let query = "SELECT things_task_id FROM task_links WHERE discussion_thread_id = ? AND things_task_id IS NOT NULL"
+
+        for row in try db.prepare(query, threadId) {
+            if let id = row[0] as? String {
+                ids.append(id)
+            }
+        }
+
+        return ids
+    }
+
+    /// Update thread to review status with resurface reason
+    func resurfaceThread(_ threadId: Int, reason: String) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        let query = """
+            UPDATE discussion_threads SET
+                status = 'review',
+                resurface_reason = ?,
+                last_resurfaced_at = ?
+            WHERE id = ?
+        """
+
+        try db.run(query, reason, now, threadId)
+
+        #if DEBUG
+        print("[DatabaseService] Resurfaced thread \(threadId) with reason: \(reason)")
+        #endif
+    }
+
+    /// Fetch threads by status, with review status threads first
+    func fetchThreadsByStatus(_ statuses: [DiscussionThread.Status]) async throws -> [DiscussionThread] {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let statusStrings = statuses.map { "'\($0.rawValue)'" }.joined(separator: ", ")
+
+        let query = """
+            SELECT dt.*, rn.title as note_title, rn.content as note_content
+            FROM discussion_threads dt
+            LEFT JOIN raw_notes rn ON dt.raw_note_id = rn.id
+            WHERE dt.status IN (\(statusStrings))
+            ORDER BY CASE WHEN dt.status = 'review' THEN 0 ELSE 1 END, dt.created_at DESC
+        """
+
+        var threads: [DiscussionThread] = []
+
+        for row in try db.prepare(query) {
+            if let thread = parseDiscussionThreadRow(row) {
+                threads.append(thread)
+            }
+        }
+
+        return threads
+    }
+
+    /// Parse a discussion thread row including new resurface columns
+    private func parseDiscussionThreadRow(_ row: Statement.Element) -> DiscussionThread? {
+        guard let id = row[0] as? Int64,
+              let rawNoteId = row[1] as? Int64,
+              let typeStr = row[2] as? String,
+              let prompt = row[3] as? String,
+              let statusStr = row[4] as? String,
+              let createdAtStr = row[5] as? String else {
+            return nil
+        }
+
+        let threadType = DiscussionThread.ThreadType(rawValue: typeStr) ?? .planning
+        let status = DiscussionThread.Status(rawValue: statusStr) ?? .pending
+        let createdAt = parseDateString(createdAtStr) ?? Date()
+
+        // Parse optional fields
+        let surfacedAt = (row[6] as? String).flatMap { parseDateString($0) }
+        let completedAt = (row[7] as? String).flatMap { parseDateString($0) }
+        let relatedConceptsJson = row[8] as? String
+        let relatedConcepts: [String]? = relatedConceptsJson.flatMap {
+            try? JSONDecoder().decode([String].self, from: $0.data(using: .utf8) ?? Data())
+        }
+
+        // New resurface columns (indexes depend on SELECT order)
+        let resurfaceReasonCode = row[9] as? String
+        let lastResurfacedAt = (row[10] as? String).flatMap { parseDateString($0) }
+
+        // Note content from JOIN
+        let noteTitle = row[12] as? String
+        let noteContent = row[13] as? String
+
+        return DiscussionThread(
+            id: Int(id),
+            rawNoteId: Int(rawNoteId),
+            threadType: threadType,
+            prompt: prompt,
+            status: status,
+            createdAt: createdAt,
+            surfacedAt: surfacedAt,
+            completedAt: completedAt,
+            relatedConcepts: relatedConcepts,
+            resurfaceReasonCode: resurfaceReasonCode,
+            lastResurfacedAt: lastResurfacedAt,
+            noteTitle: noteTitle,
+            noteContent: noteContent
+        )
     }
 
     // MARK: - Error Types

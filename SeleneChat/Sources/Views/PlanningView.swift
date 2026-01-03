@@ -7,6 +7,20 @@ struct PlanningView: View {
     @State private var selectedThread: DiscussionThread?
     @State private var selectedProject: Project?
 
+    // Phase 7.2e: Bidirectional Things sync
+    @StateObject private var thingsStatusService = ThingsStatusService.shared
+    @StateObject private var triggerService = ResurfaceTriggerService.shared
+    @State private var isSyncing = false
+    @State private var resurfacedThreads: [DiscussionThread] = []
+    @State private var activeThreads: [DiscussionThread] = []
+
+    // Section collapsed states
+    @State private var isNeedsReviewExpanded = true    // Start expanded - needs attention
+    @State private var isInboxExpanded = true          // Start expanded - primary triage
+    @State private var isConversationsExpanded = true  // Start expanded - active work
+    @State private var isActiveProjectsExpanded = true // Start expanded
+    @State private var isParkedProjectsExpanded = false // Start collapsed - less priority
+
     var body: some View {
         Group {
             if let thread = selectedThread {
@@ -37,50 +51,452 @@ struct PlanningView: View {
     }
 
     private var mainPlanningView: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Planning")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
-
-                Button(action: {}) {
-                    Image(systemName: "gearshape")
-                }
-                .buttonStyle(.plain)
-            }
-            .padding()
+        HStack(spacing: 0) {
+            // Sidebar for quick navigation
+            sectionSidebar
 
             Divider()
 
-            // Three sections: Inbox, Active Projects, Parked Projects
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Inbox section - notes pending triage
-                    InboxView()
+            // Main content
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Planning")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                    }
 
-                    Divider()
-                        .padding(.horizontal)
+                    Spacer()
 
-                    // Active projects section - limited to 5 for ADHD focus
-                    ActiveProjectsList(onSelectProject: { project in
-                        selectedProject = project
-                    })
+                    // Phase 7.2e: Sync indicator
+                    if isSyncing {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("Syncing...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
 
-                    Divider()
-                        .padding(.horizontal)
-
-                    // Parked projects section - collapsed by default
-                    ParkedProjectsList(onSelectProject: { project in
-                        selectedProject = project
-                    })
+                    Button(action: {}) {
+                        Image(systemName: "gearshape")
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.bottom)
+                .padding()
+
+                Divider()
+
+                // Scrollable sections
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Phase 7.2e: Resurfaced threads needing review
+                            if !resurfacedThreads.isEmpty {
+                                needsReviewSection
+                                    .id("needsReview")
+                            }
+
+                            // Inbox section - notes pending triage
+                            inboxSection
+                                .id("inbox")
+
+                            // Planning threads section - active conversations
+                            if !activeThreads.isEmpty {
+                                planningThreadsSection
+                                    .id("conversations")
+                            }
+
+                            // Active projects section - limited to 5 for ADHD focus
+                            activeProjectsSection
+                                .id("activeProjects")
+
+                            // Parked projects section - collapsed by default
+                            parkedProjectsSection
+                                .id("parkedProjects")
+                        }
+                        .padding(.bottom)
+                    }
+                }
             }
+        }
+        .task {
+            // Phase 7.2e: Sync Things statuses when Planning tab opens
+            await syncThingsAndEvaluateTriggers()
+        }
+    }
+
+    // MARK: - Sidebar Navigation
+
+    private var sectionSidebar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Sections")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+
+            if !resurfacedThreads.isEmpty {
+                sidebarButton(
+                    icon: "arrow.triangle.2.circlepath",
+                    label: "Needs Review",
+                    count: resurfacedThreads.count,
+                    color: .orange,
+                    isExpanded: $isNeedsReviewExpanded
+                )
+            }
+
+            sidebarButton(
+                icon: "tray",
+                label: "Inbox",
+                count: nil,
+                color: .purple,
+                isExpanded: $isInboxExpanded
+            )
+
+            if !activeThreads.isEmpty {
+                sidebarButton(
+                    icon: "bubble.left.and.bubble.right",
+                    label: "Conversations",
+                    count: activeThreads.count,
+                    color: .blue,
+                    isExpanded: $isConversationsExpanded
+                )
+            }
+
+            sidebarButton(
+                icon: "star.fill",
+                label: "Active Projects",
+                count: nil,
+                color: .yellow,
+                isExpanded: $isActiveProjectsExpanded
+            )
+
+            sidebarButton(
+                icon: "moon.zzz",
+                label: "Parked",
+                count: nil,
+                color: .gray,
+                isExpanded: $isParkedProjectsExpanded
+            )
+
+            Spacer()
+        }
+        .frame(width: 140)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+    }
+
+    private func sidebarButton(
+        icon: String,
+        label: String,
+        count: Int?,
+        color: Color,
+        isExpanded: Binding<Bool>
+    ) -> some View {
+        Button(action: { withAnimation { isExpanded.wrappedValue.toggle() } }) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundColor(color)
+                    .frame(width: 16)
+
+                Text(label)
+                    .font(.caption)
+                    .lineLimit(1)
+
+                Spacer()
+
+                if let count = count {
+                    Text("\(count)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Image(systemName: isExpanded.wrappedValue ? "eye" : "eye.slash")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isExpanded.wrappedValue ? color.opacity(0.1) : Color.clear)
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Collapsible Sections
+
+    private var inboxSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isInboxExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "tray")
+                        .foregroundColor(.purple)
+                    Text("Inbox")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Image(systemName: isInboxExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isInboxExpanded {
+                Divider()
+                InboxView()
+            }
+        }
+    }
+
+    private var activeProjectsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isActiveProjectsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.yellow)
+                    Text("Active Projects")
+                        .font(.headline)
+
+                    Text("(max 5)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: isActiveProjectsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isActiveProjectsExpanded {
+                Divider()
+                ActiveProjectsList(onSelectProject: { project in
+                    selectedProject = project
+                })
+            }
+        }
+    }
+
+    private var parkedProjectsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isParkedProjectsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "moon.zzz")
+                        .foregroundColor(.gray)
+                    Text("Parked Projects")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Image(systemName: isParkedProjectsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isParkedProjectsExpanded {
+                Divider()
+                ParkedProjectsList(onSelectProject: { project in
+                    selectedProject = project
+                })
+            }
+        }
+    }
+
+    // MARK: - Phase 7.2e: Needs Review Section
+
+    private var needsReviewSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isNeedsReviewExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundColor(.orange)
+                    Text("Needs Review")
+                        .font(.headline)
+
+                    Text("(\(resurfacedThreads.count))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: isNeedsReviewExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isNeedsReviewExpanded {
+                Divider()
+
+                // Resurfaced threads
+                LazyVStack(spacing: 12) {
+                    ForEach(resurfacedThreads, id: \.id) { thread in
+                        PlanningThreadRow(thread: thread)
+                            .onTapGesture {
+                                selectedThread = thread
+                            }
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+
+    // MARK: - Planning Threads Section
+
+    private var planningThreadsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isConversationsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .foregroundColor(.blue)
+                    Text("Planning Conversations")
+                        .font(.headline)
+
+                    Text("(\(activeThreads.count))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: isConversationsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isConversationsExpanded {
+                Divider()
+
+                // Active threads
+                LazyVStack(spacing: 12) {
+                    ForEach(activeThreads, id: \.id) { thread in
+                        PlanningThreadRow(thread: thread)
+                            .onTapGesture {
+                                selectedThread = thread
+                            }
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+
+    // MARK: - Phase 7.2e: Bidirectional Things Sync
+
+    /// Sync task statuses from Things and evaluate resurface triggers
+    private func syncThingsAndEvaluateTriggers() async {
+        isSyncing = true
+        defer { isSyncing = false }
+
+        do {
+            // Load resurfaced threads (needing review)
+            resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
+
+            // Load active/pending planning threads
+            activeThreads = try await databaseService.fetchThreadsByStatus([.active, .pending])
+
+            #if DEBUG
+            print("[PlanningView] Loaded \(resurfacedThreads.count) resurfaced, \(activeThreads.count) active threads")
+            #endif
+
+            // Only sync with Things if available
+            guard thingsStatusService.isAvailable else {
+                #if DEBUG
+                print("[PlanningView] Things status script not available, skipping sync")
+                #endif
+                return
+            }
+
+            // 1. Get all tracked task IDs
+            let taskIds = try await databaseService.getAllTaskLinkIds()
+            guard !taskIds.isEmpty else {
+                #if DEBUG
+                print("[PlanningView] No task links to sync")
+                #endif
+                return
+            }
+
+            #if DEBUG
+            print("[PlanningView] Syncing \(taskIds.count) task statuses from Things")
+            #endif
+
+            // 2. Sync each task status from Things to database
+            let result = await thingsStatusService.syncAllTaskStatuses(taskIds: taskIds) { thingsId, status in
+                try await databaseService.updateTaskLinkStatus(
+                    thingsId: thingsId,
+                    status: status.status,
+                    completedAt: status.completionDate
+                )
+            }
+
+            #if DEBUG
+            print("[PlanningView] Sync complete: \(result.synced)/\(result.total) synced, \(result.newlyCompleted) newly completed")
+            #endif
+
+            // 3. Evaluate triggers for active planning threads
+            let activeThreads = try await databaseService.fetchThreadsByStatus([.active, .pending])
+
+            for thread in activeThreads where thread.threadType == .planning {
+                // Get task statuses for this thread
+                let threadTaskIds = try await databaseService.fetchTaskIdsForThread(thread.id)
+                guard !threadTaskIds.isEmpty else { continue }
+
+                // Build ThingsTaskStatus array from synced data
+                var taskStatuses: [ThingsTaskStatus] = []
+                for taskId in threadTaskIds {
+                    if let status = try? await thingsStatusService.getTaskStatus(thingsId: taskId) {
+                        taskStatuses.append(status)
+                    }
+                }
+
+                guard !taskStatuses.isEmpty else { continue }
+
+                // Evaluate triggers
+                if let trigger = triggerService.evaluateTriggers(thread: thread, tasks: taskStatuses) {
+                    #if DEBUG
+                    print("[PlanningView] Trigger fired for thread \(thread.id): \(trigger.reasonCode)")
+                    #endif
+
+                    // Resurface the thread
+                    try await databaseService.resurfaceThread(thread.id, reason: trigger.reasonCode)
+                }
+            }
+
+            // Reload resurfaced threads after trigger evaluation
+            resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
+
+        } catch {
+            #if DEBUG
+            print("[PlanningView] Sync error: \(error)")
+            #endif
         }
     }
 }
@@ -141,6 +557,20 @@ struct PlanningThreadRow: View {
     }
 }
 
+// Wrapper for pending tasks with stable ID for SwiftUI
+struct PendingTask: Identifiable {
+    let id = UUID()
+    var title: String
+    var energy: String
+    var minutes: Int
+
+    init(from extracted: ExtractedTask) {
+        self.title = extracted.title
+        self.energy = extracted.energy
+        self.minutes = extracted.minutes
+    }
+}
+
 struct PlanningConversationView: View {
     let thread: DiscussionThread
     let onBack: () -> Void
@@ -151,6 +581,10 @@ struct PlanningConversationView: View {
     @State private var isProcessing = false
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
+    @State private var pendingTasks: [PendingTask] = []  // Queue for approval
+    @State private var isSendingTasks = false
+    @State private var editingTaskId: UUID? = nil
+    @State private var editingTitle = ""
     @FocusState private var isInputFocused: Bool
     @State private var currentProvider: AIProvider = .local
     @State private var showProviderSettings = false
@@ -161,60 +595,274 @@ struct PlanningConversationView: View {
     private let thingsService = ThingsURLService.shared
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            conversationHeader
+        HStack(spacing: 0) {
+            // Main conversation area
+            VStack(spacing: 0) {
+                // Header
+                conversationHeader
 
-            Divider()
+                Divider()
 
-            // Original note context
-            noteContextCard
+                // Original note context
+                noteContextCard
 
-            Divider()
+                Divider()
 
-            // Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        ForEach(messages) { message in
-                            PlanningMessageBubble(message: message)
-                                .id(message.id)
-                        }
-
-                        if isProcessing {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Thinking...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                // Messages
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 16) {
+                            ForEach(messages) { message in
+                                PlanningMessageBubble(message: message)
+                                    .id(message.id)
                             }
-                            .id("processing")
+
+                            if isProcessing {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Thinking...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .id("processing")
+                            }
+                        }
+                        .padding()
+                    }
+                    .onChange(of: messages.count) {
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
-                    .padding()
                 }
-                .onChange(of: messages.count) {
-                    if let lastMessage = messages.last {
-                        withAnimation {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        }
-                    }
+
+                Divider()
+
+                // API key error
+                if apiKeyMissing {
+                    apiKeyErrorView
                 }
+
+                // Input
+                inputArea
             }
 
-            Divider()
-
-            // API key error
-            if apiKeyMissing {
-                apiKeyErrorView
+            // Pending tasks sidebar (only show if there are pending or created tasks)
+            if !pendingTasks.isEmpty || !tasksCreated.isEmpty {
+                Divider()
+                pendingTasksSidebar
             }
-
-            // Input
-            inputArea
         }
         .task {
             await startConversation()
+        }
+    }
+
+    // MARK: - Pending Tasks Sidebar
+
+    private var pendingTasksSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "checklist")
+                    .foregroundColor(.blue)
+                Text("Tasks")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    // Pending tasks (awaiting approval)
+                    if !pendingTasks.isEmpty {
+                        Text("Pending Approval")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        ForEach(pendingTasks) { task in
+                            pendingTaskRow(task)
+                        }
+
+                        // Send to Things button
+                        Button(action: { Task { await sendAllToThings() } }) {
+                            HStack {
+                                Image(systemName: "paperplane.fill")
+                                Text("Send \(pendingTasks.count) to Things")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isSendingTasks)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                    }
+
+                    // Created tasks
+                    if !tasksCreated.isEmpty {
+                        if !pendingTasks.isEmpty {
+                            Divider()
+                                .padding(.vertical, 8)
+                        }
+
+                        Text("Sent to Things")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        ForEach(tasksCreated, id: \.self) { title in
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.caption)
+                                Text(title)
+                                    .font(.caption)
+                                    .lineLimit(2)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .frame(width: 240)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+    }
+
+    private func pendingTaskRow(_ task: PendingTask) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if editingTaskId == task.id {
+                // Edit mode
+                HStack {
+                    TextField("Task title", text: $editingTitle)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+
+                    Button(action: { saveEdit(task) }) {
+                        Image(systemName: "checkmark")
+                            .foregroundColor(.green)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { editingTaskId = nil }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                // Display mode
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "circle")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(task.title)
+                            .font(.caption)
+                            .lineLimit(2)
+
+                        HStack(spacing: 8) {
+                            Label(task.energy, systemImage: "bolt")
+                            Label("\(task.minutes)m", systemImage: "clock")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    // Edit/Remove buttons
+                    HStack(spacing: 4) {
+                        Button(action: { startEditing(task) }) {
+                            Image(systemName: "pencil")
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+
+                        Button(action: { removeTask(task) }) {
+                            Image(systemName: "trash")
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.red.opacity(0.7))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(6)
+        .padding(.horizontal, 8)
+    }
+
+    private func startEditing(_ task: PendingTask) {
+        editingTaskId = task.id
+        editingTitle = task.title
+    }
+
+    private func saveEdit(_ task: PendingTask) {
+        if let index = pendingTasks.firstIndex(where: { $0.id == task.id }) {
+            pendingTasks[index].title = editingTitle
+        }
+        editingTaskId = nil
+    }
+
+    private func removeTask(_ task: PendingTask) {
+        withAnimation {
+            pendingTasks.removeAll { $0.id == task.id }
+        }
+    }
+
+    private func sendAllToThings() async {
+        isSendingTasks = true
+        defer { isSendingTasks = false }
+
+        for task in pendingTasks {
+            do {
+                try await thingsService.createTask(
+                    title: task.title,
+                    notes: nil,
+                    tags: [],
+                    energy: task.energy,
+                    sourceNoteId: thread.rawNoteId,
+                    threadId: thread.id
+                )
+
+                await MainActor.run {
+                    tasksCreated.append(task.title)
+
+                    // Show confirmation in chat
+                    messages.append(PlanningMessage(
+                        role: .taskCreated,
+                        content: task.title
+                    ))
+                }
+
+            } catch {
+                await MainActor.run {
+                    messages.append(PlanningMessage(
+                        role: .system,
+                        content: "Failed to create '\(task.title)': \(error.localizedDescription)"
+                    ))
+                }
+            }
+        }
+
+        await MainActor.run {
+            pendingTasks.removeAll()
         }
     }
 
@@ -460,29 +1108,16 @@ struct PlanningConversationView: View {
     }
 
     private func handleExtractedTasks(_ tasks: [ExtractedTask]) async {
+        // Add tasks to pending queue for user approval (don't create immediately)
         for task in tasks {
-            do {
-                try await thingsService.createTask(
-                    title: task.title,
-                    notes: nil,
-                    tags: [],
-                    energy: task.energy,
-                    sourceNoteId: thread.rawNoteId,
-                    threadId: thread.id
-                )
+            await MainActor.run {
+                let pending = PendingTask(from: task)
+                pendingTasks.append(pending)
 
-                tasksCreated.append(task.title)
-
-                // Show confirmation in chat
+                // Show in chat that a task was extracted
                 messages.append(PlanningMessage(
-                    role: .taskCreated,
+                    role: .taskExtracted,
                     content: task.title
-                ))
-
-            } catch {
-                messages.append(PlanningMessage(
-                    role: .system,
-                    content: "Failed to create task: \(error.localizedDescription)"
                 ))
             }
         }
@@ -534,6 +1169,7 @@ struct PlanningMessage: Identifiable {
         case assistant
         case system
         case taskCreated
+        case taskExtracted  // Task queued for approval
     }
 
     init(role: Role, content: String, provider: AIProvider = .local) {
@@ -580,7 +1216,14 @@ struct PlanningMessageBubble: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("Task created: \(message.content)")
+                Text("Sent to Things: \(message.content)")
+            }
+            .font(.callout)
+        case .taskExtracted:
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundColor(.orange)
+                Text("Task queued: \(message.content)")
             }
             .font(.callout)
         default:
@@ -601,6 +1244,8 @@ struct PlanningMessageBubble: View {
             return Color.orange.opacity(0.2)
         case .taskCreated:
             return Color.green.opacity(0.1)
+        case .taskExtracted:
+            return Color.orange.opacity(0.1)
         }
     }
 

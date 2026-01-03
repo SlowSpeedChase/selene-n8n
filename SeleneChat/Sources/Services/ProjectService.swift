@@ -10,6 +10,9 @@ import SQLite
 class ProjectService: ObservableObject {
     static let shared = ProjectService()
 
+    // Publish when projects change so views can refresh
+    @Published var lastUpdated = Date()
+
     private var db: Connection?
 
     // Table references
@@ -135,6 +138,9 @@ class ProjectService: ObservableObject {
             ))
         }
 
+        // Notify observers that projects changed
+        await MainActor.run { lastUpdated = Date() }
+
         return Project(
             id: Int(id),
             name: name,
@@ -173,6 +179,9 @@ class ProjectService: ObservableObject {
             projectStatus <- "active",
             lastActiveAt <- now
         ))
+
+        // Notify observers that projects changed
+        await MainActor.run { lastUpdated = Date() }
     }
 
     func parkProject(_ projectIdValue: Int) async throws {
@@ -182,6 +191,9 @@ class ProjectService: ObservableObject {
 
         let project = projects.filter(projectId == Int64(projectIdValue))
         try db.run(project.update(projectStatus <- "parked"))
+
+        // Notify observers that projects changed
+        await MainActor.run { lastUpdated = Date() }
     }
 
     func completeProject(_ projectIdValue: Int) async throws {
@@ -197,6 +209,9 @@ class ProjectService: ObservableObject {
             projectStatus <- "completed",
             completedAt <- now
         ))
+
+        // Notify observers that projects changed
+        await MainActor.run { lastUpdated = Date() }
     }
 
     // MARK: - Error Types
