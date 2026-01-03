@@ -101,7 +101,9 @@ class DatabaseService: ObservableObject {
             try? Migration004_SubprojectSuggestions.run(db: db!)
 
             // Configure services that need database access
-            SubprojectSuggestionService.shared.configure(with: db!)
+            if let db = db {
+                SubprojectSuggestionService.shared.configure(with: db)
+            }
         } catch {
             isConnected = false
             #if DEBUG

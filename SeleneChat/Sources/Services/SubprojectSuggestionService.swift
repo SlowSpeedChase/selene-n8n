@@ -37,10 +37,12 @@ class SubprojectSuggestionService: ObservableObject {
 
     /// Detect sub-project candidates across all projects
     func detectCandidates() async throws -> [SubprojectSuggestion] {
-        guard let db = db else { return [] }
+        guard db != nil else {
+            await MainActor.run { isDetecting = false }
+            return []
+        }
 
         await MainActor.run { isDetecting = true }
-        defer { Task { await MainActor.run { isDetecting = false } } }
 
         var candidates: [SubprojectSuggestion] = []
 
@@ -77,8 +79,11 @@ class SubprojectSuggestionService: ObservableObject {
             }
         }
 
-        // Update published suggestions
-        await MainActor.run { suggestions = candidates }
+        // Update published suggestions and reset detecting state
+        await MainActor.run {
+            suggestions = candidates
+            isDetecting = false
+        }
 
         return candidates
     }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SubprojectSuggestionCard: View {
     let suggestion: SubprojectSuggestion
-    let onApprove: () -> Void
+    let onApprove: () async -> Bool  // Returns true if successful
     let onDismiss: () -> Void
     @State private var isProcessing = false
 
@@ -40,7 +40,16 @@ struct SubprojectSuggestionCard: View {
 
             // Buttons
             HStack(spacing: 12) {
-                Button(action: { isProcessing = true; onApprove() }) {
+                Button(action: {
+                    isProcessing = true
+                    Task {
+                        let success = await onApprove()
+                        if !success {
+                            isProcessing = false
+                        }
+                        // If success, card will be removed by parent
+                    }
+                }) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                         Text("Create Project")

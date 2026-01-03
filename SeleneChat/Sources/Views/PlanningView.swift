@@ -420,19 +420,25 @@ struct PlanningView: View {
                         SubprojectSuggestionCard(
                             suggestion: suggestion,
                             onApprove: {
-                                Task {
-                                    do {
-                                        _ = try await suggestionService.approve(suggestion)
-                                    } catch {
-                                        #if DEBUG
-                                        print("[PlanningView] Approve error: \(error)")
-                                        #endif
-                                    }
+                                do {
+                                    _ = try await suggestionService.approve(suggestion)
+                                    return true
+                                } catch {
+                                    #if DEBUG
+                                    print("[PlanningView] Approve error: \(error)")
+                                    #endif
+                                    return false
                                 }
                             },
                             onDismiss: {
                                 Task {
-                                    try? await suggestionService.dismiss(suggestion)
+                                    do {
+                                        try await suggestionService.dismiss(suggestion)
+                                    } catch {
+                                        #if DEBUG
+                                        print("[PlanningView] Dismiss error: \(error)")
+                                        #endif
+                                    }
                                 }
                             }
                         )
@@ -571,8 +577,7 @@ struct PlanningView: View {
             // Reload resurfaced threads after trigger evaluation
             resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
 
-            // Phase 7.2f: Detect sub-project candidates
-            suggestionService.configure(with: databaseService.db!)
+            // Phase 7.2f: Detect sub-project candidates (service configured in DatabaseService)
             _ = try? await suggestionService.detectCandidates()
 
         } catch {
