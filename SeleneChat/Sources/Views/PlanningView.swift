@@ -41,7 +41,8 @@ struct PlanningView: View {
             } else if let project = selectedProject {
                 ProjectDetailView(
                     project: project,
-                    onBack: { selectedProject = nil }
+                    onBack: { selectedProject = nil },
+                    onSelectThread: { thread in selectedThread = thread }
                 )
             } else {
                 mainPlanningView

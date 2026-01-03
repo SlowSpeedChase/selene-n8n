@@ -9,9 +9,9 @@ import SwiftUI
 struct ProjectDetailView: View {
     let project: Project
     let onBack: () -> Void
+    let onSelectThread: (DiscussionThread) -> Void
 
     @EnvironmentObject var databaseService: DatabaseService
-    @State private var selectedThread: DiscussionThread?
     @State private var showNewThreadSheet = false
 
     var body: some View {
@@ -108,7 +108,7 @@ struct ProjectDetailView: View {
 
                 ScrollView {
                     ThreadListView(projectId: project.id) { thread in
-                        selectedThread = thread
+                        onSelectThread(thread)
                     }
                 }
             }
@@ -119,7 +119,7 @@ struct ProjectDetailView: View {
                 projectName: project.name,
                 onCreate: { thread in
                     showNewThreadSheet = false
-                    selectedThread = thread
+                    onSelectThread(thread)
                 },
                 onCancel: {
                     showNewThreadSheet = false
