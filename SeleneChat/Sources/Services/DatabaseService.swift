@@ -98,6 +98,7 @@ class DatabaseService: ObservableObject {
             try? Migration001_TaskLinks.run(db: db!)
             try? Migration002_PlanningInbox.run(db: db!)
             try? Migration003_BidirectionalThings.run(db: db!)
+            try? Migration004_SubprojectSuggestions.run(db: db!)
         } catch {
             isConnected = false
             #if DEBUG
