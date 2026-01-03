@@ -557,6 +557,20 @@ struct PlanningThreadRow: View {
     }
 }
 
+// Wrapper for pending tasks with stable ID for SwiftUI
+struct PendingTask: Identifiable {
+    let id = UUID()
+    var title: String
+    var energy: String
+    var minutes: Int
+
+    init(from extracted: ExtractedTask) {
+        self.title = extracted.title
+        self.energy = extracted.energy
+        self.minutes = extracted.minutes
+    }
+}
+
 struct PlanningConversationView: View {
     let thread: DiscussionThread
     let onBack: () -> Void
@@ -567,6 +581,10 @@ struct PlanningConversationView: View {
     @State private var isProcessing = false
     @State private var conversationHistory: [[String: String]] = []
     @State private var tasksCreated: [String] = []
+    @State private var pendingTasks: [PendingTask] = []  // Queue for approval
+    @State private var isSendingTasks = false
+    @State private var editingTaskId: UUID? = nil
+    @State private var editingTitle = ""
     @FocusState private var isInputFocused: Bool
     @State private var currentProvider: AIProvider = .local
     @State private var showProviderSettings = false
@@ -577,60 +595,274 @@ struct PlanningConversationView: View {
     private let thingsService = ThingsURLService.shared
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            conversationHeader
+        HStack(spacing: 0) {
+            // Main conversation area
+            VStack(spacing: 0) {
+                // Header
+                conversationHeader
 
-            Divider()
+                Divider()
 
-            // Original note context
-            noteContextCard
+                // Original note context
+                noteContextCard
 
-            Divider()
+                Divider()
 
-            // Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        ForEach(messages) { message in
-                            PlanningMessageBubble(message: message)
-                                .id(message.id)
-                        }
-
-                        if isProcessing {
-                            HStack {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                Text("Thinking...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                // Messages
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 16) {
+                            ForEach(messages) { message in
+                                PlanningMessageBubble(message: message)
+                                    .id(message.id)
                             }
-                            .id("processing")
+
+                            if isProcessing {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Thinking...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .id("processing")
+                            }
+                        }
+                        .padding()
+                    }
+                    .onChange(of: messages.count) {
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
-                    .padding()
                 }
-                .onChange(of: messages.count) {
-                    if let lastMessage = messages.last {
-                        withAnimation {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        }
-                    }
+
+                Divider()
+
+                // API key error
+                if apiKeyMissing {
+                    apiKeyErrorView
                 }
+
+                // Input
+                inputArea
             }
 
-            Divider()
-
-            // API key error
-            if apiKeyMissing {
-                apiKeyErrorView
+            // Pending tasks sidebar (only show if there are pending or created tasks)
+            if !pendingTasks.isEmpty || !tasksCreated.isEmpty {
+                Divider()
+                pendingTasksSidebar
             }
-
-            // Input
-            inputArea
         }
         .task {
             await startConversation()
+        }
+    }
+
+    // MARK: - Pending Tasks Sidebar
+
+    private var pendingTasksSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Image(systemName: "checklist")
+                    .foregroundColor(.blue)
+                Text("Tasks")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    // Pending tasks (awaiting approval)
+                    if !pendingTasks.isEmpty {
+                        Text("Pending Approval")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        ForEach(pendingTasks) { task in
+                            pendingTaskRow(task)
+                        }
+
+                        // Send to Things button
+                        Button(action: { Task { await sendAllToThings() } }) {
+                            HStack {
+                                Image(systemName: "paperplane.fill")
+                                Text("Send \(pendingTasks.count) to Things")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isSendingTasks)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                    }
+
+                    // Created tasks
+                    if !tasksCreated.isEmpty {
+                        if !pendingTasks.isEmpty {
+                            Divider()
+                                .padding(.vertical, 8)
+                        }
+
+                        Text("Sent to Things")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        ForEach(tasksCreated, id: \.self) { title in
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.caption)
+                                Text(title)
+                                    .font(.caption)
+                                    .lineLimit(2)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .frame(width: 240)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+    }
+
+    private func pendingTaskRow(_ task: PendingTask) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if editingTaskId == task.id {
+                // Edit mode
+                HStack {
+                    TextField("Task title", text: $editingTitle)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+
+                    Button(action: { saveEdit(task) }) {
+                        Image(systemName: "checkmark")
+                            .foregroundColor(.green)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { editingTaskId = nil }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                // Display mode
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "circle")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(task.title)
+                            .font(.caption)
+                            .lineLimit(2)
+
+                        HStack(spacing: 8) {
+                            Label(task.energy, systemImage: "bolt")
+                            Label("\(task.minutes)m", systemImage: "clock")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    // Edit/Remove buttons
+                    HStack(spacing: 4) {
+                        Button(action: { startEditing(task) }) {
+                            Image(systemName: "pencil")
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+
+                        Button(action: { removeTask(task) }) {
+                            Image(systemName: "trash")
+                                .font(.caption2)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.red.opacity(0.7))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(6)
+        .padding(.horizontal, 8)
+    }
+
+    private func startEditing(_ task: PendingTask) {
+        editingTaskId = task.id
+        editingTitle = task.title
+    }
+
+    private func saveEdit(_ task: PendingTask) {
+        if let index = pendingTasks.firstIndex(where: { $0.id == task.id }) {
+            pendingTasks[index].title = editingTitle
+        }
+        editingTaskId = nil
+    }
+
+    private func removeTask(_ task: PendingTask) {
+        withAnimation {
+            pendingTasks.removeAll { $0.id == task.id }
+        }
+    }
+
+    private func sendAllToThings() async {
+        isSendingTasks = true
+        defer { isSendingTasks = false }
+
+        for task in pendingTasks {
+            do {
+                try await thingsService.createTask(
+                    title: task.title,
+                    notes: nil,
+                    tags: [],
+                    energy: task.energy,
+                    sourceNoteId: thread.rawNoteId,
+                    threadId: thread.id
+                )
+
+                await MainActor.run {
+                    tasksCreated.append(task.title)
+
+                    // Show confirmation in chat
+                    messages.append(PlanningMessage(
+                        role: .taskCreated,
+                        content: task.title
+                    ))
+                }
+
+            } catch {
+                await MainActor.run {
+                    messages.append(PlanningMessage(
+                        role: .system,
+                        content: "Failed to create '\(task.title)': \(error.localizedDescription)"
+                    ))
+                }
+            }
+        }
+
+        await MainActor.run {
+            pendingTasks.removeAll()
         }
     }
 
@@ -876,29 +1108,16 @@ struct PlanningConversationView: View {
     }
 
     private func handleExtractedTasks(_ tasks: [ExtractedTask]) async {
+        // Add tasks to pending queue for user approval (don't create immediately)
         for task in tasks {
-            do {
-                try await thingsService.createTask(
-                    title: task.title,
-                    notes: nil,
-                    tags: [],
-                    energy: task.energy,
-                    sourceNoteId: thread.rawNoteId,
-                    threadId: thread.id
-                )
+            await MainActor.run {
+                let pending = PendingTask(from: task)
+                pendingTasks.append(pending)
 
-                tasksCreated.append(task.title)
-
-                // Show confirmation in chat
+                // Show in chat that a task was extracted
                 messages.append(PlanningMessage(
-                    role: .taskCreated,
+                    role: .taskExtracted,
                     content: task.title
-                ))
-
-            } catch {
-                messages.append(PlanningMessage(
-                    role: .system,
-                    content: "Failed to create task: \(error.localizedDescription)"
                 ))
             }
         }
@@ -950,6 +1169,7 @@ struct PlanningMessage: Identifiable {
         case assistant
         case system
         case taskCreated
+        case taskExtracted  // Task queued for approval
     }
 
     init(role: Role, content: String, provider: AIProvider = .local) {
@@ -996,7 +1216,14 @@ struct PlanningMessageBubble: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("Task created: \(message.content)")
+                Text("Sent to Things: \(message.content)")
+            }
+            .font(.callout)
+        case .taskExtracted:
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundColor(.orange)
+                Text("Task queued: \(message.content)")
             }
             .font(.callout)
         default:
@@ -1017,6 +1244,8 @@ struct PlanningMessageBubble: View {
             return Color.orange.opacity(0.2)
         case .taskCreated:
             return Color.green.opacity(0.1)
+        case .taskExtracted:
+            return Color.orange.opacity(0.1)
         }
     }
 
