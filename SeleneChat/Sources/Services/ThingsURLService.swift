@@ -118,7 +118,8 @@ class ThingsURLService {
         energy: String? = nil,
         sourceNoteId: Int? = nil,
         threadId: Int? = nil,
-        project: String? = nil  // Things project name to assign to
+        project: String? = nil,  // Things project name to assign to
+        heading: String? = nil   // Things heading (sub-group within project)
     ) async throws -> String {
         guard FileManager.default.fileExists(atPath: addTaskScriptPath) else {
             throw ThingsError.scriptNotFound
@@ -156,6 +157,11 @@ class ThingsURLService {
         // Add project if specified
         if let project = project, !project.isEmpty {
             taskData["project"] = project
+        }
+
+        // Add heading if specified
+        if let heading = heading, !heading.isEmpty {
+            taskData["heading"] = heading
         }
 
         let jsonData = try JSONSerialization.data(withJSONObject: taskData)
