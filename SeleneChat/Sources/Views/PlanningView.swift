@@ -11,8 +11,6 @@ struct PlanningView: View {
     @StateObject private var thingsStatusService = ThingsStatusService.shared
     @StateObject private var triggerService = ResurfaceTriggerService.shared
     @State private var isSyncing = false
-    @State private var resurfacedThreads: [DiscussionThread] = []
-    @State private var activeThreads: [DiscussionThread] = []
 
     // Phase 7.2f: Sub-project suggestions
     @StateObject private var suggestionService = SubprojectSuggestionService.shared
@@ -23,10 +21,6 @@ struct PlanningView: View {
     @State private var isScratchPadExpanded = true     // Start expanded
     @State private var isInboxExpanded = true          // Start expanded - primary triage
     @State private var isParkedProjectsExpanded = false // Start collapsed - less priority
-
-    // Legacy section states (kept for backward compatibility with unused sections)
-    @State private var isNeedsReviewExpanded = true
-    @State private var isConversationsExpanded = true
 
     // Scratch Pad project
     @State private var scratchPad: Project?
@@ -376,50 +370,6 @@ struct PlanningView: View {
         }
     }
 
-    // MARK: - Phase 7.2e: Needs Review Section (legacy - now shown as badges on projects)
-
-    private var needsReviewSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Section header (tappable to collapse)
-            Button(action: { withAnimation { isNeedsReviewExpanded.toggle() } }) {
-                HStack {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .foregroundColor(.orange)
-                    Text("Needs Review")
-                        .font(.headline)
-
-                    Text("(\(resurfacedThreads.count))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    Image(systemName: isNeedsReviewExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            if isNeedsReviewExpanded {
-                Divider()
-
-                // Resurfaced threads
-                LazyVStack(spacing: 12) {
-                    ForEach(resurfacedThreads, id: \.id) { thread in
-                        PlanningThreadRow(thread: thread)
-                            .onTapGesture {
-                                selectedThread = thread
-                            }
-                    }
-                }
-                .padding()
-            }
-        }
-    }
-
     // MARK: - Phase 7.2f: Suggestions Section
 
     private var suggestionsSection: some View {
@@ -484,50 +434,6 @@ struct PlanningView: View {
         }
     }
 
-    // MARK: - Planning Threads Section
-
-    private var planningThreadsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Section header (tappable to collapse)
-            Button(action: { withAnimation { isConversationsExpanded.toggle() } }) {
-                HStack {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                        .foregroundColor(.blue)
-                    Text("Planning Conversations")
-                        .font(.headline)
-
-                    Text("(\(activeThreads.count))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    Image(systemName: isConversationsExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            if isConversationsExpanded {
-                Divider()
-
-                // Active threads
-                LazyVStack(spacing: 12) {
-                    ForEach(activeThreads, id: \.id) { thread in
-                        PlanningThreadRow(thread: thread)
-                            .onTapGesture {
-                                selectedThread = thread
-                            }
-                    }
-                }
-                .padding()
-            }
-        }
-    }
-
     // MARK: - Phase 7.2e: Bidirectional Things Sync
 
     /// Sync task statuses from Things and evaluate resurface triggers
@@ -538,16 +444,6 @@ struct PlanningView: View {
         do {
             // Load Scratch Pad project
             scratchPad = try await ProjectService.shared.getScratchPad()
-
-            // Load resurfaced threads (needing review)
-            resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
-
-            // Load active/pending planning threads
-            activeThreads = try await databaseService.fetchThreadsByStatus([.active, .pending])
-
-            #if DEBUG
-            print("[PlanningView] Loaded \(resurfacedThreads.count) resurfaced, \(activeThreads.count) active threads")
-            #endif
 
             // Only sync with Things if available
             guard thingsStatusService.isAvailable else {
@@ -611,9 +507,6 @@ struct PlanningView: View {
                     try await databaseService.resurfaceThread(thread.id, reason: trigger.reasonCode)
                 }
             }
-
-            // Reload resurfaced threads after trigger evaluation
-            resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
 
             // Phase 7.2f: Detect sub-project candidates (service configured in DatabaseService)
             _ = try? await suggestionService.detectCandidates()
