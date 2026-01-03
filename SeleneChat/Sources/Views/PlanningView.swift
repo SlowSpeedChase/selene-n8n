@@ -14,6 +14,13 @@ struct PlanningView: View {
     @State private var resurfacedThreads: [DiscussionThread] = []
     @State private var activeThreads: [DiscussionThread] = []
 
+    // Section collapsed states
+    @State private var isNeedsReviewExpanded = true    // Start expanded - needs attention
+    @State private var isInboxExpanded = true          // Start expanded - primary triage
+    @State private var isConversationsExpanded = true  // Start expanded - active work
+    @State private var isActiveProjectsExpanded = true // Start expanded
+    @State private var isParkedProjectsExpanded = false // Start collapsed - less priority
+
     var body: some View {
         Group {
             if let thread = selectedThread {
@@ -44,76 +51,75 @@ struct PlanningView: View {
     }
 
     private var mainPlanningView: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Planning")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
-
-                // Phase 7.2e: Sync indicator
-                if isSyncing {
-                    HStack(spacing: 4) {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Button(action: {}) {
-                    Image(systemName: "gearshape")
-                }
-                .buttonStyle(.plain)
-            }
-            .padding()
+        HStack(spacing: 0) {
+            // Sidebar for quick navigation
+            sectionSidebar
 
             Divider()
 
-            // Three sections: Needs Review, Inbox, Active Projects, Parked Projects
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Phase 7.2e: Resurfaced threads needing review
-                    if !resurfacedThreads.isEmpty {
-                        needsReviewSection
-
-                        Divider()
-                            .padding(.horizontal)
+            // Main content
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Planning")
+                            .font(.title2)
+                            .fontWeight(.semibold)
                     }
 
-                    // Inbox section - notes pending triage
-                    InboxView()
+                    Spacer()
 
-                    Divider()
-                        .padding(.horizontal)
-
-                    // Planning threads section - active conversations
-                    if !activeThreads.isEmpty {
-                        planningThreadsSection
-
-                        Divider()
-                            .padding(.horizontal)
+                    // Phase 7.2e: Sync indicator
+                    if isSyncing {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("Syncing...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
 
-                    // Active projects section - limited to 5 for ADHD focus
-                    ActiveProjectsList(onSelectProject: { project in
-                        selectedProject = project
-                    })
-
-                    Divider()
-                        .padding(.horizontal)
-
-                    // Parked projects section - collapsed by default
-                    ParkedProjectsList(onSelectProject: { project in
-                        selectedProject = project
-                    })
+                    Button(action: {}) {
+                        Image(systemName: "gearshape")
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.bottom)
+                .padding()
+
+                Divider()
+
+                // Scrollable sections
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Phase 7.2e: Resurfaced threads needing review
+                            if !resurfacedThreads.isEmpty {
+                                needsReviewSection
+                                    .id("needsReview")
+                            }
+
+                            // Inbox section - notes pending triage
+                            inboxSection
+                                .id("inbox")
+
+                            // Planning threads section - active conversations
+                            if !activeThreads.isEmpty {
+                                planningThreadsSection
+                                    .id("conversations")
+                            }
+
+                            // Active projects section - limited to 5 for ADHD focus
+                            activeProjectsSection
+                                .id("activeProjects")
+
+                            // Parked projects section - collapsed by default
+                            parkedProjectsSection
+                                .id("parkedProjects")
+                        }
+                        .padding(.bottom)
+                    }
+                }
             }
         }
         .task {
@@ -122,38 +128,240 @@ struct PlanningView: View {
         }
     }
 
+    // MARK: - Sidebar Navigation
+
+    private var sectionSidebar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Sections")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+
+            if !resurfacedThreads.isEmpty {
+                sidebarButton(
+                    icon: "arrow.triangle.2.circlepath",
+                    label: "Needs Review",
+                    count: resurfacedThreads.count,
+                    color: .orange,
+                    isExpanded: $isNeedsReviewExpanded
+                )
+            }
+
+            sidebarButton(
+                icon: "tray",
+                label: "Inbox",
+                count: nil,
+                color: .purple,
+                isExpanded: $isInboxExpanded
+            )
+
+            if !activeThreads.isEmpty {
+                sidebarButton(
+                    icon: "bubble.left.and.bubble.right",
+                    label: "Conversations",
+                    count: activeThreads.count,
+                    color: .blue,
+                    isExpanded: $isConversationsExpanded
+                )
+            }
+
+            sidebarButton(
+                icon: "star.fill",
+                label: "Active Projects",
+                count: nil,
+                color: .yellow,
+                isExpanded: $isActiveProjectsExpanded
+            )
+
+            sidebarButton(
+                icon: "moon.zzz",
+                label: "Parked",
+                count: nil,
+                color: .gray,
+                isExpanded: $isParkedProjectsExpanded
+            )
+
+            Spacer()
+        }
+        .frame(width: 140)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+    }
+
+    private func sidebarButton(
+        icon: String,
+        label: String,
+        count: Int?,
+        color: Color,
+        isExpanded: Binding<Bool>
+    ) -> some View {
+        Button(action: { withAnimation { isExpanded.wrappedValue.toggle() } }) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundColor(color)
+                    .frame(width: 16)
+
+                Text(label)
+                    .font(.caption)
+                    .lineLimit(1)
+
+                Spacer()
+
+                if let count = count {
+                    Text("\(count)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Image(systemName: isExpanded.wrappedValue ? "eye" : "eye.slash")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isExpanded.wrappedValue ? color.opacity(0.1) : Color.clear)
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Collapsible Sections
+
+    private var inboxSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isInboxExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "tray")
+                        .foregroundColor(.purple)
+                    Text("Inbox")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Image(systemName: isInboxExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isInboxExpanded {
+                Divider()
+                InboxView()
+            }
+        }
+    }
+
+    private var activeProjectsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isActiveProjectsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.yellow)
+                    Text("Active Projects")
+                        .font(.headline)
+
+                    Text("(max 5)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: isActiveProjectsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isActiveProjectsExpanded {
+                Divider()
+                ActiveProjectsList(onSelectProject: { project in
+                    selectedProject = project
+                })
+            }
+        }
+    }
+
+    private var parkedProjectsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isParkedProjectsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "moon.zzz")
+                        .foregroundColor(.gray)
+                    Text("Parked Projects")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Image(systemName: isParkedProjectsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isParkedProjectsExpanded {
+                Divider()
+                ParkedProjectsList(onSelectProject: { project in
+                    selectedProject = project
+                })
+            }
+        }
+    }
+
     // MARK: - Phase 7.2e: Needs Review Section
 
     private var needsReviewSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Section header
-            HStack {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .foregroundColor(.orange)
-                Text("Needs Review")
-                    .font(.headline)
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isNeedsReviewExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundColor(.orange)
+                    Text("Needs Review")
+                        .font(.headline)
 
-                Text("(\(resurfacedThreads.count))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    Text("(\(resurfacedThreads.count))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
 
-                Spacer()
+                    Spacer()
+
+                    Image(systemName: isNeedsReviewExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .buttonStyle(.plain)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
-            Divider()
+            if isNeedsReviewExpanded {
+                Divider()
 
-            // Resurfaced threads
-            LazyVStack(spacing: 12) {
-                ForEach(resurfacedThreads, id: \.id) { thread in
-                    PlanningThreadRow(thread: thread)
-                        .onTapGesture {
-                            selectedThread = thread
-                        }
+                // Resurfaced threads
+                LazyVStack(spacing: 12) {
+                    ForEach(resurfacedThreads, id: \.id) { thread in
+                        PlanningThreadRow(thread: thread)
+                            .onTapGesture {
+                                selectedThread = thread
+                            }
+                    }
                 }
+                .padding()
             }
-            .padding()
         }
     }
 
@@ -161,34 +369,43 @@ struct PlanningView: View {
 
     private var planningThreadsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Section header
-            HStack {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .foregroundColor(.blue)
-                Text("Planning Conversations")
-                    .font(.headline)
+            // Section header (tappable to collapse)
+            Button(action: { withAnimation { isConversationsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .foregroundColor(.blue)
+                    Text("Planning Conversations")
+                        .font(.headline)
 
-                Text("(\(activeThreads.count))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    Text("(\(activeThreads.count))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
 
-                Spacer()
+                    Spacer()
+
+                    Image(systemName: isConversationsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .buttonStyle(.plain)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
-            Divider()
+            if isConversationsExpanded {
+                Divider()
 
-            // Active threads
-            LazyVStack(spacing: 12) {
-                ForEach(activeThreads, id: \.id) { thread in
-                    PlanningThreadRow(thread: thread)
-                        .onTapGesture {
-                            selectedThread = thread
-                        }
+                // Active threads
+                LazyVStack(spacing: 12) {
+                    ForEach(activeThreads, id: \.id) { thread in
+                        PlanningThreadRow(thread: thread)
+                            .onTapGesture {
+                                selectedThread = thread
+                            }
+                    }
                 }
+                .padding()
             }
-            .padding()
         }
     }
 
