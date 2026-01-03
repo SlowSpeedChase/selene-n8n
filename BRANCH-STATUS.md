@@ -2,7 +2,7 @@
 
 **Created:** 2026-01-02
 **Design Doc:** docs/plans/2026-01-02-bidirectional-things-flow-design.md
-**Current Stage:** planning
+**Current Stage:** dev
 **Last Rebased:** 2026-01-02
 
 ## Overview
@@ -22,7 +22,7 @@ Implement bidirectional Things 3 integration for SeleneChat Planning tab. Query 
 - [x] Conflict check completed (no overlapping work)
 - [x] Dependencies identified and noted
 - [x] Branch and worktree created
-- [ ] Implementation plan written (superpowers:writing-plans)
+- [x] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
 - [ ] Tests written first (superpowers:test-driven-development)
