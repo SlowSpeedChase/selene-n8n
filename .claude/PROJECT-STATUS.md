@@ -1,7 +1,7 @@
 # Selene n8n Project - Current Status
 
-**Last Updated:** 2025-12-31
-**Status:** Workflows 01, 07 & 08 Complete - Phase 7.2d (AI Provider Toggle) Design Complete
+**Last Updated:** 2026-01-02
+**Status:** Workflows 01, 07 & 08 Complete - Phase 7.2d Complete ✅ - Phase 7.2e/7.2f Ready
 
 ---
 
@@ -407,36 +407,28 @@ cd workflows/01-ingestion
 
 ## Next Session Priorities
 
-1. **Implement Phase 7.2d - AI Provider Toggle** (NEXT)
-   - Design doc: `docs/plans/2025-12-31-ai-provider-toggle-design.md`
-   - Local LLM (Ollama) as default, explicit cloud opt-in
-   - Per-conversation override with visual indicators
-
-2. **Phase 7.2d-1: Core Infrastructure**
-   - Create `AIProvider.swift` enum
-   - Create `AIProviderService.swift` protocol and implementation
-   - Update `ClaudeAPIService` to check for env var API key
-   - Add `provider` field to `PlanningMessage` model
-
-3. **Phase 7.2d-2: Settings UI**
-   - Create `AIProviderSettings.swift` popover view
-   - Add gear icon to Planning tab header
-   - Show provider connection status
-
-4. **Phase 7.2d-3: Conversation Toggle**
-   - Add provider badge to conversation header
-   - Implement "Include history?" prompt when switching to cloud
-   - Store per-conversation provider override
-
-5. **Phase 7.2d-4: Visual Indicators**
-   - Style cloud messages with blue tint
-   - Add provider icons to message bubbles
-   - Inline error display for missing API key
-
-6. **Phase 7.2e: Bidirectional Things Flow** (after 7.2d)
+1. **Phase 7.2e: Bidirectional Things Flow** (NEXT)
    - Implement Things status checking via AppleScript
-   - Add resurface trigger logic
+   - Add resurface trigger logic (progress/stuck/complete triggers)
    - Update thread status based on task progress
+   - Scripts already started: `scripts/things-bridge/get-task-status.scpt`
+
+2. **Phase 7.2f: Things Project Grouping** (Design Complete)
+   - Design doc: `docs/plans/2026-01-01-project-grouping-design.md`
+   - Auto-create projects from 3+ tasks with shared concepts
+   - Auto-assign new tasks to matching projects
+   - Group tasks by type within projects (headings)
+   - Oversized task detection (overwhelm > 7)
+
+3. **Infrastructure: n8n 2.x Upgrade** (Design Complete)
+   - Design doc: `docs/plans/2026-01-01-n8n-upgrade-design.md`
+   - 10x SQLite performance with connection pooling
+   - MCP nodes for SeleneChat integration
+   - Security hardening (task runners, isolated Code execution)
+
+4. **Infrastructure: Feedback Pipeline**
+   - Design doc: `docs/plans/2026-01-02-feedback-pipeline-design.md`
+   - AI classification of #selene-feedback → backlog
 
 ---
 
@@ -471,8 +463,11 @@ cd workflows/01-ingestion
 
 ## Recent Achievements
 
+### 2026-01-02
+✅ Documentation sync - Fixed PROJECT-STATUS.md to reflect 7.2d completion
+
 ### 2025-12-31
-📋 Phase 7.2d Design Complete - AI Provider Toggle
+✅ Phase 7.2d Complete - AI Provider Toggle (PR #6 merged)
 - Local LLM (Ollama) as default, explicit cloud opt-in
 - Global setting with per-conversation override
 - Settings via gear icon in Planning tab header
