@@ -19,7 +19,28 @@ class ObsidianService {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let datePrefix = dateFormatter.string(from: note.createdAt)
 
-        // Search vault recursively for files starting with date
+        // Collect matching file URLs - must be done synchronously
+        // FileManager.DirectoryEnumerator is not Sendable and can't cross async boundaries
+        let candidateURLs = Self.findCandidateFiles(
+            in: vaultPath,
+            withDatePrefix: datePrefix
+        )
+
+        // Now verify titles asynchronously
+        for fileURL in candidateURLs {
+            if await verifyNoteTitle(fileURL: fileURL, expectedTitle: note.title) {
+                print("ObsidianService: Found matching file: \(fileURL.path)")
+                return fileURL
+            }
+        }
+
+        print("ObsidianService: No matching file found for note: \(note.title) (\(datePrefix))")
+        return nil
+    }
+    
+    /// Synchronous helper to find candidate files by date prefix
+    /// Separated to avoid async/Sendable issues with FileManager.DirectoryEnumerator
+    private static func findCandidateFiles(in vaultPath: String, withDatePrefix datePrefix: String) -> [URL] {
         let fileManager = FileManager.default
         guard let enumerator = fileManager.enumerator(
             at: URL(fileURLWithPath: vaultPath),
@@ -27,24 +48,17 @@ class ObsidianService {
             options: [.skipsHiddenFiles]
         ) else {
             print("ObsidianService: Failed to create enumerator for vault path: \(vaultPath)")
-            return nil
+            return []
         }
 
-        // Find files matching: <datePrefix>-*.md
+        var urls: [URL] = []
         for case let fileURL as URL in enumerator {
             let filename = fileURL.lastPathComponent
-
             if filename.hasPrefix(datePrefix) && filename.hasSuffix(".md") {
-                // Verify by checking frontmatter title
-                if await verifyNoteTitle(fileURL: fileURL, expectedTitle: note.title) {
-                    print("ObsidianService: Found matching file: \(fileURL.path)")
-                    return fileURL
-                }
+                urls.append(fileURL)
             }
         }
-
-        print("ObsidianService: No matching file found for note: \(note.title) (\(datePrefix))")
-        return nil
+        return urls
     }
 
     /// Generate Obsidian URI for a file path

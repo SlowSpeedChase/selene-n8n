@@ -40,7 +40,9 @@ struct SeleneChatApp: App {
 
         // Register snapshot providers
         DebugSnapshotService.shared.registerProvider(named: "actions", provider: ActionTracker.shared)
-        DebugSnapshotService.shared.registerProvider(named: "chatViewModel", provider: chatViewModel)
+
+        // Note: chatViewModel registration moved to .task modifier in body
+        // because ChatViewModel is @MainActor isolated
 
         // Start watching for snapshot requests
         DebugSnapshotService.shared.startWatching()
@@ -56,6 +58,13 @@ struct SeleneChatApp: App {
                 .task {
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
+                    
+                    #if DEBUG
+                    // Register chatViewModel provider on main actor
+                    await MainActor.run {
+                        DebugSnapshotService.shared.registerProvider(named: "chatViewModel", provider: chatViewModel)
+                    }
+                    #endif
                 }
         }
         .commands {

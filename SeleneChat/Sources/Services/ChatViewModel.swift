@@ -418,7 +418,7 @@ class ChatViewModel: ObservableObject {
 
 #if DEBUG
 @MainActor
-extension ChatViewModel: DebugSnapshotProvider {
+extension ChatViewModel: @MainActor DebugSnapshotProvider {
     func debugSnapshot() -> [String: Any] {
         return [
             "messagesCount": currentSession.messages.count,

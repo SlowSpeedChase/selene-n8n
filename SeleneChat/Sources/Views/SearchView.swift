@@ -272,11 +272,11 @@ struct NoteRow: View {
                 Spacer()
 
                 HStack(spacing: 4) {
-                    if let energy = note.energyLevel {
+                    if note.energyLevel != nil {
                         Text(note.energyEmoji)
                             .font(.caption)
                     }
-                    if let mood = note.emotionalTone {
+                    if note.emotionalTone != nil {
                         Text(note.moodEmoji)
                             .font(.caption)
                     }

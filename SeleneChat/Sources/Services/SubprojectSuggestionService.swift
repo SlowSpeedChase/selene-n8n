@@ -44,7 +44,8 @@ class SubprojectSuggestionService: ObservableObject {
 
         await MainActor.run { isDetecting = true }
 
-        var candidates: [SubprojectSuggestion] = []
+        // Build candidates array
+        var candidatesBuilder: [SubprojectSuggestion] = []
 
         // 1. Get all projects with their primary concepts
         let projects = try getProjectsWithConcepts()
@@ -74,10 +75,13 @@ class SubprojectSuggestionService: ObservableObject {
                         detectedAt: Date(),
                         actionedAt: nil
                     )
-                    candidates.append(suggestion)
+                    candidatesBuilder.append(suggestion)
                 }
             }
         }
+
+        // Make immutable for safe capture
+        let candidates = candidatesBuilder
 
         // Update published suggestions and reset detecting state
         await MainActor.run {
