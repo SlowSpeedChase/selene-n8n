@@ -33,7 +33,6 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 | **Design ADHD features** | `@.claude/ADHD_Principles.md` | `@.claude/DEVELOPMENT.md` |
 | **Daily operations** | `@.claude/OPERATIONS.md` | `@scripts/CLAUDE.md` |
 | **Check status** | `@.claude/PROJECT-STATUS.md` | `@ROADMAP.md` |
-| **Phase 7 / Task extraction** | `@docs/plans/2025-12-30-task-extraction-planning-design.md` | `@docs/architecture/metadata-definitions.md` |
 | **Development workflow** | `@.claude/GITOPS.md` | `@templates/BRANCH-STATUS.md` |
 
 ---

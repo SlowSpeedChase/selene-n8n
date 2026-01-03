@@ -163,7 +163,6 @@ scripts/things-bridge/
 
 **Documentation:**
 - Status/results: `workflows/07-task-extraction/STATUS.md`
-- Design: `docs/plans/2025-12-30-task-extraction-planning-design.md`
 
 ---
 
@@ -471,7 +470,6 @@ When phases complete, update ROADMAP.md only. This section is a quick reference.
 - Things as task database - only store relationship links in Selene
 - Methodology layer: editable prompts/triggers without code changes
 - Bidirectional Things flow with resurface triggers (progress/stuck/complete)
-- Design doc: `docs/plans/2025-12-31-phase-7.2-selenechat-planning-design.md`
 
 ### 2025-12-30
 ✅ Completed Phase 7.1 - Task Extraction with Classification

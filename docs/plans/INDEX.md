@@ -29,7 +29,6 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
-| 2026-01-02 | feedback-pipeline-implementation.md | Implementation plan for feedback classification |
 | 2026-01-02 | bidirectional-things-implementation.md | Implementation plan for 7.2e |
 | 2026-01-01 | project-grouping-7.2f.1-implementation.md | Implementation plan for 7.2f |
 | 2026-01-02 | subproject-suggestions-implementation.md | Implementation plan for 7.2f sub-project suggestions |
@@ -40,19 +39,6 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
-| 2026-01-03 | worktree-sync-ritual-design.md | 2026-01-03 |
-| 2025-12-31 | ai-provider-toggle-design.md | 2025-12-31 (Phase 7.2d) |
-| 2025-12-30 | task-extraction-planning-design.md | 2025-12-30 |
-| 2025-12-30 | daily-summary-design.md | 2025-12-31 |
-| 2025-12-31 | phase-7.2-selenechat-planning-design.md | Design complete |
-| 2025-12-31 | workflow-lifecycle-management-design.md | Implemented |
-| 2025-12-31 | feedback-pipeline-implementation.md | Merged |
-| 2026-01-01 | selenechat-debug-system-design.md | Merged |
-| 2025-11-14 | ollama-integration-design.md | Implemented |
-| 2025-11-14 | selenechat-database-integration-design.md | Implemented |
-| 2025-11-15 | selenechat-clickable-citations-design.md | Implemented |
-| 2025-11-27 | modular-context-structure.md | Implemented |
-| 2025-11-30 | dev-environment-design.md | Implemented |
 
 ---
 
@@ -60,9 +46,6 @@ Status legend:
 
 | Date | Document | Superseded By |
 |------|----------|---------------|
-| 2025-11-25 | phase-7-1-gatekeeping-design.md | task-extraction-planning-design.md |
-| 2025-11-14 | selenechat-db-integration.md | selenechat-database-integration-design.md |
-| 2025-11-15 | selenechat-data-integration-design.md | selenechat-database-integration-design.md |
 
 ---
 
@@ -72,8 +55,6 @@ These documents need status review:
 
 | Date | Document |
 |------|----------|
-| 2025-11-15 | selenechat-icon-design.md |
-| 2025-11-30 | stop-and-research-skill-design.md |
 | 2025-12-30 | trmnl-integration-design.md |
 | 2025-12-31 | selenechat-vision-and-feedback-loop-design.md |
 | 2025-12-31 | workflow-procedures-design.md |
@@ -88,3 +69,31 @@ When creating a new design doc:
 1. Use format: `YYYY-MM-DD-topic-type.md` (type: design, implementation, analysis)
 2. Add entry to this INDEX.md in appropriate section
 3. Update status when work begins/completes
+---
+
+<details>
+<summary>Archived</summary>
+
+| Date | Document | Archived |
+|------|----------|----------|
+| 2026-01-03 | worktree-sync-ritual-design.md | 2026-01-03 |
+| 2025-12-31 | ai-provider-toggle-design.md | 2026-01-03 |
+| 2025-12-30 | task-extraction-planning-design.md | 2026-01-03 |
+| 2025-12-30 | daily-summary-design.md | 2026-01-03 |
+| 2025-12-31 | phase-7.2-selenechat-planning-design.md | 2026-01-03 |
+| 2025-12-31 | workflow-lifecycle-management-design.md | 2026-01-03 |
+| 2025-12-31 | feedback-pipeline-implementation.md | 2026-01-03 |
+| 2026-01-01 | selenechat-debug-system-design.md | 2026-01-03 |
+| 2025-11-14 | ollama-integration-design.md | 2026-01-03 |
+| 2025-11-14 | selenechat-database-integration-design.md | 2026-01-03 |
+| 2025-11-15 | selenechat-clickable-citations-design.md | 2026-01-03 |
+| 2025-11-27 | modular-context-structure.md | 2026-01-03 |
+| 2025-11-30 | dev-environment-design.md | 2026-01-03 |
+| 2025-11-25 | phase-7-1-gatekeeping-design.md | 2026-01-03 |
+| 2025-11-14 | selenechat-db-integration.md | 2026-01-03 |
+| 2025-11-15 | selenechat-data-integration-design.md | 2026-01-03 |
+| 2025-11-15 | selenechat-icon-design.md | 2026-01-03 |
+| 2025-11-30 | stop-and-research-skill-design.md | 2026-01-03 |
+
+</details>
+
