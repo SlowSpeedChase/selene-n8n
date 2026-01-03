@@ -65,7 +65,7 @@ class DatabaseService: ObservableObject {
     // discussion_threads table
     private let discussionThreads = Table("discussion_threads")
     private let threadId = Expression<Int64>("id")
-    private let threadRawNoteId = Expression<Int64>("raw_note_id")
+    private let threadRawNoteId = Expression<Int64?>("raw_note_id")
     private let threadType = Expression<String>("thread_type")
     private let threadPrompt = Expression<String>("prompt")
     private let threadStatus = Expression<String>("status")
@@ -794,7 +794,7 @@ class DatabaseService: ObservableObject {
 
         return DiscussionThread(
             id: Int(try row.get(discussionThreads[threadId])),
-            rawNoteId: Int(try row.get(discussionThreads[threadRawNoteId])),
+            rawNoteId: (try? row.get(discussionThreads[threadRawNoteId])).flatMap { Int($0) },
             threadType: threadTypeEnum,
             prompt: try row.get(discussionThreads[threadPrompt]),
             status: statusEnum,
@@ -948,13 +948,15 @@ class DatabaseService: ObservableObject {
     /// Parse a discussion thread row including new resurface columns
     private func parseDiscussionThreadRow(_ row: Statement.Element) -> DiscussionThread? {
         guard let id = row[0] as? Int64,
-              let rawNoteId = row[1] as? Int64,
               let typeStr = row[2] as? String,
               let prompt = row[3] as? String,
               let statusStr = row[4] as? String,
               let createdAtStr = row[5] as? String else {
             return nil
         }
+
+        // rawNoteId is now optional (nullable in database)
+        let rawNoteId = (row[1] as? Int64).map { Int($0) }
 
         let threadType = DiscussionThread.ThreadType(rawValue: typeStr) ?? .planning
         let status = DiscussionThread.Status(rawValue: statusStr) ?? .pending
@@ -978,7 +980,7 @@ class DatabaseService: ObservableObject {
 
         return DiscussionThread(
             id: Int(id),
-            rawNoteId: Int(rawNoteId),
+            rawNoteId: rawNoteId,
             threadType: threadType,
             prompt: prompt,
             status: status,
@@ -1009,9 +1011,9 @@ class DatabaseService: ObservableObject {
         let dateFormatter = ISO8601DateFormatter()
 
         for row in try db.prepare(query) {
-            var thread = DiscussionThread(
+            let thread = DiscussionThread(
                 id: Int(row[threadId]),
-                rawNoteId: Int(row[threadRawNoteId]),
+                rawNoteId: row[threadRawNoteId].flatMap { Int($0) },
                 threadType: DiscussionThread.ThreadType(rawValue: row[threadType]) ?? .planning,
                 projectId: row[threadProjectId].map { Int($0) },
                 threadName: row[threadName],
@@ -1030,9 +1032,10 @@ class DatabaseService: ObservableObject {
 
     func createThread(
         projectId: Int,
-        rawNoteId: Int,
+        rawNoteId: Int?,  // Changed from Int to Int?
         threadType: DiscussionThread.ThreadType,
-        prompt: String
+        prompt: String,
+        threadName: String? = nil  // Added for direct naming
     ) async throws -> DiscussionThread {
         guard let db = db else {
             throw DatabaseError.notConnected
@@ -1041,23 +1044,34 @@ class DatabaseService: ObservableObject {
         let dateFormatter = ISO8601DateFormatter()
         let now = dateFormatter.string(from: Date())
 
-        let insertId = try db.run(discussionThreads.insert(
-            threadRawNoteId <- Int64(rawNoteId),
+        var setter: [Setter] = [
             self.threadType <- threadType.rawValue,
             threadPrompt <- prompt,
-            threadStatus <- "pending",
+            threadStatus <- "active",  // Start as active since user initiated
             threadCreatedAt <- now,
             threadProjectId <- Int64(projectId)
-        ))
+        ]
+
+        // Only add rawNoteId if provided
+        if let noteId = rawNoteId {
+            setter.append(threadRawNoteId <- Int64(noteId))
+        }
+
+        // Add thread name if provided
+        if let name = threadName {
+            setter.append(self.threadName <- name)
+        }
+
+        let insertId = try db.run(discussionThreads.insert(setter))
 
         return DiscussionThread(
             id: Int(insertId),
             rawNoteId: rawNoteId,
             threadType: threadType,
             projectId: projectId,
-            threadName: nil,
+            threadName: threadName,
             prompt: prompt,
-            status: .pending,
+            status: .active,
             createdAt: Date(),
             surfacedAt: nil,
             completedAt: nil,
