@@ -11,6 +11,7 @@ struct PlanningView: View {
     @StateObject private var thingsStatusService = ThingsStatusService.shared
     @StateObject private var triggerService = ResurfaceTriggerService.shared
     @State private var isSyncing = false
+    @State private var resurfacedThreads: [DiscussionThread] = []
 
     var body: some View {
         Group {
@@ -73,9 +74,17 @@ struct PlanningView: View {
 
             Divider()
 
-            // Three sections: Inbox, Active Projects, Parked Projects
+            // Three sections: Needs Review, Inbox, Active Projects, Parked Projects
             ScrollView {
                 VStack(spacing: 20) {
+                    // Phase 7.2e: Resurfaced threads needing review
+                    if !resurfacedThreads.isEmpty {
+                        needsReviewSection
+
+                        Divider()
+                            .padding(.horizontal)
+                    }
+
                     // Inbox section - notes pending triage
                     InboxView()
 
@@ -104,21 +113,64 @@ struct PlanningView: View {
         }
     }
 
+    // MARK: - Phase 7.2e: Needs Review Section
+
+    private var needsReviewSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            HStack {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .foregroundColor(.orange)
+                Text("Needs Review")
+                    .font(.headline)
+
+                Text("(\(resurfacedThreads.count))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            // Resurfaced threads
+            LazyVStack(spacing: 12) {
+                ForEach(resurfacedThreads, id: \.id) { thread in
+                    PlanningThreadRow(thread: thread)
+                        .onTapGesture {
+                            selectedThread = thread
+                        }
+                }
+            }
+            .padding()
+        }
+    }
+
     // MARK: - Phase 7.2e: Bidirectional Things Sync
 
     /// Sync task statuses from Things and evaluate resurface triggers
     private func syncThingsAndEvaluateTriggers() async {
-        guard thingsStatusService.isAvailable else {
-            #if DEBUG
-            print("[PlanningView] Things status script not available, skipping sync")
-            #endif
-            return
-        }
-
         isSyncing = true
         defer { isSyncing = false }
 
         do {
+            // Always load resurfaced threads first
+            resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
+
+            #if DEBUG
+            print("[PlanningView] Loaded \(resurfacedThreads.count) resurfaced threads")
+            #endif
+
+            // Only sync with Things if available
+            guard thingsStatusService.isAvailable else {
+                #if DEBUG
+                print("[PlanningView] Things status script not available, skipping sync")
+                #endif
+                return
+            }
+
             // 1. Get all tracked task IDs
             let taskIds = try await databaseService.getAllTaskLinkIds()
             guard !taskIds.isEmpty else {
@@ -173,6 +225,9 @@ struct PlanningView: View {
                     try await databaseService.resurfaceThread(thread.id, reason: trigger.reasonCode)
                 }
             }
+
+            // Reload resurfaced threads after trigger evaluation
+            resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
 
         } catch {
             #if DEBUG
