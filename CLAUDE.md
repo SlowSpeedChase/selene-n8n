@@ -127,6 +127,23 @@ git worktree list
 
 ---
 
+## MANDATORY: Worktree Sync Check
+
+**BEFORE doing ANY work in a `.worktrees/*` directory, you MUST:**
+
+1. Run: `git fetch origin && git rev-list --count HEAD..origin/main`
+2. If behind: Announce and offer to rebase before proceeding
+3. See `@.claude/GITOPS.md` (Session Start Ritual) for full procedure
+
+**Trigger conditions:**
+- User asks to continue work on a feature branch
+- Session starts with working directory in `.worktrees/*`
+- Switching from main repo to a worktree
+
+**This is not optional.** Skipping this leads to painful rebases at merge time.
+
+---
+
 ## Critical Rules (Do NOT)
 
 **Workflow Modifications:**

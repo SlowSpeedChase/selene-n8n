@@ -19,6 +19,37 @@
 
 ---
 
+## Session Start Ritual (MANDATORY)
+
+**Before doing ANY work in a worktree, Claude MUST check for divergence:**
+
+### Step 1: Fetch and Check
+```bash
+git fetch origin
+BEHIND=$(git rev-list --count HEAD..origin/main)
+```
+
+### Step 2: Announce if Behind
+If `BEHIND > 0`:
+> "Main has [X] new commits. Rebase now before continuing?"
+
+Options to offer:
+- **Rebase now** (recommended) → `git rebase origin/main`
+- **Show changes first** → `git log --oneline HEAD..origin/main`
+- **Skip** (not recommended) → Note risk, proceed
+
+If `BEHIND = 0`: Proceed silently.
+
+### Step 3: Handle Rebase
+If rebasing and conflicts occur:
+1. Show conflicting files
+2. Offer to help resolve
+3. Complete with `git rebase --continue`
+
+**Why this matters:** Small, frequent rebases are painless. Large rebases after days of drift cause merge conflicts and frustration.
+
+---
+
 ## Branch Naming Convention
 
 ```
