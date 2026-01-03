@@ -92,13 +92,25 @@ struct ProjectRowView: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(project.name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                HStack(spacing: 6) {
+                    Text(project.name)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    // Review badge if any thread needs review
+                    if project.hasReviewBadge {
+                        Image(systemName: "bell.badge.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                    }
+                }
 
                 HStack(spacing: 8) {
-                    Label("\(project.noteCount)", systemImage: "doc")
+                    Label("\(project.threadCount) threads", systemImage: "bubble.left.and.bubble.right")
+                    Text("\u{2022}")
+                    Label("\(project.noteCount) notes", systemImage: "doc")
                     if let time = project.timeSinceActive {
+                        Text("\u{2022}")
                         Text(time)
                     }
                 }
