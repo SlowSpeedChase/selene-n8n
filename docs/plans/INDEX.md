@@ -22,7 +22,6 @@ Status legend:
 | 2026-01-02 | feedback-pipeline-design.md | infra | AI classification of #selene-feedback → backlog |
 | 2026-01-02 | selenechat-uat-system-design.md | infra | Interactive UAT for SeleneChat views |
 | 2026-01-02 | planning-persistence-refinement-design.md | 7.2g | Conversation persistence + task refinement |
-| 2026-01-03 | worktree-sync-ritual-design.md | infra | Session-start divergence check for worktrees |
 
 ---
 
@@ -41,6 +40,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-03 | worktree-sync-ritual-design.md | 2026-01-03 |
 | 2025-12-31 | ai-provider-toggle-design.md | 2025-12-31 (Phase 7.2d) |
 | 2025-12-30 | task-extraction-planning-design.md | 2025-12-30 |
 | 2025-12-30 | daily-summary-design.md | 2025-12-31 |
