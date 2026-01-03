@@ -14,6 +14,10 @@ struct PlanningView: View {
     @State private var resurfacedThreads: [DiscussionThread] = []
     @State private var activeThreads: [DiscussionThread] = []
 
+    // Phase 7.2f: Sub-project suggestions
+    @StateObject private var suggestionService = SubprojectSuggestionService.shared
+    @State private var isSuggestionsExpanded = true
+
     // Section collapsed states
     @State private var isNeedsReviewExpanded = true    // Start expanded - needs attention
     @State private var isInboxExpanded = true          // Start expanded - primary triage
@@ -99,6 +103,12 @@ struct PlanningView: View {
                                     .id("needsReview")
                             }
 
+                            // Phase 7.2f: Sub-project suggestions
+                            if !suggestionService.suggestions.isEmpty {
+                                suggestionsSection
+                                    .id("suggestions")
+                            }
+
                             // Inbox section - notes pending triage
                             inboxSection
                                 .id("inbox")
@@ -145,6 +155,16 @@ struct PlanningView: View {
                     count: resurfacedThreads.count,
                     color: .orange,
                     isExpanded: $isNeedsReviewExpanded
+                )
+            }
+
+            if !suggestionService.suggestions.isEmpty {
+                sidebarButton(
+                    icon: "lightbulb.fill",
+                    label: "Suggestions",
+                    count: suggestionService.suggestions.count,
+                    color: .yellow,
+                    isExpanded: $isSuggestionsExpanded
                 )
             }
 
@@ -365,6 +385,70 @@ struct PlanningView: View {
         }
     }
 
+    // MARK: - Phase 7.2f: Suggestions Section
+
+    private var suggestionsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            Button(action: { withAnimation { isSuggestionsExpanded.toggle() } }) {
+                HStack {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.yellow)
+                    Text("Suggestions")
+                        .font(.headline)
+
+                    Text("(\(suggestionService.suggestions.count))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: isSuggestionsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            if isSuggestionsExpanded {
+                Divider()
+
+                LazyVStack(spacing: 12) {
+                    ForEach(suggestionService.suggestions) { suggestion in
+                        SubprojectSuggestionCard(
+                            suggestion: suggestion,
+                            onApprove: {
+                                do {
+                                    _ = try await suggestionService.approve(suggestion)
+                                    return true
+                                } catch {
+                                    #if DEBUG
+                                    print("[PlanningView] Approve error: \(error)")
+                                    #endif
+                                    return false
+                                }
+                            },
+                            onDismiss: {
+                                Task {
+                                    do {
+                                        try await suggestionService.dismiss(suggestion)
+                                    } catch {
+                                        #if DEBUG
+                                        print("[PlanningView] Dismiss error: \(error)")
+                                        #endif
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+
     // MARK: - Planning Threads Section
 
     private var planningThreadsSection: some View {
@@ -492,6 +576,9 @@ struct PlanningView: View {
 
             // Reload resurfaced threads after trigger evaluation
             resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
+
+            // Phase 7.2f: Detect sub-project candidates (service configured in DatabaseService)
+            _ = try? await suggestionService.detectCandidates()
 
         } catch {
             #if DEBUG

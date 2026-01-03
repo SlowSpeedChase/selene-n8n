@@ -20,6 +20,7 @@ Status legend:
 | 2026-01-02 | selenechat-auto-builder-design.md | infra | Post-merge hook for auto builds |
 | 2026-01-02 | feedback-pipeline-design.md | infra | AI classification of #selene-feedback → backlog |
 | 2026-01-02 | selenechat-uat-system-design.md | infra | Interactive UAT for SeleneChat views |
+| 2026-01-02 | planning-persistence-refinement-design.md | 7.2g | Conversation persistence + task refinement |
 
 ---
 
@@ -29,6 +30,7 @@ Status legend:
 |------|----------|-------|
 | 2026-01-02 | bidirectional-things-implementation.md | Implementation plan for 7.2e |
 | 2026-01-01 | project-grouping-7.2f.1-implementation.md | Implementation plan for 7.2f |
+| 2026-01-02 | subproject-suggestions-implementation.md | Implementation plan for 7.2f sub-project suggestions |
 
 ---
 
