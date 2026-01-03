@@ -12,6 +12,7 @@ struct PlanningView: View {
     @StateObject private var triggerService = ResurfaceTriggerService.shared
     @State private var isSyncing = false
     @State private var resurfacedThreads: [DiscussionThread] = []
+    @State private var activeThreads: [DiscussionThread] = []
 
     var body: some View {
         Group {
@@ -91,6 +92,14 @@ struct PlanningView: View {
                     Divider()
                         .padding(.horizontal)
 
+                    // Planning threads section - active conversations
+                    if !activeThreads.isEmpty {
+                        planningThreadsSection
+
+                        Divider()
+                            .padding(.horizontal)
+                    }
+
                     // Active projects section - limited to 5 for ADHD focus
                     ActiveProjectsList(onSelectProject: { project in
                         selectedProject = project
@@ -148,6 +157,41 @@ struct PlanningView: View {
         }
     }
 
+    // MARK: - Planning Threads Section
+
+    private var planningThreadsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            HStack {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .foregroundColor(.blue)
+                Text("Planning Conversations")
+                    .font(.headline)
+
+                Text("(\(activeThreads.count))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            // Active threads
+            LazyVStack(spacing: 12) {
+                ForEach(activeThreads, id: \.id) { thread in
+                    PlanningThreadRow(thread: thread)
+                        .onTapGesture {
+                            selectedThread = thread
+                        }
+                }
+            }
+            .padding()
+        }
+    }
+
     // MARK: - Phase 7.2e: Bidirectional Things Sync
 
     /// Sync task statuses from Things and evaluate resurface triggers
@@ -156,11 +200,14 @@ struct PlanningView: View {
         defer { isSyncing = false }
 
         do {
-            // Always load resurfaced threads first
+            // Load resurfaced threads (needing review)
             resurfacedThreads = try await databaseService.fetchThreadsByStatus([.review])
 
+            // Load active/pending planning threads
+            activeThreads = try await databaseService.fetchThreadsByStatus([.active, .pending])
+
             #if DEBUG
-            print("[PlanningView] Loaded \(resurfacedThreads.count) resurfaced threads")
+            print("[PlanningView] Loaded \(resurfacedThreads.count) resurfaced, \(activeThreads.count) active threads")
             #endif
 
             // Only sync with Things if available
