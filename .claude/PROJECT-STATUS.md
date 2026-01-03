@@ -407,28 +407,18 @@ cd workflows/01-ingestion
 
 ## Next Session Priorities
 
-1. **Phase 7.2e: Bidirectional Things Flow** (NEXT)
-   - Implement Things status checking via AppleScript
-   - Add resurface trigger logic (progress/stuck/complete triggers)
-   - Update thread status based on task progress
-   - Scripts already started: `scripts/things-bridge/get-task-status.scpt`
+**Canonical source:** [ROADMAP.md - Phase 7 section](../ROADMAP.md#-phase-7-things-integration-design-revised-2025-12-30)
 
-2. **Phase 7.2f: Things Project Grouping** (Design Complete)
-   - Design doc: `docs/plans/2026-01-01-project-grouping-design.md`
-   - Auto-create projects from 3+ tasks with shared concepts
-   - Auto-assign new tasks to matching projects
-   - Group tasks by type within projects (headings)
-   - Oversized task detection (overwhelm > 7)
+When phases complete, update ROADMAP.md only. This section is a quick reference.
 
-3. **Infrastructure: n8n 2.x Upgrade** (Design Complete)
-   - Design doc: `docs/plans/2026-01-01-n8n-upgrade-design.md`
-   - 10x SQLite performance with connection pooling
-   - MCP nodes for SeleneChat integration
-   - Security hardening (task runners, isolated Code execution)
+| Phase | Status | Summary |
+|-------|--------|---------|
+| 7.2e | TODO | Bidirectional Things Flow - status sync & resurface triggers |
+| 7.2f | Design Complete | Things Project Grouping - auto-create from task clusters |
+| n8n 2.x | Design Complete | Upgrade for 10x SQLite perf, MCP nodes |
+| Feedback Pipeline | Design Complete | AI classification of #selene-feedback |
 
-4. **Infrastructure: Feedback Pipeline**
-   - Design doc: `docs/plans/2026-01-02-feedback-pipeline-design.md`
-   - AI classification of #selene-feedback → backlog
+**Design docs:** See [docs/plans/INDEX.md](../docs/plans/INDEX.md) for all active designs.
 
 ---
 
