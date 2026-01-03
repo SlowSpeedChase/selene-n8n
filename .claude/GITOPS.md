@@ -99,7 +99,7 @@ Copy from `templates/BRANCH-STATUS.md` and fill in:
 |-------|---------|---------------------|
 | **planning** | Finalize approach | Design approved, plan written |
 | **dev** | Build it | Tests first, implementation, no errors |
-| **testing** | Verify it works | All tests pass, manual testing, edge cases |
+| **testing** | Verify it works | All tests pass, manual testing, edge cases, UAT sign-off (SeleneChat) |
 | **docs** | Document it | STATUS.md, README, roadmap |
 | **review** | Get approval | Code reviewed, feedback addressed |
 | **ready** | Prepare to merge | Rebased, final tests, all checks complete |
@@ -300,6 +300,7 @@ git branch -d phase-X.Y/name
 - [ ] Manual testing completed
 - [ ] Edge cases verified
 - [ ] Verified with superpowers:verification-before-completion
+- [ ] UAT sign-off (SeleneChat only - see `SeleneChat/Tests/UAT/`)
 
 ### Docs
 - [ ] workflow STATUS.md updated (if workflow changed)

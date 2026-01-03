@@ -19,6 +19,7 @@ Status legend:
 | 2026-01-02 | plan-archive-agent-design.md | infra | Auto-archive stale design docs |
 | 2026-01-02 | selenechat-auto-builder-design.md | infra | Post-merge hook for auto builds |
 | 2026-01-02 | feedback-pipeline-design.md | infra | AI classification of #selene-feedback → backlog |
+| 2026-01-02 | selenechat-uat-system-design.md | infra | Interactive UAT for SeleneChat views |
 
 ---
 
