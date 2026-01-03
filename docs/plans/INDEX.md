@@ -22,6 +22,8 @@ Status legend:
 | 2026-01-02 | feedback-pipeline-design.md | infra | AI classification of #selene-feedback → backlog |
 | 2026-01-02 | selenechat-uat-system-design.md | infra | Interactive UAT for SeleneChat views |
 | 2026-01-02 | planning-persistence-refinement-design.md | 7.2g | Conversation persistence + task refinement |
+| 2025-12-31 | selenechat-vision-and-feedback-loop-design.md | vision | Core vision + feedback loop design |
+| 2025-12-31 | workflow-standardization-design.md | infra | Bring workflows 02-06 to production standard |
 
 ---
 
@@ -39,6 +41,8 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2025-12-30 | trmnl-integration-design.md | 2025-12-30 |
+| 2025-12-31 | workflow-procedures-design.md | 2025-12-31 |
 
 ---
 
@@ -46,20 +50,7 @@ Status legend:
 
 | Date | Document | Superseded By |
 |------|----------|---------------|
-
----
-
-## Uncategorized
-
-These documents need status review:
-
-| Date | Document |
-|------|----------|
-| 2025-12-30 | trmnl-integration-design.md |
-| 2025-12-31 | selenechat-vision-and-feedback-loop-design.md |
-| 2025-12-31 | workflow-procedures-design.md |
-| 2025-12-31 | workflow-standardization-design.md |
-| auto-create-tasks-from-notes.md | (no date - legacy) |
+| 2025-11-24 | auto-create-tasks-from-notes.md | 2025-12-30-phase-7-1-implementation.md |
 
 ---
 
