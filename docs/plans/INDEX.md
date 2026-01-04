@@ -38,7 +38,6 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
-| 2026-01-01 | project-grouping-7.2f.1-implementation.md | 2026-01-04 |
 
 ---
 
@@ -84,7 +83,7 @@ When creating a new design doc:
 | 2025-12-31 | workflow-procedures-design.md | 2026-01-03 || 2026-01-03 | new-thread-button-fix.md | 2026-01-03 || 2026-01-02 | bidirectional-things-flow-design.md | 2026-01-03 |
 | 2026-01-02 | bidirectional-things-implementation.md | 2026-01-03 || 2026-01-03 | planning-tab-redesign.md | 2026-01-03 |
 | 2026-01-03 | planning-tab-implementation.md | 2026-01-03 |
-| 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 |
+| 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 || 2026-01-01 | project-grouping-7.2f.1-implementation.md | 2026-01-04 |
 
 </details>
 
