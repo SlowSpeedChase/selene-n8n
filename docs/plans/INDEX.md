@@ -37,9 +37,6 @@ Status legend:
 | Date | Document | Superseded By |
 |------|----------|---------------|
 | 2025-11-24 | auto-create-tasks-from-notes.md | 2025-12-30-phase-7-1-implementation.md |
-| 2025-12-31 | selenechat-vision-and-feedback-loop-design.md | selene-thread-system-design.md |
-| 2026-01-01 | project-grouping-design.md | selene-thread-system-design.md |
-| 2026-01-02 | planning-persistence-refinement-design.md | selene-thread-system-design.md |
 
 ---
 
@@ -90,7 +87,9 @@ When creating a new design doc:
 | 2026-01-03 | planning-tab-redesign.md | 2026-01-03 |
 | 2026-01-03 | planning-tab-implementation.md | 2026-01-03 |
 | 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 |
-| 2026-01-01 | project-grouping-7.2f.1-implementation.md | 2026-01-04 |
+| 2026-01-01 | project-grouping-7.2f.1-implementation.md | 2026-01-04 || 2025-12-31 | selenechat-vision-and-feedback-loop-design.md | 2026-01-04 |
+| 2026-01-01 | project-grouping-design.md | 2026-01-04 |
+| 2026-01-02 | planning-persistence-refinement-design.md | 2026-01-04 |
 
 </details>
 
