@@ -8,9 +8,9 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 0 | 5 max |
+| Active | 1 | 5 max |
 | Ready | 0 | - |
-| Draft | 4 | - |
+| Draft | 3 | - |
 | Done | 2 | - |
 | Archived | 34 | - |
 
@@ -20,7 +20,9 @@
 
 ## Active (In Progress)
 
-*None*
+| ID | Title | Priority | Branch |
+|----|-------|----------|--------|
+| US-041 | [Embedding Generation Workflow](active/US-041-embedding-generation-workflow.md) | critical | `US-041/embedding-workflow` |
 
 ---
 
@@ -36,7 +38,6 @@
 
 | ID | Title | Priority | Effort |
 |----|-------|----------|--------|
-| US-041 | [Embedding Generation Workflow](draft/US-041-embedding-generation-workflow.md) | critical | M |
 | US-042 | [Batch Embed Existing Notes](draft/US-042-batch-embed-existing-notes.md) | high | M |
 | US-043 | [Association Computation Workflow](draft/US-043-association-computation-workflow.md) | critical | M |
 | US-044 | [Verify Note Clusters](draft/US-044-verify-note-clusters.md) | high | S |
