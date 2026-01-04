@@ -1,16 +1,45 @@
 # Selene n8n Project - Current Status
 
 **Last Updated:** 2026-01-04
-**Status:** Workflows 01, 07 & 08 Complete - Phase 7.2e Complete ✅ - Phase 7.2f.1 Complete ✅ - Phase 7.2f.2 Ready
+**Status:** NEW DIRECTION - Thread System Implementation
 
 ---
 
 ## Project Overview
 
-Selene is an n8n-based automation system for capturing, processing, and managing notes from various sources (primarily Drafts app) with LLM processing and Obsidian export.
+Selene is a **thought consolidation system** for someone with ADHD. The core problem isn't capturing thoughts or organizing them — it's making sense of them over time and knowing when to act.
 
-**Architecture:** Docker-based n8n with SQLite database
+Notes form **threads** — lines of thinking that span multiple notes, have underlying motivations, and eventually become projects or writing or decisions. **The system's job is to hold the thread so the user doesn't have to.**
+
+**Architecture:** Docker-based n8n with SQLite database + Ollama embeddings
 **Location:** `/Users/chaseeasterling/selene-n8n`
+
+---
+
+## Current Focus: Thread System Phase 1
+
+**Design:** `docs/plans/2026-01-04-selene-thread-system-design.md`
+**Stories:** `docs/stories/INDEX.md` (US-040 through US-044)
+
+### Phase 1: Foundation (Embeddings + Associations)
+
+| Story | Title | Status |
+|-------|-------|--------|
+| US-040 | Thread System Database Migration | Draft |
+| US-041 | Embedding Generation Workflow | Draft |
+| US-042 | Batch Embed Existing Notes | Draft |
+| US-043 | Association Computation Workflow | Draft |
+| US-044 | Verify Note Clusters | Draft |
+
+**Goal:** Position every note in "thought space" and connect them via semantic similarity.
+
+**Checkpoint:** Can query "what notes are similar to this one?" and get meaningful results.
+
+---
+
+## Existing Infrastructure (Keep)
+
+The following workflows remain in production and will be extended by the thread system:
 
 ---
 
@@ -406,48 +435,48 @@ cd workflows/01-ingestion
 
 ## Next Session Priorities
 
-**Canonical source:** [ROADMAP.md - Phase 7 section](../ROADMAP.md#-phase-7-things-integration-design-revised-2025-12-30)
+**NEW DIRECTION:** Thread System (2026-01-04)
 
-When phases complete, update ROADMAP.md only. This section is a quick reference.
+Previous Phase 7.x work has been archived. The new focus is building a thought consolidation system using semantic embeddings and thread detection.
 
 | Phase | Status | Summary |
 |-------|--------|---------|
-| 7.2e | ✅ COMPLETE | Bidirectional Things Flow - status sync & resurface triggers |
-| 7.2f.1 | ✅ COMPLETE | Basic Project Creation - Workflow 08 production ready |
-| 7.2f.2 | Ready | Auto-assignment for new tasks (modify Workflow 07) |
-| n8n 2.x | Design Complete | Upgrade for 10x SQLite perf, MCP nodes |
-| Feedback Pipeline | Design Complete | AI classification of #selene-feedback |
+| thread-system-1 | **NEXT** | Foundation - embeddings + associations |
+| thread-system-2 | Future | Thread detection - clustering + synthesis |
+| thread-system-3 | Future | Living system - auto-processing pipeline |
+| thread-system-4 | Future | Interfaces - Obsidian export, SeleneChat queries |
+| US-029 | Ready | Workflow Standardization (infrastructure) |
 
-**Design docs:** See [docs/plans/INDEX.md](../docs/plans/INDEX.md) for all active designs.
+**Design doc:** `docs/plans/2026-01-04-selene-thread-system-design.md`
+**Stories:** `docs/stories/INDEX.md`
 
 ---
 
 ## Files to Reference
 
 **Must Read:**
-- `workflows/01-ingestion/INDEX.md` - Complete file reference
-- `workflows/01-ingestion/docs/STATUS.md` - Test results & patterns
+- `docs/plans/2026-01-04-selene-thread-system-design.md` - Thread system design
+- `docs/stories/INDEX.md` - User stories for implementation
 - `database/schema.sql` - Database structure
 - `docker-compose.yml` - Environment configuration
 
-**Workflow Files:**
-- `02-llm-processing-workflow.json` - Next to implement
-- `03-pattern-detection-workflow.json`
-- `04-obsidian-export-workflow.json`
-- `05-sentiment-analysis-workflow.json`
-- `06-connection-network-workflow.json`
+**Thread System (New):**
+- `workflows/09-embedding-generation/` - To be created
+- `workflows/10-association-computation/` - To be created
+- `database/migrations/011_thread_system.sql` - To be created
+
+**Existing Workflows (Keep):**
+- `workflows/01-ingestion/` - Note capture (production)
+- `workflows/07-task-extraction/` - Task extraction (production)
+- `workflows/08-daily-summary/` - Daily summaries (production)
 
 ---
 
 ## Questions for Next Session
 
 1. Is Ollama running and accessible?
-2. What model should be used? (default: mistral:7b)
-3. What insights should LLM extract?
-4. Should processing be batched or individual?
-5. How to handle LLM failures/timeouts?
-6. What metadata should be stored in processed_notes?
-7. Should we trigger processing automatically or manually?
+2. Is `nomic-embed-text` model pulled? (`ollama pull nomic-embed-text`)
+3. Start with US-040 (database migration) or US-029 (workflow standardization)?
 
 ---
 
