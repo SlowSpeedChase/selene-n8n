@@ -19,6 +19,7 @@ PENDING_DIR="$PROJECT_DIR/vault/things-pending"
 PROCESSED_DIR="$PROJECT_DIR/vault/things-processed"
 LOG_FILE="$PROJECT_DIR/logs/things-bridge.log"
 APPLESCRIPT="$SCRIPT_DIR/add-task-to-things.scpt"
+ASSIGN_SCRIPT="$SCRIPT_DIR/assign-to-project.scpt"
 
 # Create logs directory if it doesn't exist
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -93,6 +94,26 @@ for json_file in "${json_files[@]}"; do
         processed_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
         log_info "Success: $filename -> Things ID: $things_task_id"
+
+        # Check if task should be assigned to a project
+        project_id=""
+        if [ -n "$JQ_PATH" ]; then
+            project_id=$("$JQ_PATH" -r '.project_id // empty' "$json_file")
+        fi
+
+        # Assign to project if specified
+        if [ -n "$project_id" ]; then
+            log_info "Assigning task to project: $project_id"
+            assign_result=""
+            assign_exit=0
+            assign_result=$(osascript "$ASSIGN_SCRIPT" "$things_task_id" "$project_id" 2>&1) || assign_exit=$?
+
+            if [ $assign_exit -eq 0 ] && [[ "$assign_result" == "SUCCESS" ]]; then
+                log_info "Successfully assigned to project"
+            else
+                log_error "Failed to assign to project: $assign_result (task remains in inbox)"
+            fi
+        fi
 
         # Add things_task_id and processed_at to JSON
         if [ -n "$JQ_PATH" ]; then
