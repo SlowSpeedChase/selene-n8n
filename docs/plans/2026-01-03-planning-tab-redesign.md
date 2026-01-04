@@ -1,6 +1,6 @@
 # Planning Tab Redesign
 
-**Status:** Design Complete
+**Status:** Implemented
 **Created:** 2026-01-03
 **Author:** Chase Easterling + Claude
 **Supersedes:** Section ordering from `2026-01-02-planning-inbox-redesign.md`
@@ -399,5 +399,5 @@ func migrateOrphanThreads() async {
 
 ---
 
-**Document Status:** Design Complete
-**Next Step:** Implementation planning with superpowers:writing-plans
+**Document Status:** Implemented (2026-01-03)
+**Implementation:** See `planning-tab-implementation.md`
