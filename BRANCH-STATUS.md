@@ -1,49 +1,63 @@
-# Branch Status: US-031/auto-assignment
+# Branch Status: US-040/thread-system-migration
 
-**Story:** US-031 - Auto-Assignment for New Tasks
-**Phase:** 7.2f.2
+**Story:** US-040 - Thread System Database Migration
+**Phase:** thread-system-1 (Foundation)
 **Created:** 2026-01-04
 
 ---
 
-## Current Stage: ready
+## Current Stage: dev
 
-- [x] planning
+- [ ] planning
 - [x] dev
-- [x] testing
-- [x] docs
+- [ ] testing
+- [ ] docs
 - [ ] review
-- [x] ready
+- [ ] ready
 
 ---
 
-## Implementation Checklist
+## Objective
 
-- [x] Add "Find Matching Project" node to Workflow 07
-- [x] Update "Prepare Things Task" to include project_id in JSON
-- [x] Update "Store Task Metadata" to save things_project_id
-- [x] Update `process-pending-tasks.sh` to call assign script
-- [x] `assign-to-project.scpt` already exists
-- [x] Test with existing project data
-- [x] Update Workflow 07 STATUS.md
+Create database tables for the thread system foundation:
+- `note_embeddings` - Vector storage for semantic similarity
+- `note_associations` - Pairwise note similarity links
+- `threads` - Emergent clusters of related thinking
+- `thread_notes` - Many-to-many thread-note links
+- `thread_history` - Track thread evolution
 
 ---
 
-## Technical Approach
+## Acceptance Criteria
 
-**Best-Overlap Matching:** Count concept overlaps between task and each project, assign to highest scorer.
+- [ ] Migration file created at `database/migrations/013_thread_system.sql`
+- [ ] All 5 tables created with correct schema
+- [ ] Indexes created for performance
+- [ ] Migration runs successfully on production database
+- [ ] Existing data unaffected (additive change)
+- [ ] Schema documented in `database/schema.sql`
 
-**Workflow 07 modification point:** After "Store Task Metadata" node
+---
 
-**New nodes:**
-1. Find Matching Project (SQL query)
-2. Route by Project Match (IF node)
-3. Assign to Project (osascript + DB update)
+## Progress
+
+### 2026-01-04
+- [x] Branch created
+- [x] Worktree set up at `.worktrees/thread-system-migration`
+- [x] Migration file created (`database/migrations/013_thread_system.sql`)
+- [x] Migration applied to production database
+- [x] Schema updated (`database/schema.sql`)
+- [x] Verification tests passed (5 tables, 11 indexes, CRUD works)
+
+---
+
+## Files Changed
+
+- `database/migrations/013_thread_system.sql` (new)
+- `database/schema.sql` (update)
 
 ---
 
 ## Notes
 
-- Concepts come from `processed_notes.concepts` via Fetch Note Data
-- Projects have `primary_concept` + `related_concepts` in `project_metadata`
-- No AI calls in hot path - pure SQL matching
+This is the first story in the Thread System implementation. It provides the database foundation that all subsequent stories (US-041 through US-044) depend on.
