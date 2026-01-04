@@ -30,7 +30,6 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
-| 2026-01-01 | project-grouping-7.2f.1-implementation.md | Implementation plan for 7.2f |
 | 2026-01-02 | subproject-suggestions-implementation.md | Implementation plan for 7.2f sub-project suggestions |
 
 ---
@@ -39,6 +38,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-01 | project-grouping-7.2f.1-implementation.md | 2026-01-04 |
 
 ---
 

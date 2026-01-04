@@ -1,7 +1,7 @@
 # Selene n8n Project - Current Status
 
-**Last Updated:** 2026-01-03
-**Status:** Workflows 01, 07 & 08 Complete - Phase 7.2d Complete ✅ - Phase 7.2e Complete ✅ - Phase 7.2f Ready
+**Last Updated:** 2026-01-04
+**Status:** Workflows 01, 07 & 08 Complete - Phase 7.2e Complete ✅ - Phase 7.2f.1 Complete ✅ - Phase 7.2f.2 Ready
 
 ---
 
@@ -413,7 +413,8 @@ When phases complete, update ROADMAP.md only. This section is a quick reference.
 | Phase | Status | Summary |
 |-------|--------|---------|
 | 7.2e | ✅ COMPLETE | Bidirectional Things Flow - status sync & resurface triggers |
-| 7.2f | Design Complete | Things Project Grouping - auto-create from task clusters |
+| 7.2f.1 | ✅ COMPLETE | Basic Project Creation - Workflow 08 production ready |
+| 7.2f.2 | Ready | Auto-assignment for new tasks (modify Workflow 07) |
 | n8n 2.x | Design Complete | Upgrade for 10x SQLite perf, MCP nodes |
 | Feedback Pipeline | Design Complete | AI classification of #selene-feedback |
 
