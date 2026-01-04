@@ -49,22 +49,57 @@ When a new task is extracted from a note, it often relates to an existing projec
 - Scripts: `assign-to-project.scpt`
 - Design doc: [Project Grouping Design](../../plans/2026-01-01-project-grouping-design.md) (Phase 7.2b section)
 
-**Implementation from design doc:**
+**Implementation (refined 2026-01-04):**
+
+**Best-Overlap Matching Algorithm:**
+```sql
+-- Count how many of task's concepts match each project
+-- Assign to project with most overlap (tie-breaker: task_count)
+WITH task_concepts AS (
+  SELECT value as concept FROM json_each(:task_concepts)
+),
+project_overlap AS (
+  SELECT
+    pm.things_project_id,
+    pm.project_name,
+    pm.task_count,
+    SUM(CASE
+      WHEN tc.concept = pm.primary_concept THEN 1
+      WHEN tc.concept IN (SELECT value FROM json_each(pm.related_concepts)) THEN 1
+      ELSE 0
+    END) as overlap_count
+  FROM project_metadata pm
+  CROSS JOIN task_concepts tc
+  WHERE pm.status = 'active'
+  GROUP BY pm.things_project_id
+)
+SELECT things_project_id, project_name, overlap_count
+FROM project_overlap
+WHERE overlap_count > 0
+ORDER BY overlap_count DESC, task_count DESC
+LIMIT 1
 ```
-After "Store Task Metadata" node, add:
 
-1. SQL: Find project for this concept
-   SELECT things_project_id FROM project_metadata
-   WHERE primary_concept = ? OR related_concepts LIKE ?
-   ORDER BY task_count DESC LIMIT 1
+**Workflow 07 modification (after "Store Task Metadata" node):**
 
-2. If exists:
-   - Script: assign-to-project.scpt
-   - SQL: Update task_metadata.things_project_id
+1. New node: "Find Matching Project" (Function)
+   - Input: task's `related_concepts` JSON array
+   - Run best-overlap SQL query above
+   - Output: `things_project_id` or null
 
-3. If not:
-   - Leave in inbox (Workflow 08 will batch later)
-```
+2. New node: "Route by Project Match" (IF)
+   - If `things_project_id` exists → assign path
+   - Else → skip (stays in inbox)
+
+3. New node: "Assign to Project" (Function)
+   - Run: `assign-to-project.scpt` via osascript
+   - Update: `task_metadata.things_project_id`
+
+**Why best-overlap:**
+- Task: `["home-renovation", "budgeting"]`
+- Project A: `primary = "home-renovation"` → overlap = 1
+- Project B: `primary = "budgeting", related = ["home-renovation"]` → overlap = 2
+- Winner: Project B (better fit)
 
 ---
 

@@ -8,8 +8,8 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 0 | 5 max |
-| Ready | 5 | - |
+| Active | 1 | 5 max |
+| Ready | 4 | - |
 | Draft | 29 | - |
 | Done | 1 | - |
 
@@ -19,7 +19,9 @@
 
 ## Active (In Progress)
 
-*None currently*
+| ID | Title | Phase | Branch |
+|----|-------|-------|--------|
+| US-031 | [Auto-Assignment for New Tasks](active/US-031-auto-assignment.md) | 7.2f.2 | `US-031/auto-assignment` |
 
 ---
 
@@ -31,7 +33,6 @@
 | US-002 | [Energy Level Assignment](ready/US-002-energy-level-assignment.md) | 7.1 | critical | M |
 | US-003 | [Time Estimation](ready/US-003-time-estimation.md) | 7.1 | critical | M |
 | US-025 | [Feedback Pipeline](ready/US-025-feedback-pipeline.md) | infra | high | M |
-| US-031 | [Auto-Assignment for New Tasks](ready/US-031-auto-assignment.md) | 7.2f.2 | high | M |
 
 ---
 
@@ -114,7 +115,7 @@ Quick reference: which stories deliver which phases.
 |-------|-------------|---------|--------|
 | 7.1 | Task Extraction | US-001, US-002, US-003, US-004, US-005 | Ready |
 | 7.2f.1 | Basic Project Creation | US-006 | **Done** |
-| 7.2f.2 | Auto-Assignment | US-031 | Ready |
+| 7.2f.2 | Auto-Assignment | US-031 | **Active** |
 | 7.2f.3 | Headings Within Projects | US-032 | Draft |
 | 7.2f.4 | Oversized Task Detection | US-033 | Draft |
 | 7.2f.5 | Project Completion | US-034 | Draft |
