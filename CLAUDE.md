@@ -27,13 +27,14 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 
 | Task | Primary Context | Supporting Context |
 |------|-----------------|-------------------|
+| **Work on a story** | `@.claude/STORIES.md` | `@docs/stories/INDEX.md` |
 | **Modify workflows** | `@workflows/CLAUDE.md` | `@.claude/OPERATIONS.md` |
 | **Understand architecture** | `@.claude/DEVELOPMENT.md` | `@ROADMAP.md` |
 | **Run tests** | `@.claude/OPERATIONS.md` | `@workflows/CLAUDE.md` |
 | **Design ADHD features** | `@.claude/ADHD_Principles.md` | `@.claude/DEVELOPMENT.md` |
 | **Daily operations** | `@.claude/OPERATIONS.md` | `@scripts/CLAUDE.md` |
-| **Check status** | `@.claude/PROJECT-STATUS.md` | `@ROADMAP.md` |
-| **Development workflow** | `@.claude/GITOPS.md` | `@templates/BRANCH-STATUS.md` |
+| **Check status** | `@.claude/PROJECT-STATUS.md` | `@docs/stories/INDEX.md` |
+| **Development workflow** | `@.claude/GITOPS.md` | `@.claude/STORIES.md` |
 
 ---
 
@@ -42,7 +43,8 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 **Claude MUST follow `@.claude/GITOPS.md` for all development work.**
 
 Key requirements:
-- All work in phase-named branches: `phase-X.Y/feature-name`
+- All work starts with a user story in `docs/stories/` (see `@.claude/STORIES.md`)
+- Branch naming: `US-NNN/feature-name` or `phase-X.Y/feature-name`
 - Every branch has `BRANCH-STATUS.md` with stage checklists
 - Use superpowers skills at each stage (TDD, verification, code review)
 - Full closure ritual after merge (archive, update roadmap, cleanup)
@@ -51,14 +53,18 @@ Key requirements:
 
 **Quick commands:**
 ```bash
+# Story management
+./scripts/story.sh status              # View story dashboard
+./scripts/story.sh promote US-001      # Move story to next state
+
 # Start new work
-git worktree add -b phase-X.Y/name .worktrees/name main
+git worktree add -b US-001/auto-extract-tasks .worktrees/auto-extract-tasks main
 
 # Check active work
 git worktree list
 ```
 
-**See:** `@.claude/GITOPS.md` for complete workflow
+**See:** `@.claude/GITOPS.md` for complete workflow, `@.claude/STORIES.md` for story management
 
 ---
 

@@ -221,14 +221,14 @@ US-NNN: Story title
 
 ## Implementation Checklist
 
-- [ ] Create directory structure
-- [ ] Create STORY-TEMPLATE.md
-- [ ] Create story.sh script
-- [ ] Migrate 20 stories from things-integration-stories.md
-- [ ] Create 10 stories from active design docs
-- [ ] Create INDEX.md with all stories
-- [ ] Create .claude/STORIES.md
-- [ ] Update CLAUDE.md
-- [ ] Update GITOPS.md
-- [ ] Archive original files
+- [x] Create directory structure
+- [x] Create STORY-TEMPLATE.md
+- [x] Create story.sh script
+- [x] Migrate 20 stories from things-integration-stories.md
+- [x] Create 10 stories from active design docs
+- [x] Create INDEX.md with all stories
+- [x] Create .claude/STORIES.md
+- [x] Update CLAUDE.md
+- [x] Update GITOPS.md
+- [x] Archive original files
 - [ ] Commit all changes

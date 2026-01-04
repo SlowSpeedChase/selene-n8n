@@ -52,14 +52,20 @@ If rebasing and conflicts occur:
 
 ## Branch Naming Convention
 
+Two formats supported:
+
 ```
-phase-X.Y/short-description
+US-NNN/short-description    # Story-driven (preferred)
+phase-X.Y/short-description # Phase-driven (legacy)
 ```
 
 **Examples:**
-- `phase-7.1/task-extraction`
-- `phase-7.2/selenechat-planning`
-- `phase-3.1/pattern-detection-fix`
+- `US-001/auto-extract-tasks` (story-driven)
+- `US-017/daily-planning` (story-driven)
+- `phase-7.1/task-extraction` (phase-driven)
+- `phase-7.2/selenechat-planning` (phase-driven)
+
+**See:** `@.claude/STORIES.md` for story workflow
 
 ---
 
