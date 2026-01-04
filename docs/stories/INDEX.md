@@ -9,9 +9,9 @@
 | State | Count | Limit |
 |-------|-------|-------|
 | Active | 0 | 5 max |
-| Ready | 1 | - |
+| Ready | 0 | - |
 | Draft | 4 | - |
-| Done | 1 | - |
+| Done | 2 | - |
 | Archived | 34 | - |
 
 **Command:** `./scripts/story.sh status`
@@ -26,9 +26,7 @@
 
 ## Ready (Actionable)
 
-| ID | Title | Phase | Priority | Effort |
-|----|-------|-------|----------|--------|
-| US-029 | [Workflow Standardization](ready/US-029-workflow-standardization.md) | infra | high | L |
+*None*
 
 ---
 
@@ -49,6 +47,7 @@
 
 | ID | Title | Phase | Completed |
 |----|-------|-------|-----------|
+| US-029 | [Workflow Standardization](done/US-029-workflow-standardization.md) | infra | 2026-01-04 |
 | US-040 | [Thread System Database Migration](done/US-040-thread-system-migration.md) | thread-system-1 | 2026-01-04 |
 
 ---
@@ -89,7 +88,7 @@ Quick reference: which stories deliver which phases.
 | thread-system-2 | Thread Detection | TBD | Future |
 | thread-system-3 | Living System | TBD | Future |
 | thread-system-4 | Interfaces | TBD | Future |
-| infra | Infrastructure | US-029 | Ready |
+| infra | Infrastructure | US-029 | Done |
 
 ---
 
