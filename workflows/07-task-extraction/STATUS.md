@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 7.1 - Task Extraction COMPLETE
-**Last Updated:** 2025-12-30
-**Status:** PRODUCTION READY - Classification + Task Extraction + Things Integration Working
+**Phase:** 7.2f.2 - Auto-Assignment COMPLETE
+**Last Updated:** 2026-01-04
+**Status:** PRODUCTION READY - Classification + Task Extraction + Things Integration + Auto-Assignment Working
 
 ---
 
@@ -91,6 +91,24 @@ The task extraction workflow automatically classifies notes and extracts actiona
 | Discussion thread | PASS | Created with type `planning` |
 | Task count | PASS | 0 (not sent to Things) |
 | Things files | PASS | None created |
+
+### Test Run: 2026-01-04 (Phase 7.2f.2 - Auto-Assignment)
+
+#### Auto-Assignment Path Test
+
+| Step | Status | Details |
+|------|--------|---------|
+| Note created | PASS | ID: 217 |
+| Classification | PASS | `actionable` |
+| Task extraction | PASS | 1 task extracted |
+| Find Matching Project | PASS | Matched "Home Renovation" with overlap=2 |
+| `matched_project_id` passed | PASS | `test-project-home-reno` |
+| `task_metadata.things_project_id` | PASS | Stored correctly |
+
+**Matching Algorithm Verified:**
+- Task concepts: `["home-renovation", "shopping", "planning"]`
+- Project "Home Renovation": `primary_concept="home-renovation"`, `related_concepts=["budgeting", "planning", "organization"]`
+- Overlap count: 2 (`home-renovation` + `planning`)
 
 ---
 
