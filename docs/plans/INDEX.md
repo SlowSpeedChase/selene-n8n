@@ -39,9 +39,6 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
-| 2026-01-03 | planning-tab-redesign.md | 2026-01-03 |
-| 2026-01-03 | planning-tab-implementation.md | 2026-01-03 |
-| 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 |
 
 ---
 
@@ -85,7 +82,9 @@ When creating a new design doc:
 | 2025-11-15 | selenechat-icon-design.md | 2026-01-03 |
 | 2025-11-30 | stop-and-research-skill-design.md | 2026-01-03 || 2025-12-30 | trmnl-integration-design.md | 2026-01-03 |
 | 2025-12-31 | workflow-procedures-design.md | 2026-01-03 || 2026-01-03 | new-thread-button-fix.md | 2026-01-03 || 2026-01-02 | bidirectional-things-flow-design.md | 2026-01-03 |
-| 2026-01-02 | bidirectional-things-implementation.md | 2026-01-03 |
+| 2026-01-02 | bidirectional-things-implementation.md | 2026-01-03 || 2026-01-03 | planning-tab-redesign.md | 2026-01-03 |
+| 2026-01-03 | planning-tab-implementation.md | 2026-01-03 |
+| 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 |
 
 </details>
 
