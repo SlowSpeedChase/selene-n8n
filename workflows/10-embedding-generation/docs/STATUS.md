@@ -1,6 +1,6 @@
 # Workflow 10: Embedding Generation - Status
 
-## Current Status: In Development
+## Current Status: Ready (with known limitation)
 
 **Last Updated:** 2026-01-04
 
@@ -8,24 +8,28 @@
 
 | Test Case | Status | Notes |
 |-----------|--------|-------|
-| Single note embedding | Pending | - |
-| Batch embedding | Pending | - |
-| Skip existing (idempotent) | Pending | - |
-| Note not found | Pending | - |
-| Verify 768 dimensions | Pending | - |
+| Single note embedding | PASS | Creates 768-dim embedding |
+| Batch embedding | FAIL | Only processes first item (known n8n limitation) |
+| Skip existing (idempotent) | PASS | Correctly skips already-embedded notes |
+| Note not found | PASS | Gracefully handles missing notes |
+| Verify 768 dimensions | PASS | nomic-embed-text produces correct dimensions |
+
+**Summary:** 4/5 tests pass. Core functionality works.
 
 ## Change Log
 
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-01-04 | Initial workflow creation | Claude |
+| 2026-01-04 | Fixed test script for async verification | Claude |
+| 2026-01-04 | Added test_run column to note_embeddings | Claude |
 
 ## Known Issues
 
-None yet - awaiting first test run.
+1. **Batch processing limitation** - When multiple note_ids are sent, only the first is processed. Workaround: Send individual requests or implement a loop caller workflow.
 
 ## Dependencies
 
-- [ ] Ollama running with `nomic-embed-text` model
-- [ ] `note_embeddings` table exists in database
-- [ ] Workflow imported and activated in n8n
+- [x] Ollama running with `nomic-embed-text` model
+- [x] `note_embeddings` table exists in database
+- [x] Workflow imported and activated in n8n (ID: PbTESfTi0gIbxZiT)

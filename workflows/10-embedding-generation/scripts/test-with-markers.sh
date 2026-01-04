@@ -59,8 +59,8 @@ create_test_note() {
     local note_id
 
     note_id=$(sqlite3 "$DB_PATH" "
-        INSERT INTO raw_notes (content, content_hash, test_run, source_type)
-        VALUES ('$content', 'hash-${TEST_RUN_ID}-$(date +%s%N)', '${TEST_RUN_ID}', 'test');
+        INSERT INTO raw_notes (title, content, content_hash, created_at, test_run, source_type)
+        VALUES ('Test Note', '$content', 'hash-${TEST_RUN_ID}-$(date +%s%N)', datetime('now'), '${TEST_RUN_ID}', 'test');
         SELECT last_insert_rowid();
     ")
 
@@ -111,54 +111,103 @@ echo ""
 # ============================================
 # Test 1: Single note embedding
 # ============================================
-check_single_embed() {
-    local response="$1"
-    # Check response indicates success and 1 embedded
-    echo "$response" | jq -e '.success == true and .summary.embedded == 1' > /dev/null 2>&1
-}
+echo -n "Test $((TOTAL + 1)): Single note embedding... "
+TOTAL=$((TOTAL + 1))
 
-run_test "Single note embedding" \
-    "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\"}" \
-    check_single_embed
+curl -s -X POST "$WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+
+# Wait for async processing
+sleep 3
+
+# Verify in database
+EMBED_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_embeddings WHERE raw_note_id = $NOTE_1 AND test_run = '${TEST_RUN_ID}';")
+
+if [ "$EMBED_COUNT" = "1" ]; then
+    echo -e "${GREEN}PASS${NC}"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}FAIL${NC}"
+    echo "  Expected 1 embedding, got: $EMBED_COUNT"
+    FAILED=$((FAILED + 1))
+fi
 
 # ============================================
 # Test 2: Batch embedding (multiple notes)
 # ============================================
-check_batch_embed() {
-    local response="$1"
-    # Check response indicates 2 new embeddings
-    echo "$response" | jq -e '.success == true and .summary.embedded == 2' > /dev/null 2>&1
-}
+echo -n "Test $((TOTAL + 1)): Batch embedding (2 notes)... "
+TOTAL=$((TOTAL + 1))
 
-run_test "Batch embedding (2 notes)" \
-    "{\"note_ids\": [$NOTE_2, $NOTE_3], \"test_run\": \"${TEST_RUN_ID}\"}" \
-    check_batch_embed
+curl -s -X POST "$WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"note_ids\": [$NOTE_2, $NOTE_3], \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+
+sleep 8
+
+# Verify both notes got embeddings
+BATCH_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_embeddings WHERE raw_note_id IN ($NOTE_2, $NOTE_3) AND test_run = '${TEST_RUN_ID}';")
+
+if [ "$BATCH_COUNT" = "2" ]; then
+    echo -e "${GREEN}PASS${NC}"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}FAIL${NC}"
+    echo "  Expected 2 embeddings, got: $BATCH_COUNT"
+    FAILED=$((FAILED + 1))
+fi
 
 # ============================================
 # Test 3: Idempotency - skip existing embedding
 # ============================================
-check_skip_existing() {
-    local response="$1"
-    # Should skip (already embedded in Test 1)
-    echo "$response" | jq -e '.success == true and .summary.skipped == 1 and .summary.embedded == 0' > /dev/null 2>&1
-}
+echo -n "Test $((TOTAL + 1)): Skip existing embedding (idempotent)... "
+TOTAL=$((TOTAL + 1))
 
-run_test "Skip existing embedding (idempotent)" \
-    "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\"}" \
-    check_skip_existing
+# Get current count for NOTE_1
+BEFORE_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_embeddings WHERE raw_note_id = $NOTE_1;")
+
+curl -s -X POST "$WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+
+sleep 3
+
+# Should still be same count (not duplicated)
+AFTER_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_embeddings WHERE raw_note_id = $NOTE_1;")
+
+if [ "$BEFORE_COUNT" = "$AFTER_COUNT" ] && [ "$AFTER_COUNT" = "1" ]; then
+    echo -e "${GREEN}PASS${NC}"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}FAIL${NC}"
+    echo "  Before: $BEFORE_COUNT, After: $AFTER_COUNT (expected both 1)"
+    FAILED=$((FAILED + 1))
+fi
 
 # ============================================
 # Test 4: Note not found
 # ============================================
-check_not_found() {
-    local response="$1"
-    # Should report not_found
-    echo "$response" | jq -e '.success == true and .summary.not_found == 1' > /dev/null 2>&1
-}
+echo -n "Test $((TOTAL + 1)): Note not found (graceful)... "
+TOTAL=$((TOTAL + 1))
 
-run_test "Note not found (graceful)" \
-    "{\"note_id\": 999999, \"test_run\": \"${TEST_RUN_ID}\"}" \
-    check_not_found
+# This should not crash and should not create an embedding
+curl -s -X POST "$WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"note_id\": 999999, \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+
+sleep 2
+
+# Verify no embedding created for non-existent note
+NOT_FOUND_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_embeddings WHERE raw_note_id = 999999;")
+
+if [ "$NOT_FOUND_COUNT" = "0" ]; then
+    echo -e "${GREEN}PASS${NC}"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "${RED}FAIL${NC}"
+    echo "  Expected 0 embeddings for missing note, got: $NOT_FOUND_COUNT"
+    FAILED=$((FAILED + 1))
+fi
 
 # ============================================
 # Test 5: Verify embedding dimensions

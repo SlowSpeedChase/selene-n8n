@@ -6,7 +6,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "api/embed",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "webhook-embed",
@@ -150,20 +150,6 @@
     },
     {
       "parameters": {
-        "mode": "combine",
-        "mergeByFields": {
-          "values": []
-        },
-        "options": {}
-      },
-      "id": "merge-results",
-      "name": "Merge All Results",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [2050, 200]
-    },
-    {
-      "parameters": {
         "functionCode": "// Aggregate all results into summary\nconst items = $input.all();\n\nlet embedded = 0;\nlet skipped = 0;\nlet notFound = 0;\nlet failed = 0;\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  results.push({\n    note_id: data.note_id,\n    status: data.status,\n    error: data.error || null,\n    dimensions: data.dimensions || null\n  });\n  \n  switch (data.status) {\n    case 'embedded':\n      embedded++;\n      break;\n    case 'skipped':\n      skipped++;\n      break;\n    case 'not_found':\n      notFound++;\n      break;\n    case 'failed':\n      failed++;\n      break;\n  }\n}\n\nconst totalProcessed = items.length;\n\nreturn {\n  json: {\n    success: failed === 0,\n    summary: {\n      total: totalProcessed,\n      embedded: embedded,\n      skipped: skipped,\n      not_found: notFound,\n      failed: failed\n    },\n    results: results\n  }\n};"
       },
       "id": "aggregate-results",
@@ -287,7 +273,7 @@
       "main": [
         [
           {
-            "node": "Merge All Results",
+            "node": "Aggregate Results",
             "type": "main",
             "index": 0
           }
@@ -298,7 +284,7 @@
       "main": [
         [
           {
-            "node": "Merge All Results",
+            "node": "Aggregate Results",
             "type": "main",
             "index": 0
           }
@@ -309,7 +295,7 @@
       "main": [
         [
           {
-            "node": "Merge All Results",
+            "node": "Aggregate Results",
             "type": "main",
             "index": 0
           }
@@ -317,17 +303,6 @@
       ]
     },
     "Mark Not Found": {
-      "main": [
-        [
-          {
-            "node": "Merge All Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge All Results": {
       "main": [
         [
           {
