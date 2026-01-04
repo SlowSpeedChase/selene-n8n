@@ -39,7 +39,7 @@ log_step() {
 
 # Wrapper for n8n CLI commands - filters noisy "Error tracking disabled" message
 n8n_exec() {
-    docker exec "$CONTAINER_NAME" n8n "$@" 2>&1 | grep -v "Error tracking disabled"
+    docker exec "$CONTAINER_NAME" n8n "$@" 2>&1 | grep -v "Error tracking disabled" || true
 }
 
 # Check if container is running
@@ -157,7 +157,8 @@ import_workflow() {
     fi
 }
 
-# Update workflow (export backup, then import)
+# Update workflow by directly updating the database
+# Note: Git is the backup - no need to export before updating
 update_workflow() {
     local workflow_id="$1"
     local input_file="$2"
@@ -167,15 +168,54 @@ update_workflow() {
         exit 1
     fi
 
-    # Create backup first
-    log_step "Creating backup of workflow $workflow_id..."
-    export_workflow "$workflow_id"
+    # Resolve to absolute path if relative
+    if [[ "$input_file" != /* ]]; then
+        input_file="$(pwd)/$input_file"
+    fi
 
-    # Import updated version
-    log_step "Importing updated workflow..."
-    import_workflow "$input_file" "--separate"
+    if [ ! -f "$input_file" ]; then
+        log_error "File not found: $input_file"
+        exit 1
+    fi
 
-    log_info "✓ Workflow updated successfully"
+    # Verify workflow exists
+    local existing=$(docker exec "$CONTAINER_NAME" sqlite3 /home/node/.n8n/database.sqlite \
+        "SELECT id FROM workflow_entity WHERE id = '$workflow_id';")
+    if [ -z "$existing" ]; then
+        log_error "Workflow ID '$workflow_id' not found in n8n"
+        exit 1
+    fi
+
+    # Copy file into container
+    local container_path="/tmp/workflow-update-$(date +%s).json"
+    log_step "Copying workflow to container..."
+    docker cp "$input_file" "${CONTAINER_NAME}:${container_path}"
+
+    # Update workflow using Python (handles JSON escaping properly)
+    log_step "Updating workflow in database..."
+    docker exec "$CONTAINER_NAME" python3 -c "
+import json
+import sqlite3
+
+with open('$container_path', 'r') as f:
+    wf = json.load(f)
+
+conn = sqlite3.connect('/home/node/.n8n/database.sqlite')
+conn.execute('''
+    UPDATE workflow_entity
+    SET nodes = ?, connections = ?, updatedAt = datetime('now')
+    WHERE id = ?
+''', (json.dumps(wf['nodes']), json.dumps(wf['connections']), '$workflow_id'))
+conn.commit()
+print(f'Updated {conn.total_changes} row(s)')
+conn.close()
+"
+
+    # Cleanup temp file
+    docker exec "$CONTAINER_NAME" rm -f "$container_path" 2>/dev/null || true
+
+    log_info "✓ Workflow $workflow_id updated successfully"
+    log_info "Note: Restart n8n if changes don't appear: docker-compose restart n8n"
 }
 
 # Show workflow details
