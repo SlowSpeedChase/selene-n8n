@@ -8,10 +8,10 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 1 | 5 max |
+| Active | 0 | 5 max |
 | Ready | 1 | - |
 | Draft | 4 | - |
-| Done | 0 | - |
+| Done | 1 | - |
 | Archived | 34 | - |
 
 **Command:** `./scripts/story.sh status`
@@ -20,9 +20,7 @@
 
 ## Active (In Progress)
 
-| ID | Title | Phase | Branch |
-|----|-------|-------|--------|
-| US-040 | [Thread System Database Migration](active/US-040-thread-system-migration.md) | thread-system-1 | `US-040/thread-system-migration` |
+*None*
 
 ---
 
@@ -49,7 +47,9 @@
 
 ## Done (Completed)
 
-*None*
+| ID | Title | Phase | Completed |
+|----|-------|-------|-----------|
+| US-040 | [Thread System Database Migration](done/US-040-thread-system-migration.md) | thread-system-1 | 2026-01-04 |
 
 ---
 

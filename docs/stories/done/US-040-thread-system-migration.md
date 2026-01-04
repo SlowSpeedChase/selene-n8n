@@ -1,12 +1,11 @@
 # US-040: Thread System Database Migration
 
-**Status:** active
+**Status:** done
 **Priority:** critical
 **Effort:** S
 **Phase:** thread-system-1
 **Created:** 2026-01-04
-**Updated:** 2026-01-04
-**Branch:** `US-040/thread-system-migration`
+**Completed:** 2026-01-04
 
 ---
 
@@ -69,6 +68,5 @@ This is pure infrastructure - no user-facing changes, but critical for Phase 1.
 
 ## Links
 
-- **Branch:** `US-040/thread-system-migration`
-- **Worktree:** `.worktrees/thread-system-migration`
-- **PR:** (added when complete)
+- **Branch:** `US-040/thread-system-migration` (merged)
+- **PR:** https://github.com/SlowSpeedChase/selene-n8n/pull/21
