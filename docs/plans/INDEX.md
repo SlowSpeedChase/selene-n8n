@@ -13,6 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-04 | user-story-system-design.md | infra | Story-driven development workflow |
 | 2026-01-01 | project-grouping-design.md | 7.2f | Things project grouping |
 | 2026-01-01 | n8n-upgrade-design.md | infra | n8n 1.x to 2.x upgrade |
 | 2026-01-02 | plan-archive-agent-design.md | infra | Auto-archive stale design docs |
