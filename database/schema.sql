@@ -129,3 +129,85 @@ CREATE INDEX idx_feedback_theme ON feedback_notes(theme);
 CREATE INDEX idx_feedback_status ON feedback_notes(status);
 CREATE INDEX idx_feedback_cluster ON feedback_notes(cluster_id);
 CREATE INDEX idx_feedback_test_run ON feedback_notes(test_run);
+
+-- Thread System: Semantic embeddings and thought consolidation
+-- Migration: 013_thread_system.sql (2026-01-04)
+
+-- Vector embedding for each note (768-dim from nomic-embed-text)
+CREATE TABLE note_embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_note_id INTEGER NOT NULL UNIQUE,
+    embedding BLOB NOT NULL,  -- JSON array of floats (768 dimensions)
+    model_version TEXT NOT NULL,  -- e.g., 'nomic-embed-text'
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (raw_note_id) REFERENCES raw_notes(id) ON DELETE CASCADE
+);
+
+-- Note-to-note similarity links (cosine similarity above threshold)
+CREATE TABLE note_associations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_a_id INTEGER NOT NULL,
+    note_b_id INTEGER NOT NULL,
+    similarity_score REAL NOT NULL,  -- 0.0 to 1.0
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (note_a_id) REFERENCES raw_notes(id) ON DELETE CASCADE,
+    FOREIGN KEY (note_b_id) REFERENCES raw_notes(id) ON DELETE CASCADE,
+    UNIQUE(note_a_id, note_b_id),
+    CHECK(note_a_id < note_b_id),
+    CHECK(similarity_score >= 0.0 AND similarity_score <= 1.0)
+);
+
+-- Threads: Emergent clusters of related thinking
+CREATE TABLE threads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    why TEXT,  -- Underlying motivation/goal
+    summary TEXT,
+    status TEXT DEFAULT 'active',  -- active, paused, completed, abandoned
+    note_count INTEGER DEFAULT 0,
+    last_activity_at TEXT,
+    emotional_charge REAL,  -- Aggregate sentiment
+    momentum_score REAL,  -- Recent activity score
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    CHECK(status IN ('active', 'paused', 'completed', 'abandoned'))
+);
+
+-- Many-to-many: threads <-> notes
+CREATE TABLE thread_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id INTEGER NOT NULL,
+    raw_note_id INTEGER NOT NULL,
+    added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    relevance_score REAL,  -- 0.0 to 1.0
+    FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE,
+    FOREIGN KEY (raw_note_id) REFERENCES raw_notes(id) ON DELETE CASCADE,
+    UNIQUE(thread_id, raw_note_id)
+);
+
+-- Thread evolution history
+CREATE TABLE thread_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id INTEGER NOT NULL,
+    summary_before TEXT,
+    summary_after TEXT,
+    trigger_note_id INTEGER,
+    change_type TEXT NOT NULL,  -- note_added, merged, split, renamed, summarized, created
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE,
+    FOREIGN KEY (trigger_note_id) REFERENCES raw_notes(id) ON DELETE SET NULL,
+    CHECK(change_type IN ('note_added', 'merged', 'split', 'renamed', 'summarized', 'created'))
+);
+
+-- Thread system indexes
+CREATE INDEX idx_embeddings_note ON note_embeddings(raw_note_id);
+CREATE INDEX idx_associations_a ON note_associations(note_a_id);
+CREATE INDEX idx_associations_b ON note_associations(note_b_id);
+CREATE INDEX idx_associations_score ON note_associations(similarity_score DESC);
+CREATE INDEX idx_thread_notes_thread ON thread_notes(thread_id);
+CREATE INDEX idx_thread_notes_note ON thread_notes(raw_note_id);
+CREATE INDEX idx_threads_status ON threads(status);
+CREATE INDEX idx_threads_activity ON threads(last_activity_at DESC);
+CREATE INDEX idx_threads_momentum ON threads(momentum_score DESC);
+CREATE INDEX idx_thread_history_thread ON thread_history(thread_id);
