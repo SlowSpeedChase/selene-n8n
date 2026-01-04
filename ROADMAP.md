@@ -1,8 +1,8 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2026-01-01
-**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2d Complete ✅ | Phase 7.2f Design Complete 📋 | n8n 2.x Upgrade Design Complete 📋
+**Last Updated:** 2026-01-04
+**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2e Complete ✅ | Phase 7.2f.1 Complete ✅ | n8n 2.x Upgrade Design Complete 📋
 
 ---
 
@@ -70,15 +70,15 @@ Task extraction with classification - route actionable items to Things:
 - Phase 7.2b: Planning Tab ✅ COMPLETE
 - Phase 7.2c: Planning Conversations ✅ COMPLETE
 - Phase 7.2d: AI Provider Toggle ✅ COMPLETE
-- Phase 7.2e: Bidirectional Things Flow ⬜ TODO
-- Phase 7.2f: Things Project Grouping 📋 DESIGN COMPLETE
+- Phase 7.2e: Bidirectional Things Flow ✅ COMPLETE
+- Phase 7.2f: Things Project Grouping 🔄 IN PROGRESS
   - **[📋 Design Document](./docs/plans/2026-01-01-project-grouping-design.md)**
-  - 7.2f.1: Basic Project Creation - 3+ tasks with shared concept → auto-create project
-  - 7.2f.2: Auto-Assignment - New tasks auto-join matching projects
-  - 7.2f.3: Headings Within Projects - Group tasks by task_type
-  - 7.2f.4: Oversized Task Detection - Flag overwhelm > 7 for breakdown
-  - 7.2f.5: Project Completion - Track completion, log patterns, celebrate
-  - 7.2f.6: Sub-Project Suggestions - Approval-only spin-off suggestions
+  - 7.2f.1: Basic Project Creation ✅ COMPLETE
+  - 7.2f.2: Auto-Assignment for New Tasks ⬜ TODO
+  - 7.2f.3: Headings Within Projects ⬜ TODO
+  - 7.2f.4: Oversized Task Detection ⬜ TODO
+  - 7.2f.5: Project Completion ⬜ TODO
+  - 7.2f.6: Sub-Project Suggestions ⬜ TODO
 
 **Key Changes:**
 - Phase 7.1: Task Extraction with Classification ✅ COMPLETE (2025-12-30)
@@ -298,6 +298,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2026-01-04**: Synced documentation - Phase 7.2e (Bidirectional Things) and 7.2f.1 (Basic Project Creation) marked complete
 - **2026-01-01**: n8n 2.x Upgrade design complete - Upgrade from 1.110.1 to 2.1.4
   - Security hardening, SQLite performance, MCP integration
   - See [design document](./docs/plans/2026-01-01-n8n-upgrade-design.md)
