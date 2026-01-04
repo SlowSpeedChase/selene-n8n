@@ -9,9 +9,9 @@
 | State | Count | Limit |
 |-------|-------|-------|
 | Active | 0 | 5 max |
-| Ready | 4 | - |
-| Draft | 26 | - |
-| Done | 0 | - |
+| Ready | 5 | - |
+| Draft | 29 | - |
+| Done | 1 | - |
 
 **Command:** `./scripts/story.sh status`
 
@@ -25,34 +25,46 @@
 
 ## Ready (Actionable)
 
-| ID | Title | Priority | Effort |
-|----|-------|----------|--------|
-| US-001 | [Auto-Extract Tasks from Voice Notes](ready/US-001-auto-extract-tasks.md) | critical | L |
-| US-002 | [Energy Level Assignment](ready/US-002-energy-level-assignment.md) | critical | M |
-| US-003 | [Time Estimation](ready/US-003-time-estimation.md) | critical | M |
-| US-025 | [Feedback Pipeline](ready/US-025-feedback-pipeline.md) | high | M |
+| ID | Title | Phase | Priority | Effort |
+|----|-------|-------|----------|--------|
+| US-001 | [Auto-Extract Tasks from Voice Notes](ready/US-001-auto-extract-tasks.md) | 7.1 | critical | L |
+| US-002 | [Energy Level Assignment](ready/US-002-energy-level-assignment.md) | 7.1 | critical | M |
+| US-003 | [Time Estimation](ready/US-003-time-estimation.md) | 7.1 | critical | M |
+| US-025 | [Feedback Pipeline](ready/US-025-feedback-pipeline.md) | infra | high | M |
+| US-031 | [Auto-Assignment for New Tasks](ready/US-031-auto-assignment.md) | 7.2f.2 | high | M |
+
+---
+
+## Done (Completed)
+
+| ID | Title | Phase | Completed |
+|----|-------|-------|-----------|
+| US-006 | [Auto-Create Projects](done/US-006-auto-create-projects.md) | 7.2f.1 | 2026-01-04 |
 
 ---
 
 ## Draft (Needs Refinement)
 
-### Things Integration (Phase 7.1)
+### Phase 7.1: Task Extraction
 
-| ID | Title | Priority | Effort |
-|----|-------|----------|--------|
-| US-004 | [Overwhelm Factor Tracking](draft/US-004-overwhelm-factor.md) | high | M |
-| US-005 | [No Duplicate Tasks](draft/US-005-no-duplicate-tasks.md) | high | M |
+| ID | Title | Phase | Priority | Effort |
+|----|-------|-------|----------|--------|
+| US-004 | [Overwhelm Factor Tracking](draft/US-004-overwhelm-factor.md) | 7.1 | high | M |
+| US-005 | [No Duplicate Tasks](draft/US-005-no-duplicate-tasks.md) | 7.1 | high | M |
 
-### Project Detection (Phase 7.2)
+### Phase 7.2f: Project Grouping (Epic: US-021)
 
-| ID | Title | Priority | Effort |
-|----|-------|----------|--------|
-| US-006 | [Auto-Create Projects](draft/US-006-auto-create-projects.md) | critical | L |
-| US-007 | [Project Energy Profile](draft/US-007-project-energy-profile.md) | normal | S |
-| US-008 | [Project Time Estimation](draft/US-008-project-time-estimation.md) | high | S |
-| US-021 | [Automatic Project Grouping](draft/US-021-project-grouping.md) | critical | L |
+| ID | Title | Phase | Priority | Effort |
+|----|-------|-------|----------|--------|
+| US-021 | [Automatic Project Grouping](draft/US-021-project-grouping.md) | 7.2f (epic) | critical | L |
+| US-032 | [Headings Within Projects](draft/US-032-headings-within-projects.md) | 7.2f.3 | normal | S |
+| US-033 | [Oversized Task Detection](draft/US-033-oversized-task-detection.md) | 7.2f.4 | high | M |
+| US-034 | [Project Completion Tracking](draft/US-034-project-completion.md) | 7.2f.5 | normal | S |
+| US-035 | [Sub-Project Suggestions](draft/US-035-sub-project-suggestions.md) | 7.2f.6 | normal | M |
+| US-007 | [Project Energy Profile](draft/US-007-project-energy-profile.md) | 7.2f | normal | S |
+| US-008 | [Project Time Estimation](draft/US-008-project-time-estimation.md) | 7.2f | high | S |
 
-### SeleneChat Display (Phase 7.3)
+### Phase 7.3: SeleneChat Display
 
 | ID | Title | Priority | Effort |
 |----|-------|----------|--------|
@@ -60,7 +72,7 @@
 | US-010 | [Filter by Energy](draft/US-010-filter-by-energy.md) | high | M |
 | US-011 | [Project View](draft/US-011-project-view.md) | normal | L |
 
-### Status Sync & Patterns (Phase 7.4)
+### Phase 7.4: Status Sync & Patterns
 
 | ID | Title | Priority | Effort |
 |----|-------|----------|--------|
@@ -94,9 +106,22 @@
 
 ---
 
-## Done (Completed)
+## Phase Mapping
 
-*None yet*
+Quick reference: which stories deliver which phases.
+
+| Phase | Description | Stories | Status |
+|-------|-------------|---------|--------|
+| 7.1 | Task Extraction | US-001, US-002, US-003, US-004, US-005 | Ready |
+| 7.2f.1 | Basic Project Creation | US-006 | **Done** |
+| 7.2f.2 | Auto-Assignment | US-031 | Ready |
+| 7.2f.3 | Headings Within Projects | US-032 | Draft |
+| 7.2f.4 | Oversized Task Detection | US-033 | Draft |
+| 7.2f.5 | Project Completion | US-034 | Draft |
+| 7.2f.6 | Sub-Project Suggestions | US-035 | Draft |
+| 7.3 | SeleneChat Display | US-009, US-010, US-011 | Draft |
+| 7.4 | Status Sync & Patterns | US-012, US-013, US-014, US-015 | Draft |
+| infra | Infrastructure | US-022, US-025, US-029, US-030 | Mixed |
 
 ---
 

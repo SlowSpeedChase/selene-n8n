@@ -1,10 +1,12 @@
 # US-006: Auto-Create Projects from Concept Clusters
 
-**Status:** draft
+**Status:** done
 **Priority:** 🔥 critical
 **Effort:** L
+**Phase:** 7.2f.1
 **Created:** 2026-01-04
 **Updated:** 2026-01-04
+**Completed:** 2026-01-04 (Phase 7.2f.1 complete)
 
 ---
 
@@ -51,4 +53,7 @@ ADHD users often have many parallel interests but struggle with organization. Wh
 
 ## Links
 
+- **Branch:** phase-7.2f/project-grouping (merged)
+- **PR:** Merged to main
+- **Parent Epic:** US-021 (Automatic Project Grouping)
 - **Source:** docs/user-stories/things-integration-stories.md (Story 2.1)
