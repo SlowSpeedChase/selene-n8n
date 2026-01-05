@@ -176,6 +176,14 @@ Task: Mark tasks complete, update metrics
 - Query pattern tracking for ADHD memory support
 - Integration with Selene database for conversation history
 
+**⬜ SeleneChat Visual Redesign: Forest Study** (Ready - [Design](./docs/plans/2026-01-05-selenechat-redesign-design.md) | [Implementation Plan](./docs/plans/2026-01-05-selenechat-redesign-implementation.md))
+- Earthy color palette (cream, sage, terracotta, muted blue)
+- Serif typography for reading (Charter), sans for UI (SF Pro)
+- Surface color shifts for depth (no shadows)
+- Split-view list/detail layout
+- ADHD-optimized: calm + sharp aesthetic
+- 13-task implementation plan ready
+
 **⬜ SeleneChat Interface Improvements** (Future - [Design Research](./docs/plans/2026-01-05-selenechat-interface-inspiration-design.md))
 - Command palette (`⌘K`) for universal search/actions
 - Citation hover preview (Perplexity-style)
@@ -306,6 +314,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2026-01-05**: Added SeleneChat Forest Study Redesign to roadmap (design + 13-task implementation plan ready)
 - **2026-01-05**: Added SeleneChat Interface Improvements to roadmap (design research from Perplexity, Things, Sunsama, Raycast, Linear)
 - **2026-01-04**: Synced documentation - Phase 7.2e (Bidirectional Things) and 7.2f.1 (Basic Project Creation) marked complete
 - **2026-01-01**: n8n 2.x Upgrade design complete - Upgrade from 1.110.1 to 2.1.4
