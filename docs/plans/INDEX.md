@@ -13,6 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-05 | 2026-01-05-selenechat-interface-inspiration-design.md | selenechat | Design patterns from Perplexity, Things, Sunsama, Raycast |
 | 2026-01-05 | 2026-01-05-selenechat-redesign-design.md | selenechat | Forest Study design system - earthy, calm + sharp |
 | 2026-01-04 | 2026-01-04-selene-thread-system-design.md | thread-system | Transform Selene into thought consolidation system |
 | 2025-12-31 | workflow-standardization-design.md | infra | Bring workflows 02-06 to production standard |
