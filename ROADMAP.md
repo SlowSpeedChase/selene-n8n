@@ -1,7 +1,7 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2026-01-04
+**Last Updated:** 2026-01-05
 **Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2e Complete ✅ | Phase 7.2f.1 Complete ✅ | n8n 2.x Upgrade Design Complete 📋
 
 ---
@@ -176,6 +176,14 @@ Task: Mark tasks complete, update metrics
 - Query pattern tracking for ADHD memory support
 - Integration with Selene database for conversation history
 
+**⬜ SeleneChat Interface Improvements** (Future - [Design Research](./docs/plans/2026-01-05-selenechat-interface-inspiration-design.md))
+- Command palette (`⌘K`) for universal search/actions
+- Citation hover preview (Perplexity-style)
+- Planning tab simplification (progressive disclosure)
+- Daily planning view with resurfaced threads
+- Concept graph visualization
+- Focus mode (single-project view)
+
 **⬜ Phase 2 Next** (Obsidian Export - After Phase 1.5)
 - Export processed notes to markdown
 - Create Obsidian vault structure
@@ -298,6 +306,7 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2026-01-05**: Added SeleneChat Interface Improvements to roadmap (design research from Perplexity, Things, Sunsama, Raycast, Linear)
 - **2026-01-04**: Synced documentation - Phase 7.2e (Bidirectional Things) and 7.2f.1 (Basic Project Creation) marked complete
 - **2026-01-01**: n8n 2.x Upgrade design complete - Upgrade from 1.110.1 to 2.1.4
   - Security hardening, SQLite performance, MCP integration
