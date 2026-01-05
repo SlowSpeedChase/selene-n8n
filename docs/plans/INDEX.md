@@ -25,6 +25,7 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
+| 2026-01-05 | 2026-01-05-batch-embed-notes-design.md | US-042: Backfill embeddings for existing notes |
 | 2026-01-05 | 2026-01-05-selenechat-redesign-implementation.md | Forest Study implementation - 13 tasks |
 
 ---
