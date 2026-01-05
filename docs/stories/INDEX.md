@@ -8,10 +8,10 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 1 | 5 max |
+| Active | 0 | 5 max |
 | Ready | 0 | - |
 | Draft | 2 | - |
-| Done | 3 | - |
+| Done | 4 | - |
 | Archived | 34 | - |
 
 **Command:** `./scripts/story.sh status`
@@ -20,9 +20,7 @@
 
 ## Active (In Progress)
 
-| ID | Title | Priority | Branch |
-|----|-------|----------|--------|
-| US-042 | [Batch Embed Existing Notes](active/US-042-batch-embed-existing-notes.md) | high | `US-042/batch-embed-notes` |
+*None*
 
 ---
 
@@ -50,6 +48,7 @@
 | US-029 | [Workflow Standardization](done/US-029-workflow-standardization.md) | infra | 2026-01-04 |
 | US-040 | [Thread System Database Migration](done/US-040-thread-system-migration.md) | thread-system-1 | 2026-01-04 |
 | US-041 | [Embedding Generation Workflow](done/US-041-embedding-generation-workflow.md) | thread-system-1 | 2026-01-05 |
+| US-042 | [Batch Embed Existing Notes](done/US-042-batch-embed-existing-notes.md) | thread-system-1 | 2026-01-05 |
 
 ---
 
