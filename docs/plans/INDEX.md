@@ -23,6 +23,7 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
+| 2026-01-05 | 2026-01-05-selenechat-redesign-implementation.md | Forest Study implementation - 13 tasks |
 
 ---
 
