@@ -1,6 +1,6 @@
 # User Stories Index
 
-**Last Updated:** 2026-01-04
+**Last Updated:** 2026-01-05
 
 ---
 
@@ -10,8 +10,8 @@
 |-------|-------|-------|
 | Active | 1 | 5 max |
 | Ready | 0 | - |
-| Draft | 3 | - |
-| Done | 2 | - |
+| Draft | 2 | - |
+| Done | 3 | - |
 | Archived | 34 | - |
 
 **Command:** `./scripts/story.sh status`
@@ -22,7 +22,7 @@
 
 | ID | Title | Priority | Branch |
 |----|-------|----------|--------|
-| US-041 | [Embedding Generation Workflow](active/US-041-embedding-generation-workflow.md) | critical | `US-041/embedding-workflow` |
+| US-042 | [Batch Embed Existing Notes](active/US-042-batch-embed-existing-notes.md) | high | `US-042/batch-embed-notes` |
 
 ---
 
@@ -38,7 +38,6 @@
 
 | ID | Title | Priority | Effort |
 |----|-------|----------|--------|
-| US-042 | [Batch Embed Existing Notes](draft/US-042-batch-embed-existing-notes.md) | high | M |
 | US-043 | [Association Computation Workflow](draft/US-043-association-computation-workflow.md) | critical | M |
 | US-044 | [Verify Note Clusters](draft/US-044-verify-note-clusters.md) | high | S |
 
@@ -50,6 +49,7 @@
 |----|-------|-------|-----------|
 | US-029 | [Workflow Standardization](done/US-029-workflow-standardization.md) | infra | 2026-01-04 |
 | US-040 | [Thread System Database Migration](done/US-040-thread-system-migration.md) | thread-system-1 | 2026-01-04 |
+| US-041 | [Embedding Generation Workflow](done/US-041-embedding-generation-workflow.md) | thread-system-1 | 2026-01-05 |
 
 ---
 

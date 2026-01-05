@@ -1,11 +1,11 @@
 # US-042: Batch Embed Existing Notes
 
-**Status:** draft
+**Status:** active
 **Priority:** high
 **Effort:** M
 **Phase:** thread-system-1
 **Created:** 2026-01-04
-**Updated:** 2026-01-04
+**Updated:** 2026-01-05
 
 ---
 
@@ -73,5 +73,6 @@ for each note in (SELECT id, content FROM processed_notes WHERE id NOT IN (SELEC
 
 ## Links
 
-- **Branch:** (added when active)
+- **Branch:** `US-042/batch-embed-notes`
+- **Design:** `docs/plans/2026-01-05-batch-embed-notes-design.md`
 - **PR:** (added when complete)
