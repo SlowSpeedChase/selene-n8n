@@ -15,6 +15,7 @@ Bash automation scripts for testing, cleanup, workflow management, and database 
 ## Key Files
 
 - **manage-workflow.sh** - n8n workflow management (export, import, update)
+- **batch-embed-notes.sh** - Backfill embeddings for existing notes
 - **test-ingest.sh** - Test note ingestion workflow
 - **cleanup-tests.sh** - Remove test data from database
 - **import-workflows.sh** - Import n8n workflows
@@ -437,6 +438,65 @@ git commit -m "feat(07): description"
 ./scripts/manage-workflow.sh status   # Review
 ./scripts/manage-workflow.sh cleanup  # Remove old versions
 ```
+
+## batch-embed-notes.sh
+
+### Purpose
+Backfill embeddings for all existing processed notes by calling the embedding workflow (10-Embedding-Generation) sequentially.
+
+### Usage
+
+```bash
+# Default (1 second delay between requests)
+./scripts/batch-embed-notes.sh
+
+# Faster (0.5 second delay)
+DELAY_SECONDS=0.5 ./scripts/batch-embed-notes.sh
+
+# Custom database path
+SELENE_DB_PATH=/path/to/selene.db ./scripts/batch-embed-notes.sh
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEBHOOK_URL` | `http://localhost:5678/webhook/api/embed` | Embedding workflow webhook |
+| `SELENE_DB_PATH` | `./data/selene.db` | Database path |
+| `DELAY_SECONDS` | `1` | Delay between requests |
+
+### Features
+
+- **Pre-flight checks**: Verifies database, n8n, and Ollama are available
+- **Resume-safe**: Re-running skips already-embedded notes
+- **Progress tracking**: Shows `[15/75] Embedding note 42... done`
+- **Rate limiting**: Configurable delay between requests
+- **Error resilience**: Continues on failure, reports summary
+
+### Example Output
+
+```
+=== Batch Embed Notes ===
+
+Database: ./data/selene.db
+n8n: reachable
+Ollama: reachable
+
+Found 75 notes needing embeddings
+Delay between requests: 1s
+
+[1/75] Embedding note 1... done
+[2/75] Embedding note 2... done
+...
+[75/75] Embedding note 83... done
+
+=== Complete ===
+Success: 75
+Failed:  0
+Total:   75
+```
+
+---
 
 ## test-with-markers.sh (Workflow-Specific)
 
