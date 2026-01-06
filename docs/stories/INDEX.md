@@ -8,9 +8,9 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 0 | 5 max |
+| Active | 1 | 5 max |
 | Ready | 0 | - |
-| Draft | 2 | - |
+| Draft | 1 | - |
 | Done | 4 | - |
 | Archived | 34 | - |
 
@@ -20,7 +20,9 @@
 
 ## Active (In Progress)
 
-*None*
+| ID | Title | Priority | Branch |
+|----|-------|----------|--------|
+| US-043 | [Association Computation Workflow](active/US-043-association-computation-workflow.md) | critical | `US-043/association-computation` |
 
 ---
 
@@ -36,7 +38,6 @@
 
 | ID | Title | Priority | Effort |
 |----|-------|----------|--------|
-| US-043 | [Association Computation Workflow](draft/US-043-association-computation-workflow.md) | critical | M |
 | US-044 | [Verify Note Clusters](draft/US-044-verify-note-clusters.md) | high | S |
 
 ---
