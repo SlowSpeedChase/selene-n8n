@@ -8,10 +8,10 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 1 | 5 max |
+| Active | 0 | 5 max |
 | Ready | 0 | - |
 | Draft | 0 | - |
-| Done | 5 | - |
+| Done | 6 | - |
 | Archived | 34 | - |
 
 **Command:** `./scripts/story.sh status`
@@ -20,9 +20,7 @@
 
 ## Active (In Progress)
 
-| ID | Title | Branch | Priority |
-|----|-------|--------|----------|
-| US-044 | [Verify Note Clusters](active/US-044-verify-note-clusters.md) | `US-044/verify-note-clusters` | high |
+*None*
 
 ---
 
@@ -47,6 +45,7 @@
 | US-041 | [Embedding Generation Workflow](done/US-041-embedding-generation-workflow.md) | thread-system-1 | 2026-01-05 |
 | US-042 | [Batch Embed Existing Notes](done/US-042-batch-embed-existing-notes.md) | thread-system-1 | 2026-01-05 |
 | US-043 | [Association Computation Workflow](done/US-043-association-computation-workflow.md) | thread-system-1 | 2026-01-06 |
+| US-044 | [Verify Note Clusters](done/US-044-verify-note-clusters.md) | thread-system-1 | 2026-01-06 |
 
 ---
 
@@ -82,7 +81,7 @@ Quick reference: which stories deliver which phases.
 
 | Phase | Description | Stories | Status |
 |-------|-------------|---------|--------|
-| thread-system-1 | Foundation (Embeddings + Associations) | US-040, US-041, US-042, US-043, US-044 | **Active** |
+| thread-system-1 | Foundation (Embeddings + Associations) | US-040, US-041, US-042, US-043, US-044 | **Done** |
 | thread-system-2 | Thread Detection | TBD | Future |
 | thread-system-3 | Living System | TBD | Future |
 | thread-system-4 | Interfaces | TBD | Future |
