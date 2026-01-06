@@ -116,7 +116,7 @@ TOTAL=$((TOTAL + 1))
 
 curl -s -X POST "$WEBHOOK_URL" \
     -H "Content-Type: application/json" \
-    -d "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+    -d "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\", \"use_test_db\": true}" > /dev/null
 
 # Wait for async processing
 sleep 3
@@ -141,7 +141,7 @@ TOTAL=$((TOTAL + 1))
 
 curl -s -X POST "$WEBHOOK_URL" \
     -H "Content-Type: application/json" \
-    -d "{\"note_ids\": [$NOTE_2, $NOTE_3], \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+    -d "{\"note_ids\": [$NOTE_2, $NOTE_3], \"test_run\": \"${TEST_RUN_ID}\", \"use_test_db\": true}" > /dev/null
 
 sleep 8
 
@@ -168,7 +168,7 @@ BEFORE_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_embeddings WHERE ra
 
 curl -s -X POST "$WEBHOOK_URL" \
     -H "Content-Type: application/json" \
-    -d "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+    -d "{\"note_id\": $NOTE_1, \"test_run\": \"${TEST_RUN_ID}\", \"use_test_db\": true}" > /dev/null
 
 sleep 3
 
@@ -193,7 +193,7 @@ TOTAL=$((TOTAL + 1))
 # This should not crash and should not create an embedding
 curl -s -X POST "$WEBHOOK_URL" \
     -H "Content-Type: application/json" \
-    -d "{\"note_id\": 999999, \"test_run\": \"${TEST_RUN_ID}\"}" > /dev/null
+    -d "{\"note_id\": 999999, \"test_run\": \"${TEST_RUN_ID}\", \"use_test_db\": true}" > /dev/null
 
 sleep 2
 

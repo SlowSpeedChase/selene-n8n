@@ -432,17 +432,31 @@ if (retryCount < maxRetries) {
 
 ## Database Integration Patterns
 
-### Pattern 1: better-sqlite3 in Function Nodes
+### Pattern 1: Test-Aware Database Access (REQUIRED)
 
-**Always follow this structure:**
+**All Function nodes that access the database MUST use this pattern:**
 
 ```javascript
 const Database = require('better-sqlite3');
-const db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db');
+
+// Check for test mode from incoming data
+const useTestDb = $json.use_test_db || false;
+
+// Select database path based on test flag
+const dbPath = useTestDb
+  ? process.env.SELENE_TEST_DB_PATH
+  : process.env.SELENE_DB_PATH;
+
+const db = new Database(dbPath);
 
 try {
   const result = db.prepare('SELECT * FROM raw_notes WHERE id = ?').get($json.id);
-  return {json: result};
+  return {
+    json: {
+      ...result,
+      use_test_db: useTestDb  // Propagate flag to downstream nodes
+    }
+  };
 } catch (error) {
   console.error('Database error:', error);
   throw error;
@@ -450,6 +464,8 @@ try {
   db.close();  // CRITICAL: Always close
 }
 ```
+
+**Why:** Production data lives at `~/selene-data/` (outside repo), test data at `./data-test/`. This prevents Claude Code from accessing production notes during testing.
 
 ### Pattern 2: Parameterized Queries (Prevent SQL Injection)
 
@@ -469,7 +485,14 @@ db.prepare(`SELECT * FROM raw_notes WHERE id = ${$json.id}`).get();
 
 ```javascript
 const Database = require('better-sqlite3');
-const db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db');
+
+// Test-aware database path selection
+const useTestDb = $json.use_test_db || false;
+const dbPath = useTestDb
+  ? process.env.SELENE_TEST_DB_PATH
+  : process.env.SELENE_DB_PATH;
+
+const db = new Database(dbPath);
 
 const transaction = db.transaction(() => {
   const rawNoteResult = db.prepare(`
@@ -490,7 +513,7 @@ const transaction = db.transaction(() => {
 try {
   const noteId = transaction();
   db.close();
-  return {json: {id: noteId, success: true}};
+  return {json: {id: noteId, success: true, use_test_db: useTestDb}};
 } catch (error) {
   db.close();
   throw error;

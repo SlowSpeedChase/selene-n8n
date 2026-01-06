@@ -27,7 +27,8 @@ curl -s -X POST "$WEBHOOK_URL" \
   -H "Content-Type: application/json" \
   -d "{
     \"test_field\": \"test value\",
-    \"test_run\": \"$TEST_RUN\"
+    \"test_run\": \"$TEST_RUN\",
+    \"use_test_db\": true
   }"
 
 sleep 2

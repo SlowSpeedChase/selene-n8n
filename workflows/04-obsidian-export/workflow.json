@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Check if noteId was provided in the webhook payload\nconst body = $input.item.json.body || $input.item.json.query || $input.item.json;\nconst noteId = body.noteId || body.note_id || null;\n\n// Build command with optional noteId argument\nconst scriptPath = '/Users/chaseeasterling/selene-n8n' + '/scripts/obsidian_export.py';\nlet command = 'python3 ' + scriptPath;\nif (noteId) {\n  command += ` ${noteId}`;\n}\n\nreturn {\n  json: {\n    command: command,\n    noteId: noteId,\n    mode: noteId ? 'event-driven' : 'batch'\n  }\n};"
+        "functionCode": "// Check if noteId was provided in the webhook payload\nconst body = $input.item.json.body || $input.item.json.query || $input.item.json;\nconst noteId = body.noteId || body.note_id || null;\nconst testRun = body.test_run || null;\nconst useTestDb = body.use_test_db || testRun ? true : false;\n\n// Build command with optional noteId argument\nconst scriptPath = process.env.SELENE_PROJECT_ROOT + '/scripts/obsidian_export.py';\nlet command = 'python3 ' + scriptPath;\nif (noteId) {\n  command += ` ${noteId}`;\n}\n\n// Add environment variables for test isolation\nif (useTestDb) {\n  command = `SELENE_DB_PATH=${process.env.SELENE_TEST_DB_PATH} OBSIDIAN_VAULT_PATH=${process.env.OBSIDIAN_TEST_VAULT_PATH} ` + command;\n}\n\nreturn {\n  json: {\n    command: command,\n    noteId: noteId,\n    mode: noteId ? 'event-driven' : 'batch',\n    test_run: testRun,\n    use_test_db: useTestDb\n  }\n};"
       },
       "id": "function-build-command",
       "name": "Build Export Command",
@@ -56,7 +56,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the JSON output from the Python script\nconst output = $input.first().json.stdout;\nconst result = JSON.parse(output);\n\nreturn {\n  json: result\n};"
+        "jsCode": "// Parse the JSON output from the Python script\nconst output = $input.first().json.stdout;\nconst result = JSON.parse(output);\nconst prevData = $('Build Export Command').item.json;\n\nreturn {\n  json: {\n    ...result,\n    test_run: prevData.test_run,\n    use_test_db: prevData.use_test_db\n  }\n};"
       },
       "id": "parse-result",
       "name": "Parse Result",

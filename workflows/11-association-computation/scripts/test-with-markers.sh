@@ -74,7 +74,7 @@ run_test() {
 log_test "Test 1: Single note association"
 RESPONSE=$(curl -s -X POST "$WEBHOOK_URL" \
   -H "Content-Type: application/json" \
-  -d "{\"note_id\": $TEST_NOTE_ID, \"test_run\": \"$TEST_RUN\"}")
+  -d "{\"note_id\": $TEST_NOTE_ID, \"test_run\": \"$TEST_RUN\", \"use_test_db\": true}")
 
 run_test "Returns success" "success" "$RESPONSE"
 echo "Response: $RESPONSE"
@@ -84,7 +84,7 @@ echo ""
 log_test "Test 2: Note without embedding"
 RESPONSE=$(curl -s -X POST "$WEBHOOK_URL" \
   -H "Content-Type: application/json" \
-  -d '{"note_id": 999999, "test_run": "'"$TEST_RUN"'"}')
+  -d '{"note_id": 999999, "test_run": "'"$TEST_RUN"'", "use_test_db": true}')
 
 run_test "Skips gracefully" "skipped" "$RESPONSE"
 echo "Response: $RESPONSE"

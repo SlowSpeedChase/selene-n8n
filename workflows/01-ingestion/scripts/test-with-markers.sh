@@ -88,7 +88,8 @@ run_test "Basic Note Ingestion" \
         "content": "This is a basic test note to verify ingestion works.",
         "created_at": "2025-10-29T22:00:00Z",
         "source_type": "drafts",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' \
     "SELECT COUNT(*) FROM raw_notes WHERE title='Test Note 1' AND test_run='$TEST_RUN_ID';" \
     "1"
@@ -99,7 +100,8 @@ run_test "Note with Tags" \
         "title": "Tagged Note",
         "content": "This note has #productivity and #testing tags in it.",
         "created_at": "2025-10-29T22:05:00Z",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' \
     "SELECT tags FROM raw_notes WHERE title='Tagged Note' AND test_run='$TEST_RUN_ID';" \
     '["productivity","testing"]'
@@ -111,7 +113,8 @@ run_test "Duplicate Detection" \
         "content": "This is a basic test note to verify ingestion works.",
         "created_at": "2025-10-29T22:00:00Z",
         "source_type": "drafts",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' \
     "SELECT COUNT(*) FROM raw_notes WHERE title='Test Note 1' AND test_run='$TEST_RUN_ID';" \
     "1"
@@ -122,7 +125,8 @@ run_test "Long Content" \
         "title": "Long Form Note",
         "content": "This is a much longer note with multiple paragraphs.\\n\\nIt contains several sentences and spans multiple lines.\\n\\nWe want to test that word count, character count, and content hash all work correctly with longer content.\\n\\n#longform #testing #content",
         "created_at": "2025-10-29T22:10:00Z",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' \
     "SELECT word_count FROM raw_notes WHERE title='Long Form Note' AND test_run='$TEST_RUN_ID';" \
     "38"
@@ -131,7 +135,8 @@ run_test "Long Content" \
 run_test "Minimal Required Fields" \
     '{
         "content": "Minimal note with no title or timestamp",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' \
     "SELECT title FROM raw_notes WHERE content='Minimal note with no title or timestamp' AND test_run='$TEST_RUN_ID';" \
     "Untitled Note"
@@ -141,7 +146,8 @@ run_test "Empty Content Error" \
     '{
         "title": "Empty Note",
         "content": "",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' \
     "SELECT COUNT(*) FROM raw_notes WHERE title='Empty Note' AND test_run='$TEST_RUN_ID';" \
     "0"

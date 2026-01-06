@@ -49,7 +49,7 @@ test_workflow_trigger() {
 
     RESPONSE=$(curl -s -X POST "$WEBHOOK_URL" \
         -H "Content-Type: application/json" \
-        -d "{\"test_run\": \"$TEST_RUN\"}")
+        -d "{\"test_run\": \"$TEST_RUN\", \"use_test_db\": true}")
 
     if echo "$RESPONSE" | grep -qi "error"; then
         log_error "Workflow returned error: $RESPONSE"

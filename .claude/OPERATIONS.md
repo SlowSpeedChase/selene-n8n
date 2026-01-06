@@ -170,6 +170,49 @@ cd workflows/01-ingestion
 ./scripts/test-ingest.sh
 ```
 
+### Test Data Isolation
+
+**Production data lives OUTSIDE the repo to prevent Claude Code from accessing it.**
+
+**Directory Structure:**
+```
+~/selene-data/             # Production (outside repo - Claude cannot access)
+├── selene.db              # Real notes database
+└── obsidian-vault/        # Real Obsidian exports
+
+~/selene-n8n/              # Repo (Claude can access)
+├── data-test/
+│   └── selene-test.db     # Synthetic test data (18 notes)
+└── vault-test/            # Test Obsidian exports
+```
+
+**One-Time Setup (User Action Required):**
+```bash
+# Move production data outside repo
+./scripts/setup-test-isolation.sh
+
+# Seed test database with synthetic notes
+./scripts/seed-test-data.sh
+```
+
+**How It Works:**
+- All test scripts pass `"use_test_db": true` in webhook payloads
+- Workflows check this flag and use `SELENE_TEST_DB_PATH` instead of `SELENE_DB_PATH`
+- Production runs automatically (no flags needed) using `~/selene-data/selene.db`
+
+**Environment Variables (set by start-n8n-local.sh):**
+```bash
+SELENE_DB_PATH=~/selene-data/selene.db              # Production
+SELENE_TEST_DB_PATH=./data-test/selene-test.db      # Test
+OBSIDIAN_VAULT_PATH=~/selene-data/obsidian-vault    # Production
+OBSIDIAN_TEST_VAULT_PATH=./vault-test               # Test
+```
+
+**Test Database Contains:**
+- 18 synthetic notes covering all workflow scenarios
+- Task extraction, sentiment analysis, pattern detection test cases
+- Connection network, feedback routing, duplicate detection tests
+
 ### Git Operations
 
 ```bash

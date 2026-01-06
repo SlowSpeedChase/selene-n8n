@@ -123,7 +123,8 @@ curl -s -X POST "$INGESTION_URL" \
         "title": "Sentiment Test: Overwhelm Pattern",
         "content": "I have 15 different projects and cant focus on any of them. Everything feels urgent. My brain is racing between tasks. Too much at once. I am drowning in work and dont know where to start.",
         "created_at": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' > /dev/null
 echo -e "${GREEN}    Sent${NC}"
 
@@ -135,7 +136,8 @@ curl -s -X POST "$INGESTION_URL" \
         "title": "Sentiment Test: Hyperfocus Pattern",
         "content": "Been at this Docker networking issue for 6 hours straight. Lost track of time completely. Started at 2pm, looked up and its 8pm. I am completely dialed in on this problem. In the zone and dont want to stop.",
         "created_at": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' > /dev/null
 echo -e "${GREEN}    Sent${NC}"
 
@@ -147,7 +149,8 @@ curl -s -X POST "$INGESTION_URL" \
         "title": "Sentiment Test: Positive Energy",
         "content": "Had a great day! Made solid progress on my project. Feeling calm and focused. Everything flowed naturally without any major blocks. Good sustainable pace.",
         "created_at": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' > /dev/null
 echo -e "${GREEN}    Sent${NC}"
 
@@ -159,7 +162,8 @@ curl -s -X POST "$INGESTION_URL" \
         "title": "Sentiment Test: Burnout Pattern",
         "content": "I am so tired. Been pushing hard for weeks and I have no energy left. Even things I usually find exciting feel like a chore. Going through the motions. No motivation. Burnt out.",
         "created_at": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
-        "test_run": "'"$TEST_RUN_ID"'"
+        "test_run": "'"$TEST_RUN_ID"'",
+        "use_test_db": true
     }' > /dev/null
 echo -e "${GREEN}    Sent${NC}"
 
@@ -207,7 +211,7 @@ for note_id in $PROCESSED_NOTE_IDS; do
     echo "  Triggering analysis for processed_note_id: $note_id..."
     curl -s -X POST "$WEBHOOK_URL" \
         -H "Content-Type: application/json" \
-        -d '{"processedNoteId": '"$note_id"'}' > /dev/null
+        -d '{"processedNoteId": '"$note_id"', "use_test_db": true}' > /dev/null
     sleep 2  # Give Ollama time between requests
 done
 

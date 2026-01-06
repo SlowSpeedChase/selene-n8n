@@ -98,7 +98,8 @@ create_test_note() {
             \"content\": \"$content\",
             \"created_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
             \"source_type\": \"test\",
-            \"test_run\": \"$TEST_RUN_ID\"
+            \"test_run\": \"$TEST_RUN_ID\",
+            \"use_test_db\": true
         }" > /dev/null 2>&1
 
     # Wait for ingestion
@@ -115,7 +116,7 @@ process_note() {
 
     curl -s -X POST "$PROCESS_WEBHOOK_URL" \
         -H "Content-Type: application/json" \
-        -d "{\"noteId\": $note_id}" 2>&1
+        -d "{\"noteId\": $note_id, \"use_test_db\": true}" 2>&1
 }
 
 # Wait for note to be processed (polling with timeout)

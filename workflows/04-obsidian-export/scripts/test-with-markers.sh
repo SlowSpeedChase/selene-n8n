@@ -179,7 +179,7 @@ echo ""
 
 # Test 5: Trigger webhook and check response
 echo "Triggering export webhook..."
-WEBHOOK_RESPONSE=$(curl -s -X POST "$WEBHOOK_URL" -H "Content-Type: application/json" -d "{\"noteId\": ${RAW_NOTE_ID}}" 2>&1 || echo "CURL_ERROR")
+WEBHOOK_RESPONSE=$(curl -s -X POST "$WEBHOOK_URL" -H "Content-Type: application/json" -d "{\"noteId\": ${RAW_NOTE_ID}, \"use_test_db\": true}" 2>&1 || echo "CURL_ERROR")
 
 if echo "$WEBHOOK_RESPONSE" | grep -q "success\|exported\|Workflow was started"; then
     WEBHOOK_SUCCESS="1"
