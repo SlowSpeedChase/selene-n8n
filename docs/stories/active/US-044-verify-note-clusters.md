@@ -1,11 +1,12 @@
 # US-044: Verify Note Clusters Forming
 
-**Status:** draft
+**Status:** active
 **Priority:** high
 **Effort:** S
 **Phase:** thread-system-1
 **Created:** 2026-01-04
-**Updated:** 2026-01-04
+**Updated:** 2026-01-06
+**Branch:** US-044/verify-note-clusters
 
 ---
 
@@ -32,12 +33,12 @@ This story creates verification tools - queries, scripts, maybe a simple visuali
 
 ## Acceptance Criteria
 
-- [ ] Query script created: `scripts/query-similar-notes.sh <note_id>`
-- [ ] Script returns top N similar notes with similarity scores
-- [ ] Manual verification: results make semantic sense
-- [ ] Cluster stats query: "How many notes have 3+ associations?"
-- [ ] Documentation of verification results in Phase 1 completion notes
-- [ ] At least 10 sample queries verified manually
+- [x] Query script created: `scripts/query-similar-notes.sh <note_id>`
+- [x] Script returns top N similar notes with similarity scores
+- [x] Manual verification: results make semantic sense
+- [x] Cluster stats query: "How many notes have 3+ associations?"
+- [x] Documentation of verification results in Phase 1 completion notes
+- [x] At least 10 sample queries verified manually
 
 ---
 
@@ -88,14 +89,55 @@ FROM (
 ## Phase 1 Completion Criteria
 
 When this story is done, Phase 1 is complete. Checkpoint:
-- [ ] All notes have embeddings
-- [ ] Associations computed for all embedded notes
-- [ ] Can query "similar notes" and get meaningful results
-- [ ] Ready to proceed to Phase 2 (Thread Detection)
+- [x] All notes have embeddings (64/65 notes - 98%)
+- [x] Associations computed for all embedded notes (21 associations)
+- [x] Can query "similar notes" and get meaningful results
+- [x] Ready to proceed to Phase 2 (Thread Detection)
+
+---
+
+## Verification Results (2026-01-06)
+
+### Data Summary
+
+| Metric | Value |
+|--------|-------|
+| Total production notes | 65 |
+| Notes with embeddings | 64 (98%) |
+| Total associations | 21 |
+| Similarity threshold | 0.7 |
+| Max similarity | 0.849 |
+| Avg similarity | 0.742 |
+
+### Cluster Distribution
+
+| Category | Notes |
+|----------|-------|
+| 5+ associations (highly connected) | 1 |
+| 3-4 associations (clustered) | 3 |
+| 1-2 associations (some connections) | 19 |
+
+### Sample Query Verification (10/10)
+
+All queries returned semantically meaningful results:
+
+1. **Party engagement notes** (21, 22, 208) - correctly grouped social skills topics
+2. **Selene project notes** (59, 61, 65, 94, 126) - correctly grouped app development ideas
+3. **Dog training notes** (41, 54, 60) - correctly grouped Leo-related notes
+4. **Project management** (65, 126) - highest similarity (0.849) for same-topic notes
+
+### Scripts Created
+
+- `scripts/query-similar-notes.sh <note_id> [limit]` - Query similar notes
+- `scripts/cluster-stats.sh` - Show cluster statistics
+
+### Workflow Fix
+
+Fixed `process.env` → `$env` in workflow 11-Association-Computation for n8n 1.110.1 compatibility.
 
 ---
 
 ## Links
 
-- **Branch:** (added when active)
+- **Branch:** US-044/verify-note-clusters
 - **PR:** (added when complete)
