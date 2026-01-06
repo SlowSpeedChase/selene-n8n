@@ -1,35 +1,45 @@
-# Branch Status: US-042/batch-embed-notes
+# Branch Status: US-043/association-computation
 
-**Story:** US-042 - Batch Embed Existing Notes
-**Started:** 2026-01-05
-**Stage:** dev
+**Story:** US-043 - Association Computation Workflow
+**Phase:** thread-system-1
+**Created:** 2026-01-05
+
+---
+
+## Current Stage: [ ] Planning → [x] Dev → [ ] Testing → [ ] Docs → [ ] Review → [ ] Ready
 
 ---
 
 ## Checklist
 
 ### Planning
-- [x] Design doc created and approved
+- [x] Design doc written: `docs/plans/2026-01-05-association-computation-design.md`
 - [x] Story moved to active
 
-### Development
-- [x] Script implemented: `scripts/batch-embed-notes.sh`
-- [x] Documentation updated: `scripts/CLAUDE.md`
+### Dev
+- [ ] Workflow 11-Association-Computation created
+- [ ] Batch script created
+- [ ] Workflow 10 updated with trigger
 
 ### Testing
-- [x] Script runs without errors
-- [x] Progress output verified
-- [x] Resumes correctly (skips existing)
-- [ ] All notes embedded after completion (run in progress)
+- [ ] Test script created
+- [ ] All tests pass
+- [ ] Manual verification
 
-### Documentation
-- [ ] Design doc marked complete in INDEX.md
+### Docs
+- [ ] STATUS.md updated
+- [ ] README.md created
 
 ### Review
 - [ ] Code review requested
+- [ ] Feedback addressed
+
+### Ready
+- [ ] PR created
+- [ ] Merged to main
 
 ---
 
 ## Notes
 
-Simple batch script - calls existing workflow 10 webhook for each note needing embeddings.
+Workflow computes cosine similarity between note embeddings and stores top 20 associations above 0.7 threshold. Real-time trigger from embedding workflow + batch script for backfill.
