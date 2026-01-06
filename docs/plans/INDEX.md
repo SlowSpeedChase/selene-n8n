@@ -26,6 +26,7 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
+| 2026-01-06 | 2026-01-06-test-isolation-implementation.md | 11 tasks to isolate production data |
 | 2026-01-05 | 2026-01-05-association-computation-design.md | US-043: Compute note similarities |
 | 2026-01-05 | 2026-01-05-selenechat-redesign-implementation.md | Forest Study implementation - 13 tasks |
 
