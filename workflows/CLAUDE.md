@@ -107,7 +107,7 @@ git commit -m "feat(XX): add new-name workflow
 ### Pre-flight Checks
 1. Identify the workflow by name or number
 2. Get the workflow ID: `./scripts/manage-workflow.sh list`
-3. Confirm n8n container is running: `docker-compose ps`
+3. Confirm n8n is running: `curl -s http://localhost:5678/healthz`
 
 ### Step-by-Step Process
 
@@ -201,7 +201,8 @@ Ensures we have the latest state before archiving.
 
 **Step 3: Deactivate in n8n**
 ```bash
-docker exec selene-n8n n8n update:workflow --id=<workflow-id> --active=false
+export N8N_USER_FOLDER=/Users/chaseeasterling/selene-n8n/.n8n-local
+n8n update:workflow --id=<workflow-id> --active=false
 ```
 
 **Step 4: Create Archive Directory (if needed)**
@@ -231,7 +232,8 @@ Create `workflows/_archived/XX-name/ARCHIVED.md`:
 **Step 7: Delete from n8n (Optional)**
 Only if user explicitly wants it removed from n8n entirely:
 ```bash
-docker exec selene-n8n n8n delete:workflow --id=<workflow-id>
+export N8N_USER_FOLDER=/Users/chaseeasterling/selene-n8n/.n8n-local
+n8n delete:workflow --id=<workflow-id>
 ```
 Skip this step if user might want to restore later.
 
@@ -436,7 +438,7 @@ if (retryCount < maxRetries) {
 
 ```javascript
 const Database = require('better-sqlite3');
-const db = new Database('/selene/data/selene.db');
+const db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db');
 
 try {
   const result = db.prepare('SELECT * FROM raw_notes WHERE id = ?').get($json.id);
@@ -467,7 +469,7 @@ db.prepare(`SELECT * FROM raw_notes WHERE id = ${$json.id}`).get();
 
 ```javascript
 const Database = require('better-sqlite3');
-const db = new Database('/selene/data/selene.db');
+const db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db');
 
 const transaction = db.transaction(() => {
   const rawNoteResult = db.prepare(`

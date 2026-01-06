@@ -11,27 +11,33 @@
 
 ## Quick Command Reference
 
-### Docker Operations
+### n8n Operations (Local Installation)
+
+**n8n runs locally (not Docker) - simpler debugging, direct file access.**
 
 ```bash
-# Start n8n
-docker-compose up -d
+# Start n8n (foreground with logs)
+./scripts/start-n8n-local.sh
+
+# Start n8n (background)
+./scripts/start-n8n-local.sh &
 
 # Stop n8n
-docker-compose down
+pkill -f "n8n start"
 
-# View logs (follow mode)
-docker-compose logs -f n8n
+# Check if n8n is running
+curl -s http://localhost:5678/healthz
 
-# Restart n8n
-docker-compose restart n8n
-
-# Check container status
-docker-compose ps
-
-# Shell into container
-docker exec -it selene-n8n /bin/sh
+# View n8n info
+cat /tmp/n8n-local.log  # If redirected
 ```
+
+**Environment when running locally:**
+- n8n data: `.n8n-local/`
+- Selene DB: `data/selene.db`
+- Obsidian vault: `vault/`
+- Ollama: `http://localhost:11434`
+- n8n UI: `http://localhost:5678`
 
 ### Development Environment
 
@@ -377,17 +383,14 @@ sqlite3 data/selene.db "SELECT COUNT(*) FROM sentiment_history WHERE test_run = 
 - Database connection failed
 - Ollama timeout
 
-### Step 2: Check Docker Logs
+### Step 2: Check n8n Output
 
 ```bash
-# Real-time logs
-docker-compose logs -f n8n
+# If running in foreground, output is visible
+# If running in background, check where you redirected output
 
-# Last 100 lines
-docker-compose logs --tail=100 n8n
-
-# Search for errors
-docker-compose logs n8n | grep -i error
+# Or check recent n8n errors from terminal history
+# n8n prints errors to stderr when executing workflows
 ```
 
 ### Step 3: Check Database State
@@ -415,9 +418,9 @@ sqlite3 data/selene.db "PRAGMA wal_checkpoint;"
 **Test database queries:**
 
 ```javascript
-// In n8n Function node
+// In n8n Function node (uses hardcoded local path)
 const Database = require('better-sqlite3');
-const db = new Database('/selene/data/selene.db');
+const db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db');
 
 try {
   const result = db.prepare('SELECT * FROM raw_notes LIMIT 1').get();
@@ -434,19 +437,14 @@ try {
 ### Step 5: Ollama Connection Testing
 
 ```bash
-# From host machine
+# Test Ollama directly (local n8n uses localhost)
 curl http://localhost:11434/api/generate \
-  -d '{"model": "mistral:7b", "prompt": "test", "stream": false}'
-
-# From n8n container
-docker exec selene-n8n curl http://host.docker.internal:11434/api/generate \
   -d '{"model": "mistral:7b", "prompt": "test", "stream": false}'
 ```
 
 **Common Ollama issues:**
 - Ollama not running: `ollama serve`
 - Model not pulled: `ollama pull mistral:7b`
-- host.docker.internal not mapped (check docker-compose.yml)
 
 ---
 
@@ -527,7 +525,7 @@ git commit -m "workflow: add sentiment analysis to ingestion pipeline
 
 ## Troubleshooting Quick Reference
 
-### "Container won't start"
+### "n8n won't start"
 
 ```bash
 # Check if port 5678 in use
@@ -536,9 +534,11 @@ lsof -i :5678
 # Kill process using port
 kill -9 <PID>
 
-# Remove old containers
-docker-compose down -v
-docker-compose up -d
+# Verify n8n is installed
+n8n --version  # Should show 1.110.1
+
+# Verify better-sqlite3 is installed
+npm ls -g better-sqlite3
 ```
 
 ### "Workflow fails immediately"
@@ -547,13 +547,14 @@ docker-compose up -d
 - [ ] Check credentials in n8n UI
 - [ ] Verify database file exists (`data/selene.db`)
 - [ ] Check Ollama running (`ollama serve`)
-- [ ] Check Docker logs for errors
+- [ ] Check n8n console output for errors
 
 ### "Database locked"
 
 ```bash
-# Close all connections
-docker-compose restart n8n
+# Restart n8n
+pkill -f "n8n start"
+./scripts/start-n8n-local.sh
 
 # Check for WAL files
 ls -la data/selene.db*
@@ -586,54 +587,61 @@ ollama run mistral:7b "test prompt"
 ### "better-sqlite3 not found"
 
 ```bash
-# Check if installed in container
-docker exec selene-n8n ls /home/node/.n8n/node_modules/better-sqlite3
+# Check if installed globally
+npm ls -g better-sqlite3
 
-# Reinstall if missing
-docker exec selene-n8n npm install -g better-sqlite3
+# Reinstall if missing (must match n8n's expected version)
+npm install -g better-sqlite3@11.0.0
 
-# Restart container
-docker-compose restart n8n
+# Restart n8n
+pkill -f "n8n start"
+./scripts/start-n8n-local.sh
 ```
 
 ---
 
 ## Environment Variables
 
-**Location:** `.env` file (not committed to git)
+**Location:** `scripts/start-n8n-local.sh` (committed to git, no secrets)
 
-**Key variables:**
+**Key variables set by startup script:**
 
 ```bash
-# Authentication
-N8N_BASIC_AUTH_USER=admin
-N8N_BASIC_AUTH_PASSWORD=your_secure_password
+# n8n data directory
+N8N_USER_FOLDER=/Users/chaseeasterling/selene-n8n/.n8n-local
 
-# Paths
-SELENE_DB_PATH=/selene/data/selene.db
-OBSIDIAN_VAULT_PATH=./vault
+# Selene-specific paths (exposed to workflows via $env)
+SELENE_DB_PATH=/Users/chaseeasterling/selene-n8n/data/selene.db
+OBSIDIAN_VAULT_PATH=/Users/chaseeasterling/selene-n8n/vault
+SELENE_PROJECT_ROOT=/Users/chaseeasterling/selene-n8n
 
 # Ollama
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=mistral:7b
 
 # Node modules
 NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3
-NODE_PATH=/home/node/.n8n/node_modules
-
-# Timezone
-TIMEZONE=America/Chicago
 ```
 
-**To change:**
+**Note:** Workflows use hardcoded paths in Function nodes because n8n's VM2 sandbox
+doesn't expose `process.env` or `$env` inside JavaScript code. The env vars above
+are for n8n internal use and expression-based nodes.
+
+**To change paths:**
 
 ```bash
-# 1. Edit .env file
-nano .env
+# 1. Edit start script
+nano scripts/start-n8n-local.sh
 
-# 2. Restart container
-docker-compose down
-docker-compose up -d
+# 2. Update workflow JSON files
+# (Database paths are hardcoded in Function nodes)
+
+# 3. Re-import workflows
+export N8N_USER_FOLDER=/path/to/.n8n-local
+n8n import:workflow --input=workflows/XX-name/workflow.json
+
+# 4. Restart n8n
+pkill -f "n8n start"
+./scripts/start-n8n-local.sh
 ```
 
 ---
@@ -643,8 +651,8 @@ docker-compose up -d
 ### Starting Work
 
 - [ ] Check project status: `@.claude/PROJECT-STATUS.md`
-- [ ] Start Docker: `docker-compose up -d`
-- [ ] Check container: `docker-compose ps`
+- [ ] Start n8n: `./scripts/start-n8n-local.sh &`
+- [ ] Check n8n: `curl -s http://localhost:5678/healthz`
 - [ ] Pull latest: `git pull`
 - [ ] Review what's next in `@ROADMAP.md`
 

@@ -10,10 +10,11 @@ Bash automation scripts for testing, cleanup, workflow management, and database 
 - SQLite CLI (database operations)
 - curl (HTTP requests for testing)
 - jq (JSON parsing, optional)
-- Docker CLI (container management)
+- n8n CLI (local installation, v1.110.1)
 
 ## Key Files
 
+- **start-n8n-local.sh** - Start local n8n with correct environment (v1.110.1)
 - **manage-workflow.sh** - n8n workflow management (export, import, update)
 - **batch-embed-notes.sh** - Backfill embeddings for existing notes
 - **test-ingest.sh** - Test note ingestion workflow
@@ -88,6 +89,38 @@ sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM raw_notes WHERE test_run IS NULL;"
 # Write operation (use with caution)
 sqlite3 "$DB_PATH" "DELETE FROM raw_notes WHERE test_run = '${TEST_RUN}';"
 ```
+
+## start-n8n-local.sh
+
+### Purpose
+Start n8n locally with all required environment variables. Replaces Docker-based n8n setup.
+
+### Usage
+```bash
+# Start in foreground (see logs)
+./scripts/start-n8n-local.sh
+
+# Start in background
+./scripts/start-n8n-local.sh &
+
+# Stop n8n
+pkill -f "n8n start"
+```
+
+### Environment Variables Set
+- `N8N_USER_FOLDER` - n8n data directory (.n8n-local/)
+- `SELENE_DB_PATH` - SQLite database path
+- `OBSIDIAN_VAULT_PATH` - Obsidian vault location
+- `OLLAMA_BASE_URL` - Ollama API endpoint
+- `NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3` - Enable better-sqlite3 in Function nodes
+
+### Notes
+- Requires n8n v1.110.1 (checks version on startup)
+- Requires better-sqlite3@11.0.0 globally installed
+- Workflows use hardcoded paths in Function nodes (not env vars)
+- n8n UI available at http://localhost:5678
+
+---
 
 ## test-ingest.sh
 

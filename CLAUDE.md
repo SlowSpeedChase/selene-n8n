@@ -12,11 +12,10 @@ ADHD-focused knowledge management system using n8n workflows, SQLite, and local 
 
 ## Tech Stack
 
-- **n8n** - Workflow automation engine (Docker-based)
+- **n8n** - Workflow automation engine (local installation, v1.110.1)
 - **SQLite** + better-sqlite3 - Database for note storage
 - **Ollama** + mistral:7b - Local LLM for concept extraction
 - **Swift** + SwiftUI - SeleneChat macOS app
-- **Docker** - Container orchestration
 - **Drafts** - iOS/Mac note capture app
 
 ---
@@ -209,11 +208,11 @@ git worktree list
 ./scripts/cleanup-tests.sh <test-run-id>           # Cleanup
 ```
 
-### Docker
+### n8n
 ```bash
-docker-compose up -d       # Start
-docker-compose logs -f n8n # View logs
-docker-compose restart n8n # Restart
+./scripts/start-n8n-local.sh  # Start
+./scripts/start-n8n-local.sh & # Start (background)
+pkill -f "n8n start"          # Stop
 ```
 
 ### Database
@@ -309,7 +308,7 @@ selene-n8n/
 
 **Starting:**
 - Check `@.claude/PROJECT-STATUS.md`
-- Start Docker: `docker-compose up -d`
+- Start n8n: `./scripts/start-n8n-local.sh &`
 - Review `@ROADMAP.md` for next tasks
 
 **During:**
@@ -331,12 +330,13 @@ selene-n8n/
 
 - Check `@.claude/OPERATIONS.md` (Troubleshooting section)
 - Review workflow STATUS.md files
-- Check Docker logs: `docker-compose logs -f n8n`
+- Check n8n console output (run in foreground to see logs)
 
 ---
 
 ## Version History
 
+- **2026-01-06**: Migrated n8n from Docker to local installation (v1.110.1) for easier debugging
 - **2026-01-02**: Documentation consolidation - single entry point, removed redundant files
 - **2025-12-30**: Added GitOps development practices (.claude/GITOPS.md)
 - **2025-12-30**: Phase 7.1 design revised - Task Extraction with Classification

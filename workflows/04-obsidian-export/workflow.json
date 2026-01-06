@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Check if noteId was provided in the webhook payload\nconst body = $input.item.json.body || $input.item.json.query || $input.item.json;\nconst noteId = body.noteId || body.note_id || null;\n\n// Build command with optional noteId argument\nlet command = 'python3 /workflows/scripts/obsidian_export.py';\nif (noteId) {\n  command += ` ${noteId}`;\n}\n\nreturn {\n  json: {\n    command: command,\n    noteId: noteId,\n    mode: noteId ? 'event-driven' : 'batch'\n  }\n};"
+        "functionCode": "// Check if noteId was provided in the webhook payload\nconst body = $input.item.json.body || $input.item.json.query || $input.item.json;\nconst noteId = body.noteId || body.note_id || null;\n\n// Build command with optional noteId argument\nconst scriptPath = '/Users/chaseeasterling/selene-n8n' + '/scripts/obsidian_export.py';\nlet command = 'python3 ' + scriptPath;\nif (noteId) {\n  command += ` ${noteId}`;\n}\n\nreturn {\n  json: {\n    command: command,\n    noteId: noteId,\n    mode: noteId ? 'event-driven' : 'batch'\n  }\n};"
       },
       "id": "function-build-command",
       "name": "Build Export Command",

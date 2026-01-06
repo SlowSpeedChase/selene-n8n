@@ -21,7 +21,7 @@
     },
     {
       "parameters": {
-        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  db = new Database('/selene/data/selene.db', { readonly: true });\n  \n  // Query unprocessed feedback notes\n  const query = `\n    SELECT id, content, content_hash, created_at, test_run\n    FROM feedback_notes\n    WHERE processed_at IS NULL\n    ORDER BY created_at ASC\n    LIMIT 10\n  `;\n  \n  const rows = db.prepare(query).all();\n  \n  if (rows.length === 0) {\n    // Return empty to stop workflow - no unprocessed feedback\n    return [];\n  }\n  \n  // Return each row as a separate item for processing\n  return rows.map(row => ({ json: row }));\n  \n} catch (error) {\n  console.error('[Query Unprocessed Feedback] Error:', error.message);\n  return [];\n} finally {\n  if (db) db.close();\n}"
+        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db', { readonly: true });\n  \n  // Query unprocessed feedback notes\n  const query = `\n    SELECT id, content, content_hash, created_at, test_run\n    FROM feedback_notes\n    WHERE processed_at IS NULL\n    ORDER BY created_at ASC\n    LIMIT 10\n  `;\n  \n  const rows = db.prepare(query).all();\n  \n  if (rows.length === 0) {\n    // Return empty to stop workflow - no unprocessed feedback\n    return [];\n  }\n  \n  // Return each row as a separate item for processing\n  return rows.map(row => ({ json: row }));\n  \n} catch (error) {\n  console.error('[Query Unprocessed Feedback] Error:', error.message);\n  return [];\n} finally {\n  if (db) db.close();\n}"
       },
       "id": "query-unprocessed",
       "name": "Query Unprocessed Feedback",
@@ -42,7 +42,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:11434/api/generate",
+        "url": "={{ $env.OLLAMA_BASE_URL }}/api/generate",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  \"model\": \"mistral:7b\",\n  \"prompt\": $json.prompt,\n  \"stream\": false,\n  \"format\": \"json\",\n  \"options\": {\n    \"temperature\": 0.3,\n    \"num_predict\": 500\n  }\n} }}",
@@ -79,7 +79,7 @@
     },
     {
       "parameters": {
-        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  const data = $json;\n  \n  db = new Database('/selene/data/selene.db');\n  \n  console.log('[Update Feedback Record] Updating feedback ID:', data.feedback_id);\n  \n  const updateQuery = `\n    UPDATE feedback_notes\n    SET \n      user_story = ?,\n      theme = ?,\n      priority = ?,\n      processed_at = datetime('now'),\n      processing_error = ?\n    WHERE id = ?\n  `;\n  \n  const result = db.prepare(updateQuery).run(\n    data.user_story,\n    data.theme,\n    data.priority_hint,\n    data.parse_error,\n    data.feedback_id\n  );\n  \n  db.close();\n  \n  console.log('[Update Feedback Record] Updated rows:', result.changes);\n  \n  return {\n    json: {\n      success: result.changes > 0,\n      feedback_id: data.feedback_id,\n      user_story: data.user_story,\n      theme: data.theme,\n      priority: data.priority_hint,\n      test_run: data.test_run\n    }\n  };\n  \n} catch (error) {\n  if (db) db.close();\n  console.error('[Update Feedback Record] Error:', error);\n  throw new Error('Database update failed: ' + error.message);\n}"
+        "functionCode": "const Database = require('better-sqlite3');\nlet db;\n\ntry {\n  const data = $json;\n  \n  db = new Database('/Users/chaseeasterling/selene-n8n/data/selene.db');\n  \n  console.log('[Update Feedback Record] Updating feedback ID:', data.feedback_id);\n  \n  const updateQuery = `\n    UPDATE feedback_notes\n    SET \n      user_story = ?,\n      theme = ?,\n      priority = ?,\n      processed_at = datetime('now'),\n      processing_error = ?\n    WHERE id = ?\n  `;\n  \n  const result = db.prepare(updateQuery).run(\n    data.user_story,\n    data.theme,\n    data.priority_hint,\n    data.parse_error,\n    data.feedback_id\n  );\n  \n  db.close();\n  \n  console.log('[Update Feedback Record] Updated rows:', result.changes);\n  \n  return {\n    json: {\n      success: result.changes > 0,\n      feedback_id: data.feedback_id,\n      user_story: data.user_story,\n      theme: data.theme,\n      priority: data.priority_hint,\n      test_run: data.test_run\n    }\n  };\n  \n} catch (error) {\n  if (db) db.close();\n  console.error('[Update Feedback Record] Error:', error);\n  throw new Error('Database update failed: ' + error.message);\n}"
       },
       "id": "update-record",
       "name": "Update Feedback Record",
@@ -89,7 +89,7 @@
     },
     {
       "parameters": {
-        "functionCode": "const { execSync } = require('child_process');\nconst fs = require('fs');\n\ntry {\n  const result = execSync('/workflows/scripts/generate-backlog.sh', {\n    cwd: '/workflows',\n    encoding: 'utf8',\n    timeout: 30000\n  });\n  \n  // Verify output file was created\n  const outputPath = '/workflows/docs/backlog/user-stories.md';\n  if (!fs.existsSync(outputPath)) {\n    console.warn('[Generate Backlog] Warning: Output file not found at', outputPath);\n  }\n  \n  console.log('[Generate Backlog] Success');\n  \n  return {\n    json: {\n      backlog_updated: true,\n      timestamp: new Date().toISOString()\n    }\n  };\n} catch (error) {\n  console.error('[Generate Backlog] Failed:', error.message);\n  return {\n    json: {\n      backlog_updated: false,\n      error: error.message,\n      timestamp: new Date().toISOString()\n    }\n  };\n}"
+        "functionCode": "const { execSync } = require('child_process');\nconst fs = require('fs');\n\nconst projectRoot = '/Users/chaseeasterling/selene-n8n';\n\ntry {\n  const result = execSync(projectRoot + '/scripts/generate-backlog.sh', {\n    cwd: projectRoot,\n    encoding: 'utf8',\n    timeout: 30000\n  });\n  \n  // Verify output file was created\n  const outputPath = projectRoot + '/docs/backlog/user-stories.md';\n  if (!fs.existsSync(outputPath)) {\n    console.warn('[Generate Backlog] Warning: Output file not found at', outputPath);\n  }\n  \n  console.log('[Generate Backlog] Success');\n  \n  return {\n    json: {\n      backlog_updated: true,\n      timestamp: new Date().toISOString()\n    }\n  };\n} catch (error) {\n  console.error('[Generate Backlog] Failed:', error.message);\n  return {\n    json: {\n      backlog_updated: false,\n      error: error.message,\n      timestamp: new Date().toISOString()\n    }\n  };\n}"
       },
       "id": "generate-backlog",
       "name": "Generate Backlog File",

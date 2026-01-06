@@ -22,6 +22,12 @@ data-test/
 # Git worktrees
 .worktrees/
 
+# Local n8n data (credentials, settings, execution history)
+.n8n-local/
+
+# Workflow migration backups
+.workflow-backup-*/
+
 # Node modules
 node_modules/
 
