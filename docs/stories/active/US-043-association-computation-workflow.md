@@ -1,11 +1,11 @@
 # US-043: Association Computation Workflow
 
-**Status:** draft
+**Status:** active
 **Priority:** critical
 **Effort:** M
 **Phase:** thread-system-1
 **Created:** 2026-01-04
-**Updated:** 2026-01-04
+**Updated:** 2026-01-05
 
 ---
 
@@ -34,14 +34,15 @@ This creates the "web" of connections that thread detection will use.
 
 ## Acceptance Criteria
 
-- [ ] Workflow 10-Association-Computation created in `workflows/10-association-computation/`
+- [ ] Workflow 11-Association-Computation created in `workflows/11-association-computation/`
 - [ ] Cosine similarity function implemented correctly
 - [ ] Associations stored in `note_associations` table
 - [ ] Only stores associations above threshold (0.7 default)
 - [ ] Limits to top N associations per note (20 default)
 - [ ] Handles batch mode (compute all associations for existing notes)
-- [ ] Test script created: `workflows/10-association-computation/scripts/test-with-markers.sh`
+- [ ] Test script created: `workflows/11-association-computation/scripts/test-with-markers.sh`
 - [ ] STATUS.md documents test results
+- [ ] Workflow 10-Embedding-Generation updated to trigger associations
 
 ---
 
@@ -57,31 +58,20 @@ This creates the "web" of connections that thread detection will use.
 
 - Dependencies: US-040 (migration), US-041/US-042 (notes must have embeddings)
 - Affected components:
-  - `workflows/10-association-computation/workflow.json` (new)
-  - `workflows/10-association-computation/README.md` (new)
-  - `workflows/10-association-computation/docs/STATUS.md` (new)
-  - `workflows/10-association-computation/scripts/test-with-markers.sh` (new)
-  - `config/thread-system-config.json` (new - stores thresholds)
-- Design doc: `docs/plans/2026-01-04-selene-thread-system-design.md`
+  - `workflows/11-association-computation/workflow.json` (new)
+  - `workflows/11-association-computation/README.md` (new)
+  - `workflows/11-association-computation/docs/STATUS.md` (new)
+  - `workflows/11-association-computation/scripts/test-with-markers.sh` (new)
+  - `scripts/batch-compute-associations.sh` (new)
+  - `workflows/10-embedding-generation/workflow.json` (modified - add trigger)
+- Design doc: `docs/plans/2026-01-05-association-computation-design.md`
 
-**Cosine similarity (from design doc):**
-```javascript
-function cosineSimilarity(vecA, vecB) {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
-    }
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-```
+**Storage convention:** `note_a_id < note_b_id` to prevent duplicates
 
 ---
 
 ## Links
 
-- **Branch:** (added when active)
+- **Branch:** `US-043/association-computation`
+- **Design:** `docs/plans/2026-01-05-association-computation-design.md`
 - **PR:** (added when complete)

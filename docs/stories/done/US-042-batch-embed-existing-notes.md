@@ -1,11 +1,11 @@
 # US-042: Batch Embed Existing Notes
 
-**Status:** active
+**Status:** done
 **Priority:** high
 **Effort:** M
 **Phase:** thread-system-1
 **Created:** 2026-01-04
-**Updated:** 2026-01-05
+**Completed:** 2026-01-05
 
 ---
 
@@ -32,13 +32,13 @@ Key considerations:
 
 ## Acceptance Criteria
 
-- [ ] Batch script created: `scripts/batch-embed-notes.sh`
-- [ ] Script queries `processed_notes` that lack embeddings
-- [ ] Calls Ollama for each note with rate limiting (e.g., 1 req/sec)
-- [ ] Progress logged to console and/or file
-- [ ] Can resume from interruption (skips already-embedded notes)
-- [ ] All existing processed notes have embeddings after completion
-- [ ] Script documented in `scripts/CLAUDE.md`
+- [x] Batch script created: `scripts/batch-embed-notes.sh`
+- [x] Script queries `processed_notes` that lack embeddings
+- [x] Calls Ollama for each note with rate limiting (e.g., 1 req/sec)
+- [x] Progress logged to console and/or file
+- [x] Can resume from interruption (skips already-embedded notes)
+- [x] All existing processed notes have embeddings after completion
+- [x] Script documented in `scripts/CLAUDE.md`
 
 ---
 
@@ -58,16 +58,11 @@ Key considerations:
   - `scripts/CLAUDE.md` (update)
 - Design doc: `docs/plans/2026-01-04-selene-thread-system-design.md`
 
-**Approach:**
-```bash
-# Pseudocode
-for each note in (SELECT id, content FROM processed_notes WHERE id NOT IN (SELECT raw_note_id FROM note_embeddings)):
-    curl Ollama embedding endpoint
-    INSERT INTO note_embeddings
-    sleep 1  # rate limit
-```
-
-**Estimated time:** If 500 notes × 1 sec each = ~8 minutes
+**Implementation:**
+- Script uses sequential curl calls to embedding webhook
+- Pre-flight checks: database exists, n8n reachable, Ollama reachable
+- Progress display: `[15/75] Embedding note 42... done`
+- Exit codes: 0 on success, 1 if any failures
 
 ---
 
@@ -75,4 +70,4 @@ for each note in (SELECT id, content FROM processed_notes WHERE id NOT IN (SELEC
 
 - **Branch:** `US-042/batch-embed-notes`
 - **Design:** `docs/plans/2026-01-05-batch-embed-notes-design.md`
-- **PR:** (added when complete)
+- **PR:** #23

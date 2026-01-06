@@ -498,6 +498,68 @@ Total:   75
 
 ---
 
+## batch-compute-associations.sh
+
+### Purpose
+Backfill associations for all notes with embeddings by calling the association workflow (11-Association-Computation) sequentially.
+
+### Usage
+
+```bash
+# Default (0.5 second delay between requests)
+./scripts/batch-compute-associations.sh
+
+# Slower (1 second delay)
+DELAY_SECONDS=1 ./scripts/batch-compute-associations.sh
+
+# Custom database path
+SELENE_DB_PATH=/path/to/selene.db ./scripts/batch-compute-associations.sh
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEBHOOK_URL` | `http://localhost:5678/webhook/api/associate` | Association workflow webhook |
+| `SELENE_DB_PATH` | `./data/selene.db` | Database path |
+| `DELAY_SECONDS` | `0.5` | Delay between requests |
+
+### Features
+
+- **Pre-flight checks**: Verifies database and n8n are available
+- **Resume-safe**: Re-running skips notes that already have associations
+- **Progress tracking**: Shows `[15/75] Computing associations for note 42... done`
+- **Rate limiting**: Configurable delay between requests
+- **Stats summary**: Shows association statistics after completion
+
+### Example Output
+
+```
+=== Batch Compute Associations ===
+
+Database: ./data/selene.db
+n8n: reachable
+
+Found 75 notes needing associations
+Delay between requests: 0.5s
+
+[1/75] Computing associations for note 1... done
+[2/75] Computing associations for note 2... done
+...
+[75/75] Computing associations for note 83... done
+
+=== Complete ===
+Success: 75
+Failed:  0
+Total:   75
+
+=== Association Stats ===
+total_associations|avg_similarity|min_similarity|max_similarity
+523|0.782|0.701|0.956
+```
+
+---
+
 ## test-with-markers.sh (Workflow-Specific)
 
 ### Purpose
