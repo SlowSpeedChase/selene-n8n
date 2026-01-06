@@ -105,12 +105,12 @@ export N8N_SECURE_COOKIE=false
 # Project root (needed for scripts that use /workflows/ Docker mount)
 export SELENE_PROJECT_ROOT="$PROJECT_ROOT"
 
-# Production paths (local filesystem)
-export SELENE_DB_PATH="$PROJECT_ROOT/data/selene.db"
-export OBSIDIAN_VAULT_PATH="$PROJECT_ROOT/vault"
+# Production paths (default: ~/selene-data/ - OUTSIDE repo for privacy)
+export SELENE_DB_PATH="${SELENE_DB_PATH:-$HOME/selene-data/selene.db}"
+export OBSIDIAN_VAULT_PATH="${OBSIDIAN_VAULT_PATH:-$HOME/selene-data/obsidian-vault}"
 export SELENE_ENV=production
 
-# Test paths
+# Test paths (available to workflows for use_test_db switching)
 export SELENE_TEST_DB_PATH="$PROJECT_ROOT/data-test/selene-test.db"
 export OBSIDIAN_TEST_VAULT_PATH="$PROJECT_ROOT/vault-test"
 
