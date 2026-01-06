@@ -8,9 +8,9 @@
 
 | State | Count | Limit |
 |-------|-------|-------|
-| Active | 0 | 5 max |
+| Active | 1 | 5 max |
 | Ready | 0 | - |
-| Draft | 1 | - |
+| Draft | 0 | - |
 | Done | 5 | - |
 | Archived | 34 | - |
 
@@ -20,7 +20,9 @@
 
 ## Active (In Progress)
 
-*None*
+| ID | Title | Branch | Priority |
+|----|-------|--------|----------|
+| US-044 | [Verify Note Clusters](active/US-044-verify-note-clusters.md) | `US-044/verify-note-clusters` | high |
 
 ---
 
@@ -32,11 +34,7 @@
 
 ## Draft (Needs Refinement)
 
-### Thread System Phase 1: Foundation
-
-| ID | Title | Priority | Effort |
-|----|-------|----------|--------|
-| US-044 | [Verify Note Clusters](draft/US-044-verify-note-clusters.md) | high | S |
+*None*
 
 ---
 
