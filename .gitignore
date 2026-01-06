@@ -4,12 +4,16 @@
 
 # Personal vault files (all Obsidian data)
 vault/
-vault-test/
 *.md.backup
 
 # Data folders (including databases)
 data/
-data-test/
+
+# Test data (keep directory, ignore contents except .gitkeep)
+data-test/*
+!data-test/.gitkeep
+vault-test/*
+!vault-test/.gitkeep
 
 # Database files (SQLite)
 *.db
