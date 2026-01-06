@@ -63,10 +63,10 @@ run_test() {
 
   if [[ "$actual" == *"$expected"* ]]; then
     log_info "PASS: $name"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
   else
     log_error "FAIL: $name (expected '$expected', got '$actual')"
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
   fi
 }
 
@@ -97,7 +97,7 @@ log_info "Associations for note $TEST_NOTE_ID: $ASSOC_COUNT"
 
 if [[ "$ASSOC_COUNT" -gt 0 ]]; then
   log_info "PASS: Associations stored"
-  ((PASSED++))
+  PASSED=$((PASSED + 1))
 else
   log_warn "No associations found (may be normal if no similar notes)"
 fi
@@ -107,10 +107,10 @@ log_test "Test 4: Verify similarity scores"
 INVALID_SCORES=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_associations WHERE similarity_score < 0 OR similarity_score > 1")
 if [[ "$INVALID_SCORES" -eq 0 ]]; then
   log_info "PASS: All similarity scores in valid range [0,1]"
-  ((PASSED++))
+  PASSED=$((PASSED + 1))
 else
   log_error "FAIL: Found $INVALID_SCORES invalid scores"
-  ((FAILED++))
+  FAILED=$((FAILED + 1))
 fi
 echo ""
 
@@ -119,10 +119,10 @@ log_test "Test 5: Storage convention (note_a_id < note_b_id)"
 BAD_ORDER=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM note_associations WHERE note_a_id >= note_b_id")
 if [[ "$BAD_ORDER" -eq 0 ]]; then
   log_info "PASS: All associations follow note_a_id < note_b_id convention"
-  ((PASSED++))
+  PASSED=$((PASSED + 1))
 else
   log_error "FAIL: Found $BAD_ORDER associations with bad ordering"
-  ((FAILED++))
+  FAILED=$((FAILED + 1))
 fi
 echo ""
 
