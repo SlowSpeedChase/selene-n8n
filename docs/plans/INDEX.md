@@ -25,7 +25,7 @@ Status legend:
 
 | Date | Document | Notes |
 |------|----------|-------|
-| 2026-01-05 | 2026-01-05-batch-embed-notes-design.md | US-042: Backfill embeddings for existing notes |
+| 2026-01-05 | 2026-01-05-association-computation-design.md | US-043: Compute note similarities |
 | 2026-01-05 | 2026-01-05-selenechat-redesign-implementation.md | Forest Study implementation - 13 tasks |
 
 ---
@@ -34,6 +34,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-05 | 2026-01-05-batch-embed-notes-design.md | 2026-01-05 (US-042) |
 
 ---
 
