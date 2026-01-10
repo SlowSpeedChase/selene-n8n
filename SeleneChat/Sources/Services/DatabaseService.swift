@@ -635,14 +635,14 @@ class DatabaseService: ObservableObject {
         }
     }
 
-    /// Get recent notes with processed data, filtered by time scope
+    /// Get recent notes, filtered by time scope (includes unprocessed notes)
     private func getRecentProcessedNotes(limit: Int, timeScope: QueryAnalyzer.TimeScope) async throws -> [Note] {
         guard let db = db else {
             throw DatabaseError.notConnected
         }
 
         var query = rawNotes
-            .join(.inner, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .join(.leftOuter, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
             .order(rawNotes[createdAt].desc)
 
         // Apply time scope filter
