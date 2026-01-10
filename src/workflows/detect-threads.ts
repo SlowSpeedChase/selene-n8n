@@ -4,7 +4,8 @@ import type { WorkflowResult } from '../types';
 const log = createWorkflowLogger('detect-threads');
 
 // Configuration
-const DEFAULT_SIMILARITY_THRESHOLD = 0.7;
+// Tuned via US-046: 0.65 provides best balance between cluster detection and over-merging
+const DEFAULT_SIMILARITY_THRESHOLD = 0.65;
 const MIN_CLUSTER_SIZE = 3;
 const MAX_NOTES_PER_SYNTHESIS = 15;
 

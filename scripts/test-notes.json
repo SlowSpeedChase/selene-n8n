@@ -1,0 +1,474 @@
+{
+  "metadata": {
+    "description": "Curated fake notes for thread detection testing",
+    "version": "1.0",
+    "created": "2026-01-10",
+    "story": "US-046",
+    "note_count": 60
+  },
+  "clusters": {
+    "fitness-journey": {
+      "expected_thread_name": "Fitness Journey",
+      "description": "Exercise, energy levels, motivation to move"
+    },
+    "side-project-ideas": {
+      "expected_thread_name": "Side Project Ideas",
+      "description": "App concepts, feature brainstorms, building something"
+    },
+    "sleep-struggles": {
+      "expected_thread_name": "Sleep Struggles",
+      "description": "Insomnia, sleep hygiene, exhaustion"
+    },
+    "meeting-frustrations": {
+      "expected_thread_name": "Meeting Frustrations",
+      "description": "Pointless meetings, interruptions, calendar chaos"
+    },
+    "learning-rust": {
+      "expected_thread_name": "Learning Rust",
+      "description": "New programming language journey"
+    },
+    "kitchen-experiments": {
+      "expected_thread_name": "Kitchen Experiments",
+      "description": "Cooking, recipes, meal planning"
+    },
+    "friend-group-dynamics": {
+      "expected_thread_name": "Friend Group Dynamics",
+      "description": "Social events, relationship thoughts"
+    },
+    "home-office-setup": {
+      "expected_thread_name": "Home Office Setup",
+      "description": "Desk, equipment, work environment"
+    },
+    "orphan": {
+      "expected_thread_name": null,
+      "description": "Random thoughts that should not cluster"
+    }
+  },
+  "notes": [
+    {
+      "title": "Morning run felt different",
+      "content": "Actually got out the door at 6:30 today. The cold air was brutal at first but by mile 2 I was in a groove. Realized I've been avoiding morning runs because of the initial discomfort but once I'm moving it's fine. Need to remember this feeling.",
+      "created_at": "2025-10-15T06:45:00Z",
+      "expected_cluster": "fitness-journey",
+      "tags": ["running", "morning"]
+    },
+    {
+      "title": "Why do I keep skipping the gym",
+      "content": "Third day this week I told myself I'd go after work and then didn't. It's not even that I'm tired, I just... don't want to change clothes and drive there. Maybe I need to just go in my work clothes and change there? Or find a closer gym? The friction is killing my consistency.",
+      "created_at": "2025-10-18T19:30:00Z",
+      "expected_cluster": "fitness-journey",
+      "tags": ["gym", "habits"]
+    },
+    {
+      "title": "Energy crash at 2pm again",
+      "content": "Like clockwork. Every day around 2pm I just want to nap. Started tracking and it happens whether I eat lunch or skip it, whether I had coffee or not. Wonder if this is just my natural rhythm and I should plan around it instead of fighting it. Maybe that's when I should exercise?",
+      "created_at": "2025-10-22T14:15:00Z",
+      "expected_cluster": "fitness-journey",
+      "tags": ["energy", "afternoon"]
+    },
+    {
+      "title": "Finally tried the kettlebell thing",
+      "content": "Okay so everyone says kettlebells are amazing for ADHD because the workouts are short and varied. Did a 20 minute YouTube video and honestly? They might be onto something. Didn't get bored, got a good sweat, didn't have to go anywhere. Might actually stick with this.",
+      "created_at": "2025-11-01T17:00:00Z",
+      "expected_cluster": "fitness-journey",
+      "tags": ["kettlebell", "home workout"]
+    },
+    {
+      "title": "Body feels different when I move",
+      "content": "Been consistent with the kettlebells for 2 weeks now. My shoulders don't hurt from desk work anymore. Also sleeping slightly better? Not sure if correlation or causation but I'll take it. The hardest part is still starting but once I pick up the weight I'm fine.",
+      "created_at": "2025-11-14T08:00:00Z",
+      "expected_cluster": "fitness-journey",
+      "tags": ["progress", "consistency"]
+    },
+    {
+      "title": "Signed up for a 5k",
+      "content": "Why did I do this. It's in 6 weeks and I haven't run more than 2 miles in months. But also maybe I needed the external deadline? ADHD brain needs stakes. Okay fine, I'll start training tomorrow. This is either going to be great or a disaster.",
+      "created_at": "2025-11-20T21:00:00Z",
+      "expected_cluster": "fitness-journey",
+      "tags": ["5k", "motivation"]
+    },
+    {
+      "title": "App idea: habit tracker but different",
+      "content": "What if instead of streaks (which feel punishing when you break them) the app showed you patterns? Like 'you tend to exercise on days when you wake up before 7am' or 'you skip habits when you have more than 3 meetings'. Insight-based not guilt-based.",
+      "created_at": "2025-10-10T22:30:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "habits"]
+    },
+    {
+      "title": "The notes app problem",
+      "content": "Every notes app assumes you want to organize things into folders or tags. But my brain doesn't work that way. I want to dump thoughts and have the app figure out connections for me. Like... what if notes could form clusters automatically based on semantic similarity? Is that even possible?",
+      "created_at": "2025-10-14T15:00:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "notes"]
+    },
+    {
+      "title": "Voice memo to task pipeline",
+      "content": "I talk to myself constantly with half-formed ideas and todos. What if there was a way to just brain dump via voice and have AI extract the actual actionable stuff? Separate the wheat from the chaff. Could probably build this with Whisper and GPT.",
+      "created_at": "2025-10-28T09:15:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "voice", "AI"]
+    },
+    {
+      "title": "Thinking about the notes thing more",
+      "content": "The semantic clustering idea keeps coming back to me. What if I built it myself? Would need embeddings, some kind of vector similarity, and a way to surface connections. Could use local LLM to avoid sending my private thoughts to the cloud. This is feeling less crazy.",
+      "created_at": "2025-11-05T20:00:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "notes", "embeddings"]
+    },
+    {
+      "title": "MVP scope for note clustering",
+      "content": "Okay if I was going to actually build this, minimum viable would be: 1) capture notes via some input (Drafts action?), 2) generate embeddings, 3) compute similarity, 4) show clusters. Skip the fancy UI at first, just prove the clustering works. Could probably hack this together in a weekend.",
+      "created_at": "2025-11-12T23:00:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "MVP", "planning"]
+    },
+    {
+      "title": "What if the app surfaced forgotten ideas",
+      "content": "One thing I hate about my notes is stuff gets buried. I have great ideas from 6 months ago that I completely forgot about. What if the app had a 'resurface' feature that brought back old notes that are semantically related to what you're thinking about now? Context-aware memory.",
+      "created_at": "2025-11-25T16:30:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "memory", "surfacing"]
+    },
+    {
+      "title": "Competing with Notion?",
+      "content": "Someone asked if I was trying to build a Notion competitor. No, completely different. Notion is for people who like organizing. I want something for people who hate organizing but still need to make sense of their thoughts. Anti-organizational organizational tool.",
+      "created_at": "2025-12-01T11:00:00Z",
+      "expected_cluster": "side-project-ideas",
+      "tags": ["app idea", "positioning"]
+    },
+    {
+      "title": "3am again",
+      "content": "Brain won't shut off. Lying here thinking about that work thing from yesterday. Tried the breathing exercise, tried counting, tried getting up and reading. Still awake. This happens every time I have something stressful coming up. Tomorrow is going to be rough.",
+      "created_at": "2025-10-20T03:15:00Z",
+      "expected_cluster": "sleep-struggles",
+      "tags": ["insomnia", "anxiety"]
+    },
+    {
+      "title": "Sleep debt is real",
+      "content": "Been running on 5-6 hours for weeks now and I can feel my brain getting slower. Made a stupid mistake in code today that took 2 hours to debug. The kind of mistake I never would have made with proper sleep. I know what I need to do but knowing and doing are different.",
+      "created_at": "2025-10-25T22:00:00Z",
+      "expected_cluster": "sleep-struggles",
+      "tags": ["sleep debt", "cognition"]
+    },
+    {
+      "title": "Tried the no screens thing",
+      "content": "Everyone says no screens before bed so I tried it. Read a book instead. Still took forever to fall asleep. Maybe the screens aren't the problem? Or maybe I need to do it for longer than one night. Ugh. Why is sleep so complicated.",
+      "created_at": "2025-11-02T23:30:00Z",
+      "expected_cluster": "sleep-struggles",
+      "tags": ["sleep hygiene", "screens"]
+    },
+    {
+      "title": "The revenge bedtime thing",
+      "content": "Read about 'revenge bedtime procrastination' and felt personally attacked. It's when you stay up late because you didn't have enough free time during the day. That's exactly what I do. Even when I'm exhausted I'll scroll for hours because it feels like MY time. How do you fix this?",
+      "created_at": "2025-11-08T01:00:00Z",
+      "expected_cluster": "sleep-struggles",
+      "tags": ["procrastination", "habits"]
+    },
+    {
+      "title": "Maybe I'm a night owl",
+      "content": "What if I'm just fighting my natural rhythm? I'm most creative and focused between 10pm and 2am. Always have been. But the world runs on 9-5. Is there a way to restructure my life around my actual biology instead of pretending I'm a morning person?",
+      "created_at": "2025-11-15T00:30:00Z",
+      "expected_cluster": "sleep-struggles",
+      "tags": ["chronotype", "schedule"]
+    },
+    {
+      "title": "Another 2 hour sync",
+      "content": "Why do we need everyone in the room for status updates that could be a Slack message. I lost my whole morning and now I'm behind on the actual work. Half the people were on their laptops doing email anyway. Such a waste.",
+      "created_at": "2025-10-17T11:30:00Z",
+      "expected_cluster": "meeting-frustrations",
+      "tags": ["meetings", "waste"]
+    },
+    {
+      "title": "Context switching is killing me",
+      "content": "Third interruption today. Was finally in flow on the API refactor and now I have to sit through a 'quick sync' that's definitely not going to be quick. Every time I get interrupted it takes 20+ minutes to get back to where I was. My productivity is being death by a thousand cuts.",
+      "created_at": "2025-10-21T14:45:00Z",
+      "expected_cluster": "meeting-frustrations",
+      "tags": ["meetings", "focus", "interruptions"]
+    },
+    {
+      "title": "Calendar audit needed",
+      "content": "Looked at next week - 23 hours of meetings. When am I supposed to do my job? Need to start declining more aggressively. But then people get offended or assume you're not a team player. There has to be a better way to protect deep work time.",
+      "created_at": "2025-10-30T18:00:00Z",
+      "expected_cluster": "meeting-frustrations",
+      "tags": ["calendar", "boundaries"]
+    },
+    {
+      "title": "The meeting about the meeting",
+      "content": "Just sat through a meeting to plan another meeting. I wish I was joking. An hour of my life to decide when we should meet to discuss something that could have been decided in 5 minutes over chat. Corporate life is a parody of itself.",
+      "created_at": "2025-11-06T16:00:00Z",
+      "expected_cluster": "meeting-frustrations",
+      "tags": ["meetings", "bureaucracy"]
+    },
+    {
+      "title": "Tried the focus blocks thing",
+      "content": "Blocked off 9-12 as 'focus time' on my calendar. It lasted exactly one day before someone scheduled over it for an 'urgent' discussion that was not urgent. How do people actually protect their time? Do I need to be more aggressive or is this just how it is?",
+      "created_at": "2025-11-13T12:30:00Z",
+      "expected_cluster": "meeting-frustrations",
+      "tags": ["focus time", "calendar"]
+    },
+    {
+      "title": "Meetings are other people's todo lists",
+      "content": "Had this realization: most meetings exist because someone else doesn't want to make a decision alone, or wants to avoid writing something down, or needs to look busy. Very few meetings are actually necessary. I'm done being a supporting character in other people's productivity theater.",
+      "created_at": "2025-11-22T09:00:00Z",
+      "expected_cluster": "meeting-frustrations",
+      "tags": ["meetings", "insight"]
+    },
+    {
+      "title": "Started the Rust book",
+      "content": "Finally cracked open The Rust Programming Language. The ownership system is bending my brain in good ways. Coming from TypeScript this feels like learning to drive stick after years of automatic. Frustrating but I can tell it's making me think harder about memory.",
+      "created_at": "2025-10-23T20:00:00Z",
+      "expected_cluster": "learning-rust",
+      "tags": ["rust", "learning"]
+    },
+    {
+      "title": "Borrow checker wins again",
+      "content": "Spent an hour fighting the borrow checker on what seemed like simple code. Finally understood why it was complaining - I was trying to have two mutable references which is exactly what Rust prevents. The compiler is strict but it's strict for good reasons. Slowly getting it.",
+      "created_at": "2025-10-29T21:30:00Z",
+      "expected_cluster": "learning-rust",
+      "tags": ["rust", "borrow checker"]
+    },
+    {
+      "title": "Rust error messages are actually good",
+      "content": "Coming from C++ where error messages are hieroglyphics, Rust's compiler errors are a revelation. It literally tells you what you did wrong and suggests fixes. Why doesn't every language do this? Makes learning so much less frustrating.",
+      "created_at": "2025-11-04T19:00:00Z",
+      "expected_cluster": "learning-rust",
+      "tags": ["rust", "compiler"]
+    },
+    {
+      "title": "First working Rust program",
+      "content": "Built a simple CLI tool that parses JSON files. Nothing fancy but it compiles and runs and handles errors properly. The satisfaction of cargo build completing without errors is real. Now I want to try something more ambitious.",
+      "created_at": "2025-11-11T22:00:00Z",
+      "expected_cluster": "learning-rust",
+      "tags": ["rust", "project"]
+    },
+    {
+      "title": "Rust for systems stuff",
+      "content": "Reading about using Rust for building databases and networking tools. The zero-cost abstractions thing makes more sense now - you can write high-level code that compiles to efficient low-level code. Feels like a superpower compared to garbage collected languages.",
+      "created_at": "2025-11-18T20:30:00Z",
+      "expected_cluster": "learning-rust",
+      "tags": ["rust", "systems"]
+    },
+    {
+      "title": "The risotto experiment",
+      "content": "Tried making risotto from scratch. Stood at the stove stirring for 25 minutes which normally I'd hate but it was actually meditative? The slow addition of broth, watching it absorb, the gradual transformation. Turned out pretty good too. Maybe cooking can be my focus activity.",
+      "created_at": "2025-10-19T19:30:00Z",
+      "expected_cluster": "kitchen-experiments",
+      "tags": ["cooking", "risotto"]
+    },
+    {
+      "title": "Meal prep Sunday fail",
+      "content": "Tried to be one of those people who preps all their meals on Sunday. Made it through exactly 2 containers before I got bored and ordered pizza. The problem isn't cooking, it's the repetition. Maybe I need to prep components not full meals? Keep it flexible.",
+      "created_at": "2025-10-27T17:00:00Z",
+      "expected_cluster": "kitchen-experiments",
+      "tags": ["meal prep", "failure"]
+    },
+    {
+      "title": "Knife skills matter",
+      "content": "Watched a video on proper knife technique and practiced for 30 minutes. My diced onions actually look diced now instead of mangled. Small thing but it makes cooking feel more competent. Also way faster. Should have learned this years ago.",
+      "created_at": "2025-11-03T18:00:00Z",
+      "expected_cluster": "kitchen-experiments",
+      "tags": ["cooking", "skills"]
+    },
+    {
+      "title": "Spice cabinet overhaul",
+      "content": "Threw out all the expired spices (some from 2019, yikes) and restocked with fresh stuff. The difference in flavor is insane. That 'meh' feeling about my cooking might have just been dead spices. Also organized by cuisine type which makes deciding what to make easier.",
+      "created_at": "2025-11-10T15:00:00Z",
+      "expected_cluster": "kitchen-experiments",
+      "tags": ["cooking", "organization"]
+    },
+    {
+      "title": "Cast iron convert",
+      "content": "Finally got a cast iron skillet and I get the hype now. The sear on a steak is incredible. Yes it's heavy and you can't put it in the dishwasher but the results are worth it. Might slowly replace all my non-stick pans. This feels like leveling up.",
+      "created_at": "2025-11-17T20:00:00Z",
+      "expected_cluster": "kitchen-experiments",
+      "tags": ["cooking", "equipment"]
+    },
+    {
+      "title": "The group chat is exhausting",
+      "content": "Our friend group chat has 47 unread messages and I can't bring myself to open it. It's not that I don't like these people, I just can't keep up with the constant back and forth. When did maintaining friendships become a part-time job?",
+      "created_at": "2025-10-16T21:00:00Z",
+      "expected_cluster": "friend-group-dynamics",
+      "tags": ["friends", "social fatigue"]
+    },
+    {
+      "title": "Canceled plans guilt",
+      "content": "Bailed on dinner tonight and I feel terrible about it but also relieved? I was running on empty and knew I'd be bad company. Is it better to show up exhausted or to take care of yourself? Why does friendship have to feel like an obligation sometimes?",
+      "created_at": "2025-10-24T18:30:00Z",
+      "expected_cluster": "friend-group-dynamics",
+      "tags": ["friends", "boundaries"]
+    },
+    {
+      "title": "Quality over quantity with friends",
+      "content": "Realized I'd rather have deep 1-on-1 conversations than big group hangs. The group dynamic changes people - everyone performs instead of connects. Maybe I need to start suggesting coffee dates instead of always going along with group plans.",
+      "created_at": "2025-11-01T22:00:00Z",
+      "expected_cluster": "friend-group-dynamics",
+      "tags": ["friends", "introvert"]
+    },
+    {
+      "title": "The energy imbalance thing",
+      "content": "Some friends leave me energized, others leave me drained. It's not about liking them less, just different energy dynamics. Started paying attention to this and being more intentional about who I spend time with when I'm already low.",
+      "created_at": "2025-11-09T16:00:00Z",
+      "expected_cluster": "friend-group-dynamics",
+      "tags": ["friends", "energy"]
+    },
+    {
+      "title": "Making new friends as an adult",
+      "content": "How do people make friends after 30? All my friends are from college or previous jobs. Tried a meetup group once and it was awkward. Maybe I need to just get more comfortable with awkward? Everyone there probably feels the same way.",
+      "created_at": "2025-11-16T19:30:00Z",
+      "expected_cluster": "friend-group-dynamics",
+      "tags": ["friends", "social"]
+    },
+    {
+      "title": "Friend audit sounds harsh but",
+      "content": "Read about doing a 'friend audit' and while the name is cold the concept makes sense. Who do you actually want to spend time with vs. who do you see out of habit or obligation? Life is short. Maybe it's okay to let some friendships fade.",
+      "created_at": "2025-11-23T14:00:00Z",
+      "expected_cluster": "friend-group-dynamics",
+      "tags": ["friends", "priorities"]
+    },
+    {
+      "title": "Standing desk research",
+      "content": "My back is complaining and everyone says standing desks help. Looked into it and there's like 50 options. Need to figure out: manual vs electric, what size, keyboard tray or not. Why is buying furniture so complicated? Just want something that won't hurt my spine.",
+      "created_at": "2025-10-26T12:00:00Z",
+      "expected_cluster": "home-office-setup",
+      "tags": ["office", "desk"]
+    },
+    {
+      "title": "Lighting makes a difference",
+      "content": "Got a desk lamp with adjustable color temperature and whoa. The harsh overhead light was giving me headaches without realizing it. Now I use warm light in the morning, cooler in the afternoon. Small change but my eyes feel less strained.",
+      "created_at": "2025-11-07T10:00:00Z",
+      "expected_cluster": "home-office-setup",
+      "tags": ["office", "lighting"]
+    },
+    {
+      "title": "Cable management project",
+      "content": "Finally dealt with the rats nest of cables under my desk. Took 2 hours but now everything is velcro'd and routed neatly. Shouldn't matter since I can't see it but somehow my brain works better when the hidden mess is gone too. Weird but true.",
+      "created_at": "2025-11-12T14:00:00Z",
+      "expected_cluster": "home-office-setup",
+      "tags": ["office", "organization"]
+    },
+    {
+      "title": "Monitor arm game changer",
+      "content": "Mounted my monitors on arms instead of stands and got so much desk space back. Also can actually position them at the right height now instead of stacking books under them. Should have done this years ago. Why did I wait so long?",
+      "created_at": "2025-11-19T11:00:00Z",
+      "expected_cluster": "home-office-setup",
+      "tags": ["office", "monitors"]
+    },
+    {
+      "title": "The chair situation",
+      "content": "Sat in my friend's Herman Miller and now my cheap Amazon chair feels like a torture device. Can't justify $1500 on a chair but also can't go back to not knowing what good support feels like. Looking at used options. This is a slippery slope.",
+      "created_at": "2025-11-24T16:00:00Z",
+      "expected_cluster": "home-office-setup",
+      "tags": ["office", "chair"]
+    },
+    {
+      "title": "Saw a weird cloud today",
+      "content": "Looked like a shoe. Like specifically a Nike Air Max. I know that's oddly specific but I swear it had the little air bubble and everything. Took a photo but it just looks like a cloud in the picture. You had to be there I guess.",
+      "created_at": "2025-10-12T16:30:00Z",
+      "expected_cluster": "orphan",
+      "tags": []
+    },
+    {
+      "title": "Subscription audit needed",
+      "content": "Just got charged for something I don't remember signing up for. Need to go through all my subscriptions and cancel the ones I'm not using. How many streaming services does one person need? The answer is apparently all of them.",
+      "created_at": "2025-10-31T09:00:00Z",
+      "expected_cluster": "orphan",
+      "tags": ["money"]
+    },
+    {
+      "title": "Do penguins get cold",
+      "content": "Random thought but like... they live in Antarctica but they're not covered in fur. Do they just not feel cold? Or do they feel it and just deal with it? Need to look this up. Probably have some special adaptation thing going on.",
+      "created_at": "2025-11-05T23:45:00Z",
+      "expected_cluster": "orphan",
+      "tags": []
+    },
+    {
+      "title": "Dentist appointment reminder",
+      "content": "Got the postcard that says I'm due for a cleaning. Been 8 months which isn't terrible but also not great. Need to actually call and schedule this time instead of letting it sit on my desk for another month. Putting it on the calendar now.",
+      "created_at": "2025-11-08T10:30:00Z",
+      "expected_cluster": "orphan",
+      "tags": ["health", "todo"]
+    },
+    {
+      "title": "That song is stuck in my head",
+      "content": "Been humming the same 4 bars of a song I heard at the grocery store for 3 days now. Don't even know what it's called or who sings it. Just 'dun dun dun-dun-dun' on repeat in my brain. This is my life now.",
+      "created_at": "2025-11-11T08:00:00Z",
+      "expected_cluster": "orphan",
+      "tags": []
+    },
+    {
+      "title": "Plants are hard",
+      "content": "Killed another succulent. They're supposed to be unkillable. Maybe I over-watered it? Under-watered? Looked at it wrong? I want to be a plant person but plants do not want me to be a plant person.",
+      "created_at": "2025-11-14T17:00:00Z",
+      "expected_cluster": "orphan",
+      "tags": ["home"]
+    },
+    {
+      "title": "Old receipt archaeology",
+      "content": "Cleaned out my wallet and found a receipt from a restaurant I don't remember going to. The date was 8 months ago. I have no memory of this meal. What else have I forgotten? Memory is weird.",
+      "created_at": "2025-11-18T13:00:00Z",
+      "expected_cluster": "orphan",
+      "tags": []
+    },
+    {
+      "title": "Shower thought about time",
+      "content": "Every day is the oldest you've ever been and the youngest you'll ever be again. I know this is obvious but it hit different this morning. What am I doing with this finite time? Probably thinking about time instead of using it.",
+      "created_at": "2025-11-21T07:30:00Z",
+      "expected_cluster": "orphan",
+      "tags": []
+    },
+    {
+      "title": "Forgot why I walked into this room",
+      "content": "Classic. Stood here for 30 seconds trying to remember. Walked back to where I was and immediately remembered - needed to grab my phone charger. The doorway memory wipe thing is real and annoying.",
+      "created_at": "2025-11-25T11:00:00Z",
+      "expected_cluster": "orphan",
+      "tags": ["adhd"]
+    },
+    {
+      "title": "That one email",
+      "content": "There's an email in my inbox from 2 weeks ago that I keep meaning to respond to and keep not responding to. At this point it's been so long that responding feels awkward. But not responding is worse. The email anxiety spiral is real.",
+      "created_at": "2025-11-28T15:00:00Z",
+      "expected_cluster": "orphan",
+      "tags": ["anxiety"]
+    },
+    {
+      "title": "Exhausted from bad sleep then skipped gym then had long meeting",
+      "content": "Triple whammy day. Couldn't sleep last night, woke up exhausted, decided to skip my morning workout because tired, then sat through a 2 hour status meeting that could have been an email. Now I'm tired AND frustrated AND didn't move my body. Tomorrow has to be better.",
+      "created_at": "2025-11-10T18:00:00Z",
+      "expected_cluster": "multi-topic",
+      "tags": ["sleep", "gym", "meetings"],
+      "edge_case": "multi-topic: sleep + fitness + meetings"
+    },
+    {
+      "title": "Learning Rust for my side project",
+      "content": "Thinking Rust might be good for the backend of that notes app idea. The performance characteristics would be great for handling embeddings and vector similarity calculations. Plus I want to learn it anyway so this kills two birds.",
+      "created_at": "2025-11-15T21:00:00Z",
+      "expected_cluster": "multi-topic",
+      "tags": ["rust", "side project"],
+      "edge_case": "multi-topic: learning-rust + side-project-ideas"
+    },
+    {
+      "title": "Standing desk helping my back during long coding sessions",
+      "content": "The new desk is making a real difference. Can code for hours now without that lower back ache. Standing while working on the Rust stuff makes me feel more alert too. The setup investment is paying off.",
+      "created_at": "2025-11-20T14:00:00Z",
+      "expected_cluster": "multi-topic",
+      "tags": ["desk", "coding", "health"],
+      "edge_case": "multi-topic: home-office-setup + fitness + learning-rust"
+    },
+    {
+      "title": "Energy drinks aren't helping anymore",
+      "content": "Used to be one Red Bull would get me through the afternoon slump. Now I need two and they barely work. Building up tolerance I guess. Need to either quit entirely or find a different solution. Maybe the real fix is just sleeping more.",
+      "created_at": "2025-11-12T15:30:00Z",
+      "expected_cluster": "borderline",
+      "tags": ["energy", "caffeine"],
+      "edge_case": "borderline: could be sleep-struggles or fitness-journey"
+    },
+    {
+      "title": "Need focus music for deep work",
+      "content": "Found a playlist that actually helps me concentrate without being distracting. Lo-fi beats are overrated but this one atmospheric electronic album hits different. My productivity doubles when I put it on. Music as a tool not entertainment.",
+      "created_at": "2025-11-16T10:00:00Z",
+      "expected_cluster": "borderline",
+      "tags": ["focus", "music"],
+      "edge_case": "borderline: could be meeting-frustrations (focus) or home-office-setup (environment)"
+    }
+  ]
+}
