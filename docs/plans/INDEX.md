@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-01-06
+**Last Updated:** 2026-01-09
 
 Status legend:
 - **Active** - Ready for implementation or in progress
@@ -13,6 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-09 | 2026-01-09-n8n-replacement-design.md | infra | Replace n8n with plain TypeScript scripts |
 | 2026-01-06 | 2026-01-06-test-isolation-design.md | infra | Isolate production data from Claude Code during testing |
 | 2026-01-05 | 2026-01-05-weekly-review-react-flow-design.md | ux-core | "Present -> React -> File" paradigm starting with weekly review |
 | 2026-01-05 | 2026-01-05-selenechat-interface-inspiration-design.md | selenechat | Design patterns from Perplexity, Things, Sunsama, Raycast |
