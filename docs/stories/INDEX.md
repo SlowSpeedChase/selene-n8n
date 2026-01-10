@@ -1,6 +1,6 @@
 # User Stories Index
 
-**Last Updated:** 2026-01-06
+**Last Updated:** 2026-01-09
 
 ---
 
@@ -9,7 +9,7 @@
 | State | Count | Limit |
 |-------|-------|-------|
 | Active | 0 | 5 max |
-| Ready | 0 | - |
+| Ready | 2 | - |
 | Draft | 0 | - |
 | Done | 6 | - |
 | Archived | 34 | - |
@@ -26,7 +26,10 @@
 
 ## Ready (Actionable)
 
-*None*
+| ID | Title | Phase | Effort |
+|----|-------|-------|--------|
+| US-045 | [Thread Detection Workflow](ready/US-045-thread-detection-workflow.md) | thread-system-2 | L |
+| US-046 | [Thread Detection Testing & Tuning](ready/US-046-thread-detection-tuning.md) | thread-system-2 | M |
 
 ---
 
@@ -50,13 +53,6 @@
 ---
 
 ## Future Phases (Stories TBD)
-
-### Phase 2: Thread Detection
-
-| Title | Priority | Effort |
-|-------|----------|--------|
-| Thread Detection Workflow (clustering logic) | critical | L |
-| Thread Synthesis Prompts (LLM summarization) | critical | M |
 
 ### Phase 3: Living System
 
@@ -82,7 +78,7 @@ Quick reference: which stories deliver which phases.
 | Phase | Description | Stories | Status |
 |-------|-------------|---------|--------|
 | thread-system-1 | Foundation (Embeddings + Associations) | US-040, US-041, US-042, US-043, US-044 | **Done** |
-| thread-system-2 | Thread Detection | TBD | Future |
+| thread-system-2 | Thread Detection | US-045, US-046 | **Ready** |
 | thread-system-3 | Living System | TBD | Future |
 | thread-system-4 | Interfaces | TBD | Future |
 | infra | Infrastructure | US-029 | Done |

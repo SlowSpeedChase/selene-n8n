@@ -87,7 +87,8 @@ export N8N_TEMPLATES_ENABLED=false
 export N8N_COMMUNITY_PACKAGES_ENABLED=true
 
 # Allow external modules in Function nodes
-export NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3,crypto,fs,path
+export NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3
+export N8N_RUNNERS_ENABLED=true
 
 # Find better-sqlite3 path (global npm modules)
 GLOBAL_NODE_MODULES="$(npm root -g)"
