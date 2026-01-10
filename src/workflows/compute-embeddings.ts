@@ -3,8 +3,8 @@ import type { WorkflowResult } from '../types';
 
 const log = createWorkflowLogger('compute-embeddings');
 
-export async function computeEmbeddings(limit = 10): Promise<WorkflowResult> {
-  log.info({ limit }, 'Starting embedding computation run');
+export async function computeEmbeddings(limit = 10, includeTestNotes = false): Promise<WorkflowResult> {
+  log.info({ limit, includeTestNotes }, 'Starting embedding computation run');
 
   if (!(await isAvailable())) {
     log.error('Ollama is not available');
@@ -12,12 +12,13 @@ export async function computeEmbeddings(limit = 10): Promise<WorkflowResult> {
   }
 
   // Get notes without embeddings
+  const testFilter = includeTestNotes ? '' : 'AND rn.test_run IS NULL';
   const notes = db
     .prepare(
       `SELECT rn.id, rn.title, rn.content
        FROM raw_notes rn
        LEFT JOIN note_embeddings ne ON rn.id = ne.raw_note_id
-       WHERE ne.raw_note_id IS NULL AND rn.test_run IS NULL
+       WHERE ne.raw_note_id IS NULL ${testFilter}
        LIMIT ?`
     )
     .all(limit) as Array<{ id: number; title: string; content: string }>;
@@ -57,7 +58,10 @@ export async function computeEmbeddings(limit = 10): Promise<WorkflowResult> {
 
 // CLI entry point
 if (require.main === module) {
-  computeEmbeddings()
+  const includeTest = process.argv.includes('--include-test');
+  const limit = 100; // Higher limit for batch processing
+
+  computeEmbeddings(limit, includeTest)
     .then((result) => {
       console.log('Compute-embeddings complete:', result);
       process.exit(result.errors > 0 ? 1 : 0);
