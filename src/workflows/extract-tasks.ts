@@ -67,9 +67,11 @@ For each task, provide:
 - title: Short task title
 - notes: Any relevant context
 - task_type: One of: action, decision, research, communication, learning, planning
+- estimated_minutes: Estimate (5, 15, 30, 60, 120, or 240)
+- overwhelm_factor: 1-10 scale (10 = most overwhelming/complex)
 
 Respond in JSON array format:
-[{"title": "Task title", "notes": "Context", "task_type": "action"}]
+[{"title": "Task", "notes": "Context", "task_type": "action", "estimated_minutes": 30, "overwhelm_factor": 3}]
 
 JSON response:`;
 
@@ -139,8 +141,31 @@ export async function extractTasks(limit = 10): Promise<WorkflowResult> {
           log.info({ noteId: note.id, projectId }, 'Found matching project for auto-assignment');
         }
 
-        // Write tasks to Things bridge directory
+        // Write tasks to Things bridge directory (or discussion thread if oversized)
         for (const task of tasks) {
+          // Check for oversized task (7.2f.4)
+          const isOversized =
+            (task.overwhelm_factor && task.overwhelm_factor > 7) ||
+            (task.estimated_minutes && task.estimated_minutes >= 240);
+
+          if (isOversized) {
+            // Route to discussion thread for planning breakdown
+            db.prepare(
+              `INSERT INTO discussion_threads_new
+               (raw_note_id, thread_type, prompt, status, related_concepts)
+               VALUES (?, 'planning', ?, 'pending', ?)`
+            ).run(
+              note.id,
+              `This task needs breakdown: "${task.title}"\n\nOriginal context: ${task.notes || 'None'}\n\nEstimated: ${task.estimated_minutes || '?'} min, Overwhelm: ${task.overwhelm_factor || '?'}/10`,
+              JSON.stringify([])
+            );
+            log.info(
+              { noteId: note.id, title: task.title, overwhelm: task.overwhelm_factor, minutes: task.estimated_minutes },
+              'Oversized task routed to discussion thread'
+            );
+            continue;
+          }
+
           const taskFile = join(
             config.thingsPendingDir,
             `task-${note.id}-${Date.now()}.json`
@@ -158,7 +183,6 @@ export async function extractTasks(limit = 10): Promise<WorkflowResult> {
           }
 
           // Add heading based on task_type (7.2f.3)
-          // Maps task_type to human-readable heading for Things
           const headingMap: Record<string, string> = {
             action: 'Actions',
             decision: 'Decisions',
