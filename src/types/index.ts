@@ -28,3 +28,28 @@ export interface WorkflowResult {
   errors: number;
   details: Array<{ id: number; success: boolean; error?: string }>;
 }
+
+// Obsidian export types
+export interface ExportableNote {
+  id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  tags: string | null;
+  word_count: number;
+  concepts: string | null;
+  primary_theme: string;
+  secondary_themes: string | null;
+  overall_sentiment: string;
+  sentiment_score: number | null;
+  emotional_tone: string;
+  energy_level: string;
+  sentiment_data: string | null;
+}
+
+export interface ExportResult {
+  success: boolean;
+  exported_count: number;
+  errors: number;
+  message: string;
+}

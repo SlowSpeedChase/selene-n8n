@@ -130,3 +130,112 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
     echo -e "${YELLOW}This was a dry run. Run without --dry-run to update the database.${NC}"
 fi
+
+# Check for project completion (7.2f.5)
+# A project is complete when all its tasks are completed
+log "INFO" "Checking for project completion..."
+
+PROJECTS_COMPLETED=0
+
+# Get active projects with tasks
+ACTIVE_PROJECTS=$(sqlite3 "$DB_PATH" "
+    SELECT p.id, p.things_project_id, p.name,
+           (SELECT COUNT(*) FROM task_links tl WHERE tl.things_project_id = p.things_project_id) as total_tasks,
+           (SELECT COUNT(*) FROM task_links tl WHERE tl.things_project_id = p.things_project_id AND tl.things_status = 'completed') as completed_tasks
+    FROM projects p
+    WHERE p.status = 'active'
+    AND p.things_project_id IS NOT NULL;
+")
+
+while IFS='|' read -r project_id things_project_id project_name total_tasks completed_tasks; do
+    [ -z "$project_id" ] && continue
+    [ "$total_tasks" -eq 0 ] && continue
+
+    if [ "$total_tasks" -eq "$completed_tasks" ]; then
+        log "INFO" "Project completed: $project_name ($completed_tasks/$total_tasks tasks)"
+
+        if [ "$DRY_RUN" = false ]; then
+            # Mark project as completed
+            sqlite3 "$DB_PATH" "
+                UPDATE projects SET
+                    status = 'completed',
+                    completed_at = datetime('now')
+                WHERE id = $project_id;
+            "
+
+            # Log to detected_patterns for productivity analysis
+            sqlite3 "$DB_PATH" "
+                INSERT INTO detected_patterns (pattern_type, pattern_name, description, confidence, data_points, pattern_data, discovered_at, is_active)
+                VALUES (
+                    'project_completion',
+                    'Project Completed: $project_name',
+                    'All $total_tasks tasks in project were completed',
+                    1.0,
+                    $total_tasks,
+                    json_object('project_id', $project_id, 'things_project_id', '$things_project_id', 'task_count', $total_tasks),
+                    datetime('now'),
+                    1
+                );
+            "
+
+            PROJECTS_COMPLETED=$((PROJECTS_COMPLETED + 1))
+        fi
+    fi
+done <<< "$ACTIVE_PROJECTS"
+
+if [ "$PROJECTS_COMPLETED" -gt 0 ]; then
+    log "INFO" "Marked $PROJECTS_COMPLETED project(s) as completed"
+    echo "Projects completed:  $PROJECTS_COMPLETED"
+fi
+
+# Check for sub-project suggestions (7.2f.6)
+# When a heading has 5+ tasks, suggest spinning off as separate project
+log "INFO" "Checking for sub-project suggestions..."
+
+SUGGESTIONS_CREATED=0
+
+# Find headings with 5+ tasks (grouped by project + heading)
+HEADING_CLUSTERS=$(sqlite3 "$DB_PATH" "
+    SELECT tl.things_project_id, tl.heading, COUNT(*) as task_count,
+           GROUP_CONCAT(tl.things_task_id) as task_ids
+    FROM task_links tl
+    WHERE tl.things_project_id IS NOT NULL
+    AND tl.heading IS NOT NULL
+    AND tl.things_status != 'completed'
+    GROUP BY tl.things_project_id, tl.heading
+    HAVING COUNT(*) >= 5;
+")
+
+while IFS='|' read -r things_project_id heading task_count task_ids; do
+    [ -z "$things_project_id" ] && continue
+
+    # Check if suggestion already exists
+    EXISTS=$(sqlite3 "$DB_PATH" "
+        SELECT COUNT(*) FROM subproject_suggestions
+        WHERE source_project_id = '$things_project_id'
+        AND suggested_concept = '$heading';
+    ")
+
+    if [ "$EXISTS" -eq 0 ]; then
+        log "INFO" "Suggesting sub-project: '$heading' ($task_count tasks)"
+
+        if [ "$DRY_RUN" = false ]; then
+            # Create suggestion (JSON array from comma-separated)
+            TASK_IDS_JSON=$(echo "$task_ids" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
+
+            sqlite3 "$DB_PATH" "
+                INSERT INTO subproject_suggestions
+                    (source_project_id, suggested_concept, task_count, task_ids)
+                VALUES
+                    ('$things_project_id', '$heading', $task_count, '$TASK_IDS_JSON');
+            "
+
+            SUGGESTIONS_CREATED=$((SUGGESTIONS_CREATED + 1))
+        fi
+    fi
+done <<< "$HEADING_CLUSTERS"
+
+if [ "$SUGGESTIONS_CREATED" -gt 0 ]; then
+    log "INFO" "Created $SUGGESTIONS_CREATED sub-project suggestion(s)"
+    echo "Sub-project suggestions: $SUGGESTIONS_CREATED"
+fi
