@@ -187,3 +187,55 @@ if [ "$PROJECTS_COMPLETED" -gt 0 ]; then
     log "INFO" "Marked $PROJECTS_COMPLETED project(s) as completed"
     echo "Projects completed:  $PROJECTS_COMPLETED"
 fi
+
+# Check for sub-project suggestions (7.2f.6)
+# When a heading has 5+ tasks, suggest spinning off as separate project
+log "INFO" "Checking for sub-project suggestions..."
+
+SUGGESTIONS_CREATED=0
+
+# Find headings with 5+ tasks (grouped by project + heading)
+HEADING_CLUSTERS=$(sqlite3 "$DB_PATH" "
+    SELECT tl.things_project_id, tl.heading, COUNT(*) as task_count,
+           GROUP_CONCAT(tl.things_task_id) as task_ids
+    FROM task_links tl
+    WHERE tl.things_project_id IS NOT NULL
+    AND tl.heading IS NOT NULL
+    AND tl.things_status != 'completed'
+    GROUP BY tl.things_project_id, tl.heading
+    HAVING COUNT(*) >= 5;
+")
+
+while IFS='|' read -r things_project_id heading task_count task_ids; do
+    [ -z "$things_project_id" ] && continue
+
+    # Check if suggestion already exists
+    EXISTS=$(sqlite3 "$DB_PATH" "
+        SELECT COUNT(*) FROM subproject_suggestions
+        WHERE source_project_id = '$things_project_id'
+        AND suggested_concept = '$heading';
+    ")
+
+    if [ "$EXISTS" -eq 0 ]; then
+        log "INFO" "Suggesting sub-project: '$heading' ($task_count tasks)"
+
+        if [ "$DRY_RUN" = false ]; then
+            # Create suggestion (JSON array from comma-separated)
+            TASK_IDS_JSON=$(echo "$task_ids" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
+
+            sqlite3 "$DB_PATH" "
+                INSERT INTO subproject_suggestions
+                    (source_project_id, suggested_concept, task_count, task_ids)
+                VALUES
+                    ('$things_project_id', '$heading', $task_count, '$TASK_IDS_JSON');
+            "
+
+            SUGGESTIONS_CREATED=$((SUGGESTIONS_CREATED + 1))
+        fi
+    fi
+done <<< "$HEADING_CLUSTERS"
+
+if [ "$SUGGESTIONS_CREATED" -gt 0 ]; then
+    log "INFO" "Created $SUGGESTIONS_CREATED sub-project suggestion(s)"
+    echo "Sub-project suggestions: $SUGGESTIONS_CREATED"
+fi
