@@ -58,7 +58,11 @@
 | Title | Priority | Effort |
 |-------|----------|--------|
 | Wire Embedding into Processing Pipeline | critical | M |
-| Reconsolidation Workflow | critical | L |
+| Thread Reconsolidation Workflow | critical | L |
+| Thread Splitting (sub-clusters emerge) | high | M |
+| Thread Merging (related threads combine) | high | M |
+| Note Reassignment (move notes between threads) | normal | S |
+| Faceted Threading (note in multiple threads) | normal | M |
 
 ### Phase 4: Interfaces
 
