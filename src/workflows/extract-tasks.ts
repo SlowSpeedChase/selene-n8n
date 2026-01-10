@@ -66,9 +66,10 @@ Note: {content}
 For each task, provide:
 - title: Short task title
 - notes: Any relevant context
+- task_type: One of: action, decision, research, communication, learning, planning
 
 Respond in JSON array format:
-[{"title": "Task title", "notes": "Context"}]
+[{"title": "Task title", "notes": "Context", "task_type": "action"}]
 
 JSON response:`;
 
@@ -144,10 +145,37 @@ export async function extractTasks(limit = 10): Promise<WorkflowResult> {
             config.thingsPendingDir,
             `task-${note.id}-${Date.now()}.json`
           );
-          // Include project_id if we found a matching project
-          const taskData = projectId ? { ...task, project_id: projectId } : task;
+
+          // Build task data with optional fields
+          const taskData: Record<string, unknown> = {
+            title: task.title,
+            notes: task.notes,
+          };
+
+          // Add project_id if we found a matching project
+          if (projectId) {
+            taskData.project_id = projectId;
+          }
+
+          // Add heading based on task_type (7.2f.3)
+          // Maps task_type to human-readable heading for Things
+          const headingMap: Record<string, string> = {
+            action: 'Actions',
+            decision: 'Decisions',
+            research: 'Research',
+            communication: 'Communication',
+            learning: 'Learning',
+            planning: 'Planning',
+          };
+          if (task.task_type && headingMap[task.task_type]) {
+            taskData.heading = headingMap[task.task_type];
+          }
+
           writeFileSync(taskFile, JSON.stringify(taskData, null, 2));
-          log.info({ noteId: note.id, taskFile, projectId }, 'Task written to Things bridge');
+          log.info(
+            { noteId: note.id, taskFile, projectId, heading: taskData.heading },
+            'Task written to Things bridge'
+          );
         }
 
         // Mark as tasks_created
