@@ -413,3 +413,120 @@ This is a hub page for all notes related to **${concept}**. Obsidian will automa
 
   return filename;
 }
+
+// Query for notes ready to export
+function getNotesForExport(noteId?: number, limit = 50): ExportableNote[] {
+  if (noteId) {
+    // Export specific note
+    return db
+      .prepare(
+        `SELECT
+          rn.id, rn.title, rn.content, rn.created_at, rn.tags, rn.word_count,
+          pn.concepts, pn.primary_theme, pn.secondary_themes,
+          pn.overall_sentiment, pn.sentiment_score, pn.emotional_tone,
+          pn.energy_level, pn.sentiment_data
+        FROM raw_notes rn
+        JOIN processed_notes pn ON rn.id = pn.raw_note_id
+        WHERE rn.id = ?
+          AND rn.status = 'processed'`
+      )
+      .all(noteId) as ExportableNote[];
+  }
+
+  // Export all pending notes
+  return db
+    .prepare(
+      `SELECT
+        rn.id, rn.title, rn.content, rn.created_at, rn.tags, rn.word_count,
+        pn.concepts, pn.primary_theme, pn.secondary_themes,
+        pn.overall_sentiment, pn.sentiment_score, pn.emotional_tone,
+        pn.energy_level, pn.sentiment_data
+      FROM raw_notes rn
+      JOIN processed_notes pn ON rn.id = pn.raw_note_id
+      WHERE rn.exported_to_obsidian = 0
+        AND rn.status = 'processed'
+      ORDER BY rn.created_at DESC
+      LIMIT ?`
+    )
+    .all(limit) as ExportableNote[];
+}
+
+// Mark note as exported
+function markAsExported(noteId: number): void {
+  db.prepare(
+    `UPDATE raw_notes
+     SET exported_to_obsidian = 1, exported_at = ?
+     WHERE id = ?`
+  ).run(new Date().toISOString(), noteId);
+}
+
+// Main export function
+export async function exportObsidian(noteId?: number): Promise<ExportResult> {
+  log.info({ noteId }, 'Starting Obsidian export');
+
+  const vaultPath = process.env.OBSIDIAN_VAULT_PATH || join(config.projectRoot, 'vault');
+  log.info({ vaultPath }, 'Using vault path');
+
+  const notes = getNotesForExport(noteId);
+  log.info({ noteCount: notes.length }, 'Found notes for export');
+
+  if (notes.length === 0) {
+    const message = noteId
+      ? `Note ${noteId} not found or not ready for export`
+      : 'No notes ready for export';
+    return { success: true, exported_count: 0, errors: 0, message };
+  }
+
+  let exportedCount = 0;
+  let errorCount = 0;
+
+  for (const note of notes) {
+    try {
+      log.info({ noteId: note.id, title: note.title }, 'Exporting note');
+
+      // Generate markdown
+      const markdownData = generateAdhdMarkdown(note);
+
+      // Write to vault
+      const filename = writeNoteToVault(note, markdownData, vaultPath);
+
+      // Mark as exported
+      markAsExported(note.id);
+
+      log.info({ noteId: note.id, filename }, 'Note exported successfully');
+      exportedCount++;
+    } catch (err) {
+      const error = err as Error;
+      log.error({ noteId: note.id, err: error }, 'Failed to export note');
+      errorCount++;
+    }
+  }
+
+  const message = noteId
+    ? `Exported note ${noteId}`
+    : `Exported ${exportedCount} notes to Obsidian`;
+
+  log.info({ exportedCount, errorCount }, 'Export complete');
+
+  return {
+    success: errorCount === 0,
+    exported_count: exportedCount,
+    errors: errorCount,
+    message,
+  };
+}
+
+// CLI entry point
+if (require.main === module) {
+  const noteId = process.argv[2] ? parseInt(process.argv[2], 10) : undefined;
+
+  exportObsidian(noteId)
+    .then((result) => {
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(result.errors > 0 ? 1 : 0);
+    })
+    .catch((err) => {
+      console.error('Export failed:', err);
+      process.exit(1);
+    });
+}
