@@ -5,10 +5,28 @@
   "private": true,
   "scripts": {
     "mcp-wrapper": "node scripts/things-mcp-wrapper.js",
-    "test-mcp": "node scripts/test-mcp-wrapper.js"
+    "test-mcp": "node scripts/test-mcp-wrapper.js",
+    "start": "ts-node src/server.ts",
+    "dev": "ts-node-dev src/server.ts",
+    "workflow:process-llm": "ts-node src/workflows/process-llm.ts",
+    "workflow:extract-tasks": "ts-node src/workflows/extract-tasks.ts",
+    "workflow:compute-embeddings": "ts-node src/workflows/compute-embeddings.ts",
+    "workflow:compute-associations": "ts-node src/workflows/compute-associations.ts",
+    "workflow:daily-summary": "ts-node src/workflows/daily-summary.ts"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "fastify": "^4.26.0",
+    "better-sqlite3": "^11.0.0",
+    "pino": "^8.18.0",
+    "pino-pretty": "^10.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0",
+    "ts-node-dev": "^2.0.0",
+    "@types/node": "^20.11.0",
+    "@types/better-sqlite3": "^7.6.8"
   },
   "keywords": [
     "n8n",
