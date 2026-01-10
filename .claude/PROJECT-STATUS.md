@@ -1,454 +1,227 @@
-# Selene n8n Project - Current Status
+# Selene Project - Current Status
 
-**Last Updated:** 2026-01-04
-**Status:** NEW DIRECTION - Thread System Implementation
+**Last Updated:** 2026-01-09
+**Status:** TypeScript Backend Replacement Complete
 
 ---
 
 ## Project Overview
 
-Selene is a **thought consolidation system** for someone with ADHD. The core problem isn't capturing thoughts or organizing them — it's making sense of them over time and knowing when to act.
+Selene is a **thought consolidation system** for someone with ADHD. The core problem is not capturing thoughts or organizing them - it is making sense of them over time and knowing when to act.
 
-Notes form **threads** — lines of thinking that span multiple notes, have underlying motivations, and eventually become projects or writing or decisions. **The system's job is to hold the thread so the user doesn't have to.**
+Notes form **threads** - lines of thinking that span multiple notes, have underlying motivations, and eventually become projects or writing or decisions. **The system's job is to hold the thread so the user does not have to.**
 
-**Architecture:** Docker-based n8n with SQLite database + Ollama embeddings
+**Architecture:** TypeScript + Fastify + launchd with SQLite database + Ollama embeddings
 **Location:** `/Users/chaseeasterling/selene-n8n`
 
 ---
 
-## Current Focus: Thread System Phase 1
+## Current Focus: TypeScript Backend
 
-**Design:** `docs/plans/2026-01-04-selene-thread-system-design.md`
-**Stories:** `docs/stories/INDEX.md` (US-040 through US-044)
+**Branch:** `n8n-replacement` (this branch)
 
-### Phase 1: Foundation (Embeddings + Associations)
+The n8n workflow engine has been replaced with a pure TypeScript backend:
 
-| Story | Title | Status |
-|-------|-------|--------|
-| US-040 | Thread System Database Migration | Draft |
-| US-041 | Embedding Generation Workflow | Draft |
-| US-042 | Batch Embed Existing Notes | Draft |
-| US-043 | Association Computation Workflow | Draft |
-| US-044 | Verify Note Clusters | Draft |
+### Completed Components
 
-**Goal:** Position every note in "thought space" and connect them via semantic similarity.
+| Component | File | Status |
+|-----------|------|--------|
+| Webhook Server | `src/server.ts` | Done |
+| Database Utilities | `src/lib/db.ts` | Done |
+| Ollama Client | `src/lib/ollama.ts` | Done |
+| Logger (Pino) | `src/lib/logger.ts` | Done |
+| Configuration | `src/lib/config.ts` | Done |
+| Ingestion Workflow | `src/workflows/ingest.ts` | Done |
+| LLM Processing | `src/workflows/process-llm.ts` | Done |
+| Task Extraction | `src/workflows/extract-tasks.ts` | Done |
+| Embedding Generation | `src/workflows/compute-embeddings.ts` | Done |
+| Association Computation | `src/workflows/compute-associations.ts` | Done |
+| Daily Summary | `src/workflows/daily-summary.ts` | Done |
+| Launchd Agents | `launchd/*.plist` | Done |
+| Install Script | `scripts/install-launchd.sh` | Done |
 
-**Checkpoint:** Can query "what notes are similar to this one?" and get meaningful results.
+### Why Replace n8n?
+
+1. **Simpler debugging** - TypeScript stack traces vs n8n execution logs
+2. **Version control** - All code in git, no UI state to sync
+3. **Fewer moving parts** - No Docker, no n8n runtime overhead
+4. **Type safety** - TypeScript catches errors at compile time
+5. **macOS native** - launchd is reliable, built-in, and efficient
 
 ---
 
-## Existing Infrastructure (Keep)
+## System Architecture
 
-The following workflows remain in production and will be extended by the thread system:
+### Components
 
----
-
-## Completed Workflows
-
-### ✅ 01-Ingestion Workflow (COMPLETE)
-
-**Status:** Tested and Production Ready (6/7 tests passing)
-**Location:** `workflows/01-ingestion/`
-**Webhook:** `http://localhost:5678/webhook/api/drafts`
-
-**What It Does:**
-- Receives notes via webhook (POST JSON)
-- Validates content and extracts metadata
-- Generates content hash for duplicate detection
-- Extracts hashtags from content
-- Stores in `raw_notes` table with status='pending'
-
-**Key Features:**
-- ✅ Duplicate detection via content hash
-- ✅ Tag extraction (#hashtag support)
-- ✅ Word/character count calculation
-- ✅ Test data marking system (`test_run` column)
-- ✅ Automated test suite with cleanup
-- ✅ Drafts app integration ready
-
-**Database Table:** `raw_notes`
-```sql
-CREATE TABLE raw_notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    content_hash TEXT UNIQUE NOT NULL,
-    source_type TEXT DEFAULT 'drafts',
-    word_count INTEGER DEFAULT 0,
-    character_count INTEGER DEFAULT 0,
-    tags TEXT, -- JSON array
-    created_at DATETIME NOT NULL,
-    imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    processed_at DATETIME,
-    exported_at DATETIME,
-    status TEXT DEFAULT 'pending',
-    exported_to_obsidian INTEGER DEFAULT 0,
-    test_run TEXT DEFAULT NULL
-);
+```
+Drafts App
+    |
+    v
+Fastify Server (port 5678)
+    |
+    v
+SQLite Database (data/selene.db)
+    ^
+    |
+launchd Scheduled Jobs:
+  - process-llm (every 5 min)
+  - extract-tasks (every 5 min)
+  - compute-embeddings (every 10 min)
+  - compute-associations (every 10 min)
+  - daily-summary (midnight)
+    |
+    v
+Ollama (localhost:11434)
+  - mistral:7b (text generation)
+  - nomic-embed-text (embeddings)
 ```
 
-**Configuration:**
-- better-sqlite3 installed in `/home/node/.n8n/node_modules/`
-- `NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3`
-- `NODE_PATH=/home/node/.n8n/node_modules`
+### Key Files
 
-**Known Issues:**
-- Alternative query parameter format not supported (low priority)
-
-**Testing:**
-- Test suite: `./workflows/01-ingestion/scripts/test-with-markers.sh`
-- Cleanup: `./workflows/01-ingestion/scripts/cleanup-tests.sh`
-
-**Documentation:**
-- Quick reference: `workflows/01-ingestion/INDEX.md`
-- Status/results: `workflows/01-ingestion/docs/STATUS.md`
-- Drafts setup: `workflows/01-ingestion/docs/DRAFTS-QUICKSTART.md`
-
----
-
-### ✅ 08-Daily-Summary Workflow (COMPLETE)
-
-**Status:** Production Ready
-**Location:** `workflows/08-daily-summary/`
-**Completed:** 2025-12-31
-
-**What It Does:**
-- Runs daily at midnight (00:00) via schedule trigger
-- Queries last 24 hours of data from three sources:
-  - `raw_notes` - Recently captured notes
-  - `processed_notes` - LLM-extracted concepts and themes
-  - `detected_patterns` - Active recurring patterns
-- Sends data to Ollama (mistral:7b) for executive summary generation
-- Writes formatted markdown to `/obsidian/Selene/Daily/YYYY-MM-DD-summary.md`
-- Includes error fallback if Ollama is offline
-
-**Key Features:**
-- ✅ Automated daily execution (cron: 0 0 * * *)
-- ✅ Multi-source data aggregation (notes + insights + patterns)
-- ✅ LLM-generated executive summary
-- ✅ ADHD-friendly daily context visibility
-- ✅ Graceful error handling (Ollama timeout/offline)
-- ✅ Obsidian vault integration
-
-**Output Format:**
-- Markdown file with daily statistics
-- Summary of note activity and themes
-- Connection to detected patterns
-- Automatic timestamp and metadata
-
-**Workflow Nodes:**
-- Schedule: Midnight Daily (scheduleTrigger)
-- Query All Data (function - parallel queries)
-- Build Summary Prompt (function)
-- Send to Ollama (httpRequest with 120s timeout)
-- Fallback: Ollama Error (function)
-- Prepare Markdown (function)
-- Convert to Binary (moveBinaryData)
-- Write to Obsidian (writeBinaryFile)
-
-**Configuration:**
-- Ollama URL: `http://host.docker.internal:11434/api/generate`
-- Model: `mistral:7b`
-- Output path: `/obsidian/Selene/Daily/`
-- Timezone: Server timezone
-
-**Testing:**
-- Test script: `./workflows/08-daily-summary/scripts/test-with-markers.sh`
-- Status: All tests passing (as of 2025-12-31)
-
-**Documentation:**
-- Quick start: `workflows/08-daily-summary/README.md`
-- Status/results: `workflows/08-daily-summary/docs/STATUS.md`
-
----
-
-### ✅ 07-Task-Extraction Workflow (COMPLETE)
-
-**Status:** Production Ready
-**Location:** `workflows/07-task-extraction/`
-**Completed:** 2025-12-30
-
-**What It Does:**
-- Classifies notes as: `actionable`, `needs_planning`, or `archive_only`
-- Extracts tasks from actionable notes using Ollama LLM
-- Routes actionable tasks to Things 3 inbox via file-based handoff
-- Flags `needs_planning` notes with discussion threads for SeleneChat
-- Stores classification metadata in database
-
-**Key Features:**
-- ✅ Three-way classification using Ollama
-- ✅ ADHD-optimized task metadata (energy, overwhelm, time estimates)
-- ✅ File-based Things integration with launchd automation
-- ✅ Discussion threads for planning items
-- ✅ Full E2E tests passing
-
-**Things Bridge Components:**
 ```
-scripts/things-bridge/
-├── add-task-to-things.scpt      # AppleScript for Things API
-├── process-pending-tasks.sh     # Wrapper script
-└── com.selene.things-bridge.plist  # launchd configuration
+src/
+  server.ts           # Fastify webhook server
+  lib/
+    config.ts         # Environment configuration
+    db.ts             # better-sqlite3 database utilities
+    logger.ts         # Pino structured logging
+    ollama.ts         # Ollama API client
+  workflows/
+    ingest.ts         # Note ingestion (called by webhook)
+    process-llm.ts    # LLM concept extraction
+    extract-tasks.ts  # Task classification
+    compute-embeddings.ts
+    compute-associations.ts
+    daily-summary.ts
+  types/
+    index.ts          # Shared TypeScript types
+
+launchd/
+  com.selene.server.plist
+  com.selene.process-llm.plist
+  com.selene.extract-tasks.plist
+  com.selene.compute-embeddings.plist
+  com.selene.compute-associations.plist
+  com.selene.daily-summary.plist
+
+logs/
+  selene.log          # Workflow logs (Pino JSON)
+  server.out.log      # Server stdout
+  server.err.log      # Server stderr
 ```
 
-**Documentation:**
-- Status/results: `workflows/07-task-extraction/STATUS.md`
+---
+
+## Existing Features (Migrated)
+
+### Ingestion
+- Webhook endpoint: `POST /webhook/api/drafts`
+- Duplicate detection via content hash
+- Tag extraction from #hashtags
+- Word/character count calculation
+- Test data marking system (`test_run` column)
+
+### LLM Processing
+- Concept extraction via Ollama
+- Theme detection
+- Status tracking (pending -> processing -> completed)
+
+### Task Extraction
+- Three-way classification: actionable / needs_planning / archive_only
+- Things 3 integration for actionable tasks
+- Discussion threads for planning items
+
+### Embeddings & Associations
+- Semantic embeddings via nomic-embed-text
+- Cosine similarity for note relationships
+- Note clustering and thread detection
+
+### Daily Summary
+- Aggregates notes, insights, patterns
+- LLM-generated executive summary
+- Writes to Obsidian vault
 
 ---
 
-## Next Workflows (TODO)
-
-### 🔄 02-LLM Processing (IN PROGRESS)
-
-**Status:** Not Started
-**Location:** `workflows/02-llm-processing/` (file exists: `02-llm-processing-workflow.json`)
-**Purpose:** Process notes from `raw_notes` with LLM
-
-**Expected Flow:**
-1. Query `raw_notes` WHERE status='pending'
-2. Send to Ollama for processing
-3. Extract insights, topics, connections
-4. Store in `processed_notes` table
-5. Update raw_notes.status='processed'
-
-**Ollama Configuration:**
-- URL: `http://host.docker.internal:11434` (from n8n container)
-- Model: `mistral:7b` (configurable via `OLLAMA_MODEL` env var)
-- Container has `host.docker.internal` mapped to host gateway
-
-**Database Table:** `processed_notes` (needs verification)
-
-**Questions to Answer:**
-- What processing should be done?
-- What should be extracted?
-- How to structure processed_notes table?
-- Batch processing or one-by-one?
-- Error handling for LLM failures?
-
-### 📊 03-Pattern Detection
-
-**Status:** Not Started
-**Location:** `workflows/03-pattern-detection/` (file exists: `03-pattern-detection-workflow.json`)
-
-**Expected:** Analyze patterns across processed notes
-
-### 📤 04-Obsidian Export
-
-**Status:** Not Started
-**Location:** `workflows/04-obsidian-export/` (file exists: `04-obsidian-export-workflow.json`)
-
-**Expected:** Export processed notes to Obsidian vault
-**Vault Path:** `/obsidian` (mounted from `${OBSIDIAN_VAULT_PATH:-./vault}`)
-
-### 📈 05-Sentiment Analysis
-
-**Status:** Not Started
-**Location:** (file exists: `05-sentiment-analysis-workflow.json`)
-
-### 🕸️ 06-Connection Network
-
-**Status:** Not Started
-**Location:** (file exists: `06-connection-network-workflow.json`)
-
----
-
-## Technical Architecture
-
-### Database
+## Database Schema
 
 **Type:** SQLite
 **Location:** `data/selene.db`
-**Container Path:** `/selene/data/selene.db`
 
 **Tables:**
-- `raw_notes` - Ingested notes (workflow 01 ✅)
-- `processed_notes` - LLM processed notes (workflow 02)
-- `detected_patterns` - Pattern detection results (workflow 03)
-- `sentiment_history` - Sentiment analysis (workflow 05)
-- `network_analysis_history` - Connection network (workflow 06)
-- `pattern_reports` - Pattern reports (workflow 03)
-- `test_table` - Unknown purpose
-
-**Schema Location:** `database/schema.sql`
-
-### Docker Setup
-
-**Container:** `selene-n8n`
-**Image:** Custom build from `Dockerfile`
-**Base:** `n8nio/n8n:latest`
-
-**Volumes:**
-- `n8n_data:/home/node/.n8n` - Persistent n8n data
-- `./data:/selene/data:rw` - Database
-- `./vault:/obsidian:rw` - Obsidian vault
-- `.:/workflows:ro` - Workflow files (read-only)
-
-**Environment Variables:**
-```yaml
-# Authentication
-N8N_BASIC_AUTH_ACTIVE=true
-N8N_BASIC_AUTH_USER=admin
-N8N_BASIC_AUTH_PASSWORD=selene_n8n_2025
-
-# Node modules
-NODE_FUNCTION_ALLOW_EXTERNAL=better-sqlite3
-NODE_PATH=/home/node/.n8n/node_modules
-
-# Database paths
-SELENE_DB_PATH=/selene/data/selene.db
-OBSIDIAN_VAULT_PATH=/obsidian
-
-# Ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=mistral:7b
-
-# Community packages
-N8N_COMMUNITY_PACKAGES_ENABLED=true
-N8N_COMMUNITY_PACKAGES_INSTALL=n8n-nodes-sqlite
-```
-
-**Network:**
-- `host.docker.internal:host-gateway` mapped for Ollama access
-
-### Dependencies
-
-**Installed in Container:**
-- better-sqlite3@11.0.0 (in `/home/node/.n8n/node_modules/`)
-- n8n-nodes-sqlite (community package)
-
-**System Packages:**
-- python3, make, g++, sqlite, sqlite-dev
-
----
-
-## Important Patterns & Decisions
-
-### 1. Better-SQLite3 Integration
-
-**Problem:** n8n's VM2 sandbox can't access globally installed modules
-**Solution:** Install in workspace + set NODE_PATH + whitelist with NODE_FUNCTION_ALLOW_EXTERNAL
-
-**Usage in workflows:**
-```javascript
-const Database = require('better-sqlite3');
-const db = new Database('/selene/data/selene.db');
-// ... use db
-db.close();
-```
-
-### 2. Test Data Management
-
-**Pattern:** All test data marked with `test_run` column
-**Benefit:** Easy programmatic cleanup without affecting production data
-
-**Usage:**
-```json
-{
-  "title": "Test Note",
-  "content": "Content",
-  "test_run": "test-run-20251030-120000"
-}
-```
-
-**Cleanup:**
-```bash
-./scripts/cleanup-tests.sh test-run-20251030-120000
-```
-
-### 3. Switch vs IF Nodes
-
-**Issue:** Switch node with `notExists` doesn't work with `null` values
-**Solution:** Use IF node with explicit null check
-
-**Correct Pattern:**
-```javascript
-// In IF node condition:
-$json.id == null || $json.id == undefined
-```
-
-### 4. Workflow Response Modes
-
-**webhook responseMode: "onReceived"** - Returns immediately, workflow runs async
-**webhook responseMode: "lastNode"** - Waits for workflow completion
-
-Currently using `onReceived` for ingestion workflow.
-
----
-
-## Network Configuration
-
-**Local Network IP:** 192.168.1.26
-**Tailscale IP:** 100.111.6.10
-**n8n Port:** 5678
-
-**Drafts Webhook URLs:**
-- Same device: `http://localhost:5678/webhook/api/drafts`
-- Same WiFi: `http://192.168.1.26:5678/webhook/api/drafts`
-- Tailscale: `http://100.111.6.10:5678/webhook/api/drafts`
-
----
-
-## Testing Strategy
-
-### Automated Tests
-- Location: `workflows/*/scripts/test-with-markers.sh`
-- Marks all data with unique `test_run` ID
-- Provides cleanup instructions
-
-### Manual Tests
-- Always include `test_run` parameter
-- Clean up after testing
-
-### CI/CD Ready
-- Tests can run in pipeline
-- Automatic cleanup possible
-- Test data isolated from production
+- `raw_notes` - Ingested notes
+- `processed_notes` - LLM processed notes
+- `note_embeddings` - Semantic embeddings
+- `note_associations` - Note relationships
+- `detected_patterns` - Pattern detection results
+- `extracted_tasks` - Task classification results
 
 ---
 
 ## Common Commands
 
-### Docker Management
+### Server
 ```bash
-docker-compose ps              # Check status
-docker-compose logs n8n        # View logs
-docker-compose restart n8n     # Restart
-docker-compose down            # Stop
-docker-compose up -d           # Start
+curl http://localhost:5678/health           # Health check
+tail -f logs/server.out.log                 # Server logs
+launchctl kickstart -k gui/$(id -u)/com.selene.server  # Restart
 ```
 
-### Database Access
+### Workflows
 ```bash
-sqlite3 data/selene.db "SELECT * FROM raw_notes LIMIT 5;"
-sqlite3 data/selene.db ".tables"
-sqlite3 data/selene.db ".schema raw_notes"
+npx ts-node src/workflows/process-llm.ts
+npx ts-node src/workflows/extract-tasks.ts
+npx ts-node src/workflows/compute-embeddings.ts
+tail -f logs/selene.log | npx pino-pretty   # View logs
+```
+
+### Launchd
+```bash
+launchctl list | grep selene                # List agents
+./scripts/install-launchd.sh                # Install agents
 ```
 
 ### Testing
 ```bash
-cd workflows/01-ingestion
-./scripts/test-with-markers.sh           # Run tests
-./scripts/cleanup-tests.sh --list        # List test runs
-./scripts/cleanup-tests.sh <test-run-id> # Clean specific run
+curl -X POST http://localhost:5678/webhook/api/drafts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test", "content": "Test content", "test_run": "test-123"}'
+
+./scripts/cleanup-tests.sh --list           # List test runs
+./scripts/cleanup-tests.sh test-123         # Cleanup
 ```
 
 ---
 
-## Next Session Priorities
+## Next Steps
 
-**NEW DIRECTION:** Thread System (2026-01-04)
+1. **Merge this branch** - Complete the n8n replacement
+2. **Phase 7.2** - SeleneChat Planning Integration
+3. **Phase 7.3** - Cloud AI Integration (sanitization layer)
+4. **Phase 7.4** - Contextual Surfacing
 
-Previous Phase 7.x work has been archived. The new focus is building a thought consolidation system using semantic embeddings and thread detection.
+---
 
-| Phase | Status | Summary |
-|-------|--------|---------|
-| thread-system-1 | **NEXT** | Foundation - embeddings + associations |
-| thread-system-2 | Future | Thread detection - clustering + synthesis |
-| thread-system-3 | Future | Living system - auto-processing pipeline |
-| thread-system-4 | Future | Interfaces - Obsidian export, SeleneChat queries |
-| US-029 | Ready | Workflow Standardization (infrastructure) |
+## Recent Achievements
 
-**Design doc:** `docs/plans/2026-01-04-selene-thread-system-design.md`
-**Stories:** `docs/stories/INDEX.md`
+### 2026-01-09
+- Completed TypeScript backend replacement
+- Implemented all workflow scripts
+- Created launchd agents for scheduling
+- Updated documentation
+
+### 2026-01-04
+- Thread System Design complete
+- Stories US-040 through US-044 defined
+
+### 2025-12-31
+- Phase 7.2d Complete - AI Provider Toggle
+- Phase 7.2 Design Complete - SeleneChat Planning Integration
+
+### 2025-12-30
+- Phase 7.1 Complete - Task Extraction with Classification
+- File-based Things integration with launchd automation
 
 ---
 
@@ -458,137 +231,17 @@ Previous Phase 7.x work has been archived. The new focus is building a thought c
 - `docs/plans/2026-01-04-selene-thread-system-design.md` - Thread system design
 - `docs/stories/INDEX.md` - User stories for implementation
 - `database/schema.sql` - Database structure
-- `docker-compose.yml` - Environment configuration
 
-**Thread System (New):**
-- `workflows/09-embedding-generation/` - To be created
-- `workflows/10-association-computation/` - To be created
-- `database/migrations/011_thread_system.sql` - To be created
-
-**Existing Workflows (Keep):**
-- `workflows/01-ingestion/` - Note capture (production)
-- `workflows/07-task-extraction/` - Task extraction (production)
-- `workflows/08-daily-summary/` - Daily summaries (production)
+**Source Code:**
+- `src/server.ts` - Webhook server entry point
+- `src/lib/` - Shared utilities
+- `src/workflows/` - Background processing scripts
+- `launchd/` - macOS launch agent configurations
 
 ---
 
 ## Questions for Next Session
 
-1. Is Ollama running and accessible?
-2. Is `nomic-embed-text` model pulled? (`ollama pull nomic-embed-text`)
-3. Start with US-040 (database migration) or US-029 (workflow standardization)?
-
----
-
-## Recent Achievements
-
-### 2026-01-02
-✅ Documentation sync - Fixed PROJECT-STATUS.md to reflect 7.2d completion
-
-### 2025-12-31
-✅ Phase 7.2d Complete - AI Provider Toggle (PR #6 merged)
-- Local LLM (Ollama) as default, explicit cloud opt-in
-- Global setting with per-conversation override
-- Settings via gear icon in Planning tab header
-- "Include history?" prompt when switching to cloud mid-conversation
-- Visual indicators: header badge + message bubble styling
-- API key via environment variable (ANTHROPIC_API_KEY)
-
-📋 Phase 7.2 Design Complete - SeleneChat Planning Integration
-- New "Planning" sidebar tab for guided breakdown conversations
-- Dual AI routing: Ollama (sensitive) / Claude API (planning)
-- Things as task database - only store relationship links in Selene
-- Methodology layer: editable prompts/triggers without code changes
-- Bidirectional Things flow with resurface triggers (progress/stuck/complete)
-
-### 2025-12-30
-✅ Completed Phase 7.1 - Task Extraction with Classification
-✅ Three-way note classification (actionable/needs_planning/archive_only)
-✅ File-based Things integration with launchd automation
-✅ AppleScript bridge for Things API
-✅ Discussion threads for planning items
-✅ Full E2E tests passing for both actionable and needs_planning paths
-
-### 2025-12-31
-✅ Completed Workflow 08 - Daily Summary
-✅ Implemented automated daily executive summaries
-✅ Integrated Ollama LLM for summary generation
-✅ Multi-source data aggregation (notes, insights, patterns)
-✅ Obsidian vault output with markdown formatting
-✅ Error handling for Ollama offline scenarios
-✅ All tests passing
-
-### 2025-10-30
-✅ Completed ingestion workflow testing (6/7 pass rate)
-✅ Fixed better-sqlite3 module loading
-✅ Fixed switch node logic for duplicate detection
-✅ Implemented test data management system
-✅ Created comprehensive documentation
-✅ Organized folder structure
-✅ Set up Drafts app integration guide
-✅ Marked existing test data for cleanup
-✅ Updated all documentation paths
-
-**Ready for:** Workflow 02 - LLM Processing
-
----
-
-## Context Structure (2025-11-27)
-
-### Modular Documentation
-
-The codebase now uses modular context files optimized for Claude Code AI development:
-
-**Root Level:**
-- `CLAUDE.md` - High-level overview with navigation
-- `ROADMAP.md` - Project phases and planning
-
-**`.claude/` Directory:**
-- `README.md` - Context navigation guide (START HERE)
-- `DEVELOPMENT.md` - Architecture, patterns, decisions
-- `OPERATIONS.md` - Daily commands and procedures
-- `ADHD_Principles.md` - ADHD design framework
-- `PROJECT-STATUS.md` - Current state (this file)
-
-**`workflows/` Directory:**
-- `CLAUDE.md` - Workflow development patterns
-- `XX-name/workflow.json` - Source of truth for workflows
-- `XX-name/docs/STATUS.md` - Per-workflow test results
-
-**`scripts/` Directory:**
-- `CLAUDE.md` - Script utilities documentation
-- `manage-workflow.sh` - Workflow CLI tool
-
-### Why This Structure?
-
-**Single Responsibility:**
-- Each file serves one specific AI task
-- Development decisions separate from operations
-- Workflow patterns separate from architecture
-
-**Minimal Context Loading:**
-- Agents read only what's needed for current task
-- Faster context loading
-- Reduced token usage
-
-**DRY Principle:**
-- Information lives in one canonical location
-- Cross-references using @filename syntax
-- No duplication across files
-
-### Loading Patterns
-
-**For workflow modifications:**
-```
-@workflows/CLAUDE.md → @.claude/OPERATIONS.md → @scripts/CLAUDE.md
-```
-
-**For architectural decisions:**
-```
-@.claude/DEVELOPMENT.md → @.claude/ADHD_Principles.md → @ROADMAP.md
-```
-
-**For daily operations:**
-```
-@.claude/OPERATIONS.md → @.claude/PROJECT-STATUS.md
-```
+1. Should we merge the n8n-replacement branch to main?
+2. Any issues with the launchd scheduling?
+3. Ready to start Phase 7.2 (SeleneChat Planning)?

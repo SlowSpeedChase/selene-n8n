@@ -5,7 +5,7 @@
 **Related Context:**
 - `@.claude/ADHD_Principles.md` - Why we make ADHD-focused design choices
 - `@.claude/OPERATIONS.md` - How to execute common operations
-- `@workflows/CLAUDE.md` - Workflow-specific implementation patterns
+- `@src/workflows/` - TypeScript workflow implementations
 
 ---
 
@@ -14,34 +14,37 @@
 ### Three-Tier Design
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ TIER 1: CAPTURE (Reduce Friction)                          │
-│ ┌──────────────┐                                            │
-│ │  Drafts App  │ → Webhook → 01-Ingestion → SQLite         │
-│ └──────────────┘                                            │
-│ Design Goal: One-click note capture, zero organization      │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+| TIER 1: CAPTURE (Reduce Friction)                           |
+| +-------------+                                              |
+| | Drafts App  | -> Webhook -> src/workflows/ingest.ts       |
+| +-------------+                                              |
+|                                       |                      |
+|                                       v                      |
+|                                    SQLite                    |
+| Design Goal: One-click note capture, zero organization      |
++-------------------------------------------------------------+
 
-┌─────────────────────────────────────────────────────────────┐
-│ TIER 2: PROCESS (Externalize Working Memory)               │
-│ ┌──────────────────────────────────────────────────────┐   │
-│ │ n8n Workflows:                                        │   │
-│ │ 02-LLM Processing → Concepts/Themes                   │   │
-│ │ 03-Pattern Detection → Trends                         │   │
-│ │ 05-Sentiment Analysis → Emotional Tone                │   │
-│ │ 06-Connection Network → Relationships                 │   │
-│ └──────────────────────────────────────────────────────┘   │
-│ Design Goal: Automatic organization, visual patterns       │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+| TIER 2: PROCESS (Externalize Working Memory)                |
+| +-------------------------------------------------------+   |
+| | launchd Scheduled Jobs:                               |   |
+| |   - process-llm.ts      -> Concepts/Themes            |   |
+| |   - extract-tasks.ts    -> Task Classification        |   |
+| |   - compute-embeddings.ts -> Semantic Vectors         |   |
+| |   - compute-associations.ts -> Note Relationships     |   |
+| +-------------------------------------------------------+   |
+| Design Goal: Automatic organization, visual patterns        |
++-------------------------------------------------------------+
 
-┌─────────────────────────────────────────────────────────────┐
-│ TIER 3: RETRIEVE (Make Information Visible)                │
-│ ┌─────────────────┐   ┌──────────────────┐                 │
-│ │  SeleneChat App │   │ Obsidian Vault   │                 │
-│ │  (Swift/macOS)  │   │ (04-Export)      │                 │
-│ └─────────────────┘   └──────────────────┘                 │
-│ Design Goal: Query and explore without mental overhead     │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+| TIER 3: RETRIEVE (Make Information Visible)                 |
+| +----------------+   +------------------+                    |
+| | SeleneChat App |   | Obsidian Vault   |                   |
+| | (Swift/macOS)  |   | (daily-summary)  |                   |
+| +----------------+   +------------------+                    |
+| Design Goal: Query and explore without mental overhead      |
++-------------------------------------------------------------+
 ```
 
 ### Why This Architecture?
@@ -67,21 +70,22 @@
 
 ## Technology Choices
 
-### n8n vs Python
+### TypeScript vs n8n
 
-**Original System:** 10,000+ lines of Python
-**Current System:** ~1,600 lines of n8n JSON
+**Original System:** n8n workflow engine
+**Current System:** TypeScript + Fastify + launchd
 
 **Why We Switched:**
 
-| Aspect | Python | n8n | ADHD Impact |
-|--------|--------|-----|-------------|
-| **Visibility** | Code in files | Visual canvas | ✅ Reduces "out of sight, out of mind" |
-| **Debugging** | Stack traces | Execution logs | ✅ Visual flow easier to follow |
-| **Maintenance** | Requires Python knowledge | Drag & drop | ✅ Lower cognitive load |
-| **Setup** | venv, dependencies | Import JSON | ✅ Reduces friction |
+| Aspect | n8n | TypeScript | Impact |
+|--------|-----|------------|--------|
+| **Debugging** | UI execution logs | Stack traces, IDE breakpoints | Faster debugging |
+| **Version Control** | JSON exports, UI state sync | All code in git | No sync issues |
+| **Dependencies** | Docker + n8n runtime | Node.js only | Simpler setup |
+| **Type Safety** | None | TypeScript compiler | Fewer runtime errors |
+| **Scheduling** | n8n triggers | macOS launchd | Native, reliable |
 
-**Decision:** Visual beats text for ADHD brains. n8n makes the entire system visible on one screen.
+**Decision:** Simpler is better. TypeScript gives us full control with fewer moving parts.
 
 ### SQLite vs PostgreSQL
 
@@ -95,13 +99,13 @@
 - **ADHD-friendly:** No configuration paralysis
 
 **Trade-offs Accepted:**
-- ❌ No concurrent writes (not needed for personal system)
-- ❌ No advanced features (not needed yet)
-- ✅ Simplicity wins for solo ADHD user
+- No concurrent writes (not needed for personal system)
+- No advanced features (not needed yet)
+- Simplicity wins for solo ADHD user
 
 ### Ollama vs Cloud LLMs
 
-**Choice:** Ollama (mistral:7b) local LLM
+**Choice:** Ollama (mistral:7b + nomic-embed-text) local LLM
 
 **Rationale:**
 - **Privacy:** Notes never leave user's machine
@@ -110,24 +114,23 @@
 - **Fast enough:** 10-30 seconds per note acceptable
 
 **Trade-offs Accepted:**
-- ❌ Less accurate than GPT-4 (good enough for concept extraction)
-- ❌ Requires decent hardware (M1 Mac minimum)
-- ✅ Privacy and cost win for personal notes
+- Less accurate than GPT-4 (good enough for concept extraction)
+- Requires decent hardware (M1 Mac minimum)
+- Privacy and cost win for personal notes
 
-### Docker vs Native
+### launchd vs Cron vs Always-On Server
 
-**Choice:** Docker containerization
+**Choice:** macOS launchd agents
 
 **Rationale:**
-- **Reproducible:** Same environment everywhere
-- **Isolated:** No conflicts with system packages
-- **Easy reset:** `docker-compose down && docker-compose up -d`
-- **ADHD-friendly:** "It just works" without troubleshooting
+- **Native:** Built into macOS, no extra dependencies
+- **Reliable:** Proper process management, restart on failure
+- **Efficient:** Only runs when scheduled, no idle resource usage
+- **User-space:** No root permissions needed
 
 **Trade-offs Accepted:**
-- ❌ Requires Docker installation
-- ❌ Slightly more resource usage
-- ✅ Simplicity wins over optimization
+- macOS-only (acceptable for personal system)
+- Slightly more complex than cron
 
 ---
 
@@ -160,7 +163,7 @@ CREATE TABLE raw_notes (
 **Design Decisions:**
 
 - **content_hash:** Prevents exact duplicates (ADHD = repeat captures of same thought)
-- **source_uuid:** Track individual drafts for edit detection (Phase 1.5)
+- **source_uuid:** Track individual drafts for edit detection
 - **status column:** Explicit workflow state tracking
 - **test_run:** Programmatic test data isolation (never pollute production)
 - **Timestamps:** created_at (user time) vs imported_at (system time)
@@ -212,7 +215,7 @@ sqlite3 data/selene.db "DELETE FROM raw_notes WHERE test_run = '$TEST_RUN';"
 - Programmatic cleanup without manual sorting
 - Zero risk of deleting production data
 
-**See:** `@scripts/CLAUDE.md` (cleanup-tests.sh)
+**See:** `@.claude/OPERATIONS.md` (Testing Procedures)
 
 ---
 
@@ -224,17 +227,13 @@ sqlite3 data/selene.db "DELETE FROM raw_notes WHERE test_run = '$TEST_RUN';"
 
 **Solution:** SHA256 hash of content
 
-**Implementation:**
-```javascript
-// In n8n Function node
-const crypto = require('crypto');
-const content = $json.content.trim();
-const hash = crypto.createHash('sha256').update(content).digest('hex');
+**Implementation (TypeScript):**
+```typescript
+import { createHash } from 'crypto';
 
-return {
-  ...item.json,
-  content_hash: hash
-};
+const contentHash = createHash('sha256')
+  .update(content.trim())
+  .digest('hex');
 ```
 
 **Database Constraint:**
@@ -251,15 +250,16 @@ content_hash TEXT UNIQUE NOT NULL
 **Solution:** Explicit status column with state transitions
 
 **States:**
-- `pending` → Note captured, waiting for processing
-- `processing` → LLM currently analyzing
-- `completed` → Processing finished
-- `failed` → Error occurred (with error details)
+- `pending` -> Note captured, waiting for processing
+- `processing` -> LLM currently analyzing
+- `completed` -> Processing finished
+- `failed` -> Error occurred (with error details)
 
 **Transitions:**
 ```
-pending → processing → completed
-        ↓
+pending -> processing -> completed
+        |
+        v
        failed
 ```
 
@@ -278,37 +278,39 @@ UPDATE raw_notes SET
 WHERE id = ?;
 ```
 
-### Pattern 3: Node Naming Convention
+### Pattern 3: Structured Logging
 
-**Format:** `[Verb] + [Object]`
+**Tool:** Pino (fast JSON logging)
 
-**Examples:**
-- ✅ "Parse Note Data"
-- ✅ "Check for Duplicate"
-- ✅ "Insert Raw Note"
-- ✅ "Send to Ollama"
-- ❌ "Function" (what does it do?)
-- ❌ "Main Logic" (too vague)
-- ❌ "Process" (verb needs object)
+**Implementation:**
+```typescript
+import { logger } from './lib/logger';
 
-**Why:** ADHD brains scan visually. Clear names reduce cognitive load when debugging.
+logger.info({ noteId: 123 }, 'Processing note');
+logger.error({ err, noteId: 123 }, 'Failed to process note');
+```
+
+**Output:** JSON lines to `logs/selene.log`
+
+**Viewing:**
+```bash
+tail -f logs/selene.log | npx pino-pretty
+```
 
 ### Pattern 4: Error Handling
 
-**Rule:** Every n8n node connects to error handler
+**Rule:** All errors are logged with context
 
 **Pattern:**
+```typescript
+try {
+  const result = await processNote(note);
+  logger.info({ noteId: note.id }, 'Note processed');
+} catch (err) {
+  logger.error({ err, noteId: note.id }, 'Failed to process note');
+  await updateNoteStatus(note.id, 'failed');
+}
 ```
-[Node] → [Success Path]
-   ↓
-[On Error] → [Log Error] → [Update Status to Failed]
-```
-
-**Implementation:**
-- Error node captures full context
-- Logs to database or file
-- Updates status column
-- Optionally sends notification
 
 **Why:** Failures must be visible. ADHD = "out of sight, out of mind" applies to errors too.
 
@@ -325,20 +327,16 @@ WHERE id = ?;
 - Relational data (use foreign keys)
 
 **Example:**
-```javascript
-// Store concepts as JSON
-{
-  "concepts": ["time management", "focus", "productivity"],
-  "primary_theme": "ADHD strategies",
-  "secondary_themes": ["executive function", "motivation"]
-}
-```
+```typescript
+const processedNote = {
+  concepts: ['time management', 'focus', 'productivity'],
+  primary_theme: 'ADHD strategies',
+  secondary_themes: ['executive function', 'motivation']
+};
 
-**Query Pattern:**
-```sql
--- SQLite JSON functions
-SELECT * FROM processed_notes
-WHERE json_extract(concepts, '$[0]') = 'time management';
+// Store as JSON string
+db.run('INSERT INTO processed_notes (concepts) VALUES (?)',
+  JSON.stringify(processedNote.concepts));
 ```
 
 ---
@@ -347,34 +345,33 @@ WHERE json_extract(concepts, '$[0]') = 'time management';
 
 ### Ollama Integration
 
-**Container Access:**
-```yaml
-extra_hosts:
-  - "host.docker.internal:host-gateway"
+**URL:** `http://localhost:11434`
+
+**Models:**
+- `mistral:7b` - Text generation, concept extraction
+- `nomic-embed-text` - Embeddings for semantic similarity
+
+**API Usage (via src/lib/ollama.ts):**
+```typescript
+import { ollama } from './lib/ollama';
+
+// Generate text
+const response = await ollama.generate({
+  model: 'mistral:7b',
+  prompt: 'Extract concepts from: ...',
+});
+
+// Generate embeddings
+const embedding = await ollama.embed({
+  model: 'nomic-embed-text',
+  input: 'Note content here',
+});
 ```
 
-**URL from n8n:**
-```
-http://host.docker.internal:11434
-```
-
-**Why:** n8n runs in Docker, Ollama runs on host machine
-
-**Model Configuration:**
-```bash
-# Environment variable
-OLLAMA_MODEL=mistral:7b
-
-# In workflow
-POST http://host.docker.internal:11434/api/generate
-{
-  "model": "{{ $env.OLLAMA_MODEL }}",
-  "prompt": "...",
-  "stream": false
-}
-```
-
-**See:** `@docs/roadmap/11-OLLAMA-INTEGRATION.md`
+**Common Issues:**
+- Ollama not running: `ollama serve`
+- Model not pulled: `ollama pull mistral:7b`
+- First request slow (model loading)
 
 ### Drafts App Integration
 
@@ -390,8 +387,7 @@ http://100.111.6.10:5678/webhook/api/drafts     # Tailscale
 {
   "title": "Note Title",
   "content": "Note content...",
-  "uuid": "draft-uuid-123",
-  "test_run": null
+  "created_at": "2026-01-09T12:00:00Z"
 }
 ```
 
@@ -401,7 +397,7 @@ let endpoint = "http://localhost:5678/webhook/api/drafts";
 let data = {
   "title": draft.title,
   "content": draft.content,
-  "uuid": draft.uuid
+  "created_at": draft.createdAt.toISOString()
 };
 
 let http = HTTP.create();
@@ -413,39 +409,14 @@ let response = http.request({
 });
 ```
 
-**See:** `@workflows/01-ingestion/docs/DRAFTS-QUICKSTART.md`
-
 ### Obsidian Export Integration
 
-**Vault Path:**
-```yaml
-volumes:
-  - ${OBSIDIAN_VAULT_PATH:-./vault}:/obsidian:rw
+**Vault Path:** `./vault/` (or `$OBSIDIAN_VAULT_PATH`)
+
+**Daily Summary Output:**
 ```
-
-**Export Format:**
-```markdown
----
-created: 2025-11-27T10:30:00
-concepts: [[time management]], [[focus]], [[productivity]]
-theme: ADHD strategies
----
-
-# Note Title
-
-Note content...
-
-## Extracted Concepts
-- time management
-- focus
-- productivity
-
-## Related Notes
-- [[Note about focus]]
-- [[Note about productivity]]
+vault/Selene/Daily/YYYY-MM-DD-summary.md
 ```
-
-**See:** `@workflows/04-obsidian-export/`
 
 ---
 
@@ -457,21 +428,20 @@ Note content...
 |--------|--------|-------------|
 | **Database Size** | 10,000+ notes | No slowdown |
 | **Note Processing** | mistral:7b | 10-30 seconds per note |
-| **Export Speed** | Obsidian | ~50 notes/minute |
+| **Embedding Generation** | nomic-embed-text | 1-2 seconds per note |
 | **Concurrent Processing** | Sequential | 1 note at a time (by design) |
 
 ### Optimization Decisions
 
 **Sequential Processing (Not Parallel):**
-- **Why:** Ollama on consumer hardware (M1 Mac) handles 1 request well, struggles with parallel
+- **Why:** Ollama on consumer hardware handles 1 request well, struggles with parallel
 - **Trade-off:** Slower bulk processing, but reliable results
 - **ADHD Impact:** User captures notes throughout day, not in batches
 
-**Polling vs Event-Driven:**
-- **Original:** Cron schedules (every 30 seconds)
-- **Phase 6:** Event-driven triggers
-- **Result:** 3x faster processing, 100% resource efficiency
-- **See:** `@docs/roadmap/08-PHASE-6-EVENT-DRIVEN.md`
+**launchd Intervals:**
+- Process LLM: Every 5 minutes (balance between responsiveness and resource usage)
+- Embeddings: Every 10 minutes (batch efficiency)
+- Daily summary: Once at midnight (natural boundary)
 
 ---
 
@@ -480,23 +450,18 @@ Note content...
 ### Testing Requirements
 
 **Every workflow must have:**
-1. `scripts/test-with-markers.sh` - Automated test suite
-2. `docs/STATUS.md` - Test results and pass/fail tracking
-3. Test cases for success path
-4. Test cases for error conditions
-5. Cleanup procedure
+1. Test with `test_run` marker
+2. Verification queries
+3. Cleanup procedure
 
-**See:** `@workflows/CLAUDE.md` (Testing section)
+**See:** `@.claude/OPERATIONS.md` (Testing Procedures)
 
 ### Documentation Requirements
 
-**When modifying workflows:**
-1. Update `workflows/XX-name/docs/STATUS.md` with changes
-2. Update `workflows/XX-name/README.md` if interface changed
-3. Update `.claude/PROJECT-STATUS.md` when complete
-4. Commit workflow.json to git
-
-**See:** `@workflows/CLAUDE.md` (Documentation section)
+**When modifying code:**
+1. Update relevant CLAUDE.md files
+2. Update PROJECT-STATUS.md when complete
+3. Commit with descriptive message
 
 ### Git Commit Conventions
 
@@ -508,14 +473,14 @@ Note content...
 - `docs:` Documentation only
 - `refactor:` Code restructure, no behavior change
 - `test:` Add or modify tests
-- `workflow:` n8n workflow changes
+- `chore:` Maintenance
 
 **Examples:**
 ```bash
 git commit -m "feat: add task extraction workflow"
-git commit -m "fix: duplicate detection in ingestion workflow"
-git commit -m "docs: update STATUS.md with test results"
-git commit -m "workflow: add error handling to LLM processing"
+git commit -m "fix: handle Ollama timeout in LLM processing"
+git commit -m "docs: update OPERATIONS.md with new commands"
+git commit -m "refactor: extract Ollama client to shared lib"
 ```
 
 ---
@@ -558,6 +523,6 @@ Before implementing any feature, ask:
 
 - **`@.claude/ADHD_Principles.md`** - Why ADHD drives our architecture
 - **`@.claude/OPERATIONS.md`** - Daily commands and operations
-- **`@workflows/CLAUDE.md`** - Workflow implementation patterns
+- **`@src/workflows/`** - TypeScript workflow implementations
 - **`@.claude/PROJECT-STATUS.md`** - Current state of development
 - **`@ROADMAP.md`** - Planned phases and features
