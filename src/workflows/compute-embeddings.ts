@@ -16,8 +16,8 @@ export async function computeEmbeddings(limit = 10): Promise<WorkflowResult> {
     .prepare(
       `SELECT rn.id, rn.title, rn.content
        FROM raw_notes rn
-       LEFT JOIN note_embeddings ne ON rn.id = ne.note_id
-       WHERE ne.note_id IS NULL
+       LEFT JOIN note_embeddings ne ON rn.id = ne.raw_note_id
+       WHERE ne.raw_note_id IS NULL AND rn.test_run IS NULL
        LIMIT ?`
     )
     .all(limit) as Array<{ id: number; title: string; content: string }>;
@@ -36,7 +36,7 @@ export async function computeEmbeddings(limit = 10): Promise<WorkflowResult> {
 
       // Store embedding
       db.prepare(
-        `INSERT INTO note_embeddings (note_id, embedding, model, created_at)
+        `INSERT INTO note_embeddings (raw_note_id, embedding, model_version, created_at)
          VALUES (?, ?, ?, ?)`
       ).run(note.id, JSON.stringify(embedding), 'nomic-embed-text', new Date().toISOString());
 

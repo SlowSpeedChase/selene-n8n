@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-01-09
-**Status:** TypeScript Backend Replacement Complete
+**Last Updated:** 2026-01-10
+**Status:** Thread Detection Workflow Complete
 
 ---
 
@@ -36,6 +36,7 @@ The n8n workflow engine has been replaced with a pure TypeScript backend:
 | Task Extraction | `src/workflows/extract-tasks.ts` | Done |
 | Embedding Generation | `src/workflows/compute-embeddings.ts` | Done |
 | Association Computation | `src/workflows/compute-associations.ts` | Done |
+| Thread Detection | `src/workflows/detect-threads.ts` | Done |
 | Daily Summary | `src/workflows/daily-summary.ts` | Done |
 | Launchd Agents | `launchd/*.plist` | Done |
 | Install Script | `scripts/install-launchd.sh` | Done |
@@ -204,6 +205,14 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ---
 
 ## Recent Achievements
+
+### 2026-01-10
+- Completed US-045: Thread Detection Workflow
+- Applied thread system database migration (013_thread_system.sql)
+- Generated embeddings for 15 production notes
+- Computed 64 associations (threshold 0.5)
+- Detected 2 threads via LLM synthesis
+- Created launchd plist for scheduled thread detection
 
 ### 2026-01-09
 - Completed TypeScript backend replacement

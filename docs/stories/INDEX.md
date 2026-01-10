@@ -1,6 +1,6 @@
 # User Stories Index
 
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-10
 
 ---
 
@@ -9,9 +9,9 @@
 | State | Count | Limit |
 |-------|-------|-------|
 | Active | 0 | 5 max |
-| Ready | 2 | - |
+| Ready | 1 | - |
 | Draft | 0 | - |
-| Done | 6 | - |
+| Done | 7 | - |
 | Archived | 34 | - |
 
 **Command:** `./scripts/story.sh status`
@@ -28,7 +28,6 @@
 
 | ID | Title | Phase | Effort |
 |----|-------|-------|--------|
-| US-045 | [Thread Detection Workflow](ready/US-045-thread-detection-workflow.md) | thread-system-2 | L |
 | US-046 | [Thread Detection Testing & Tuning](ready/US-046-thread-detection-tuning.md) | thread-system-2 | M |
 
 ---
@@ -49,6 +48,7 @@
 | US-042 | [Batch Embed Existing Notes](done/US-042-batch-embed-existing-notes.md) | thread-system-1 | 2026-01-05 |
 | US-043 | [Association Computation Workflow](done/US-043-association-computation-workflow.md) | thread-system-1 | 2026-01-06 |
 | US-044 | [Verify Note Clusters](done/US-044-verify-note-clusters.md) | thread-system-1 | 2026-01-06 |
+| US-045 | [Thread Detection Workflow](done/US-045-thread-detection-workflow.md) | thread-system-2 | 2026-01-10 |
 
 ---
 
@@ -78,7 +78,7 @@ Quick reference: which stories deliver which phases.
 | Phase | Description | Stories | Status |
 |-------|-------------|---------|--------|
 | thread-system-1 | Foundation (Embeddings + Associations) | US-040, US-041, US-042, US-043, US-044 | **Done** |
-| thread-system-2 | Thread Detection | US-045, US-046 | **Ready** |
+| thread-system-2 | Thread Detection | US-045, US-046 | **In Progress** (US-045 done) |
 | thread-system-3 | Living System | TBD | Future |
 | thread-system-4 | Interfaces | TBD | Future |
 | infra | Infrastructure | US-029 | Done |
