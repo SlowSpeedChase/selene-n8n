@@ -4,6 +4,25 @@ import SQLite
 class DatabaseService: ObservableObject {
     static let shared = DatabaseService()
 
+    // MARK: - Environment Detection
+
+    static func isRunningFromAppBundle() -> Bool {
+        let executablePath = Bundle.main.executablePath ?? ""
+        return executablePath.contains(".app/Contents/MacOS")
+    }
+
+    private static func defaultDatabasePath() -> String {
+        if isRunningFromAppBundle() {
+            // Production: user's real notes
+            return "/Users/chaseeasterling/selene-data/selene.db"
+        } else {
+            // Development: Claude's test database
+            return FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("selene-n8n/data/selene.db")
+                .path
+        }
+    }
+
     @Published var isConnected = false
     @Published var databasePath: String {
         didSet {
@@ -78,15 +97,19 @@ class DatabaseService: ObservableObject {
     private let threadName = Expression<String?>("thread_name")
 
     init() {
-        // Try to load saved path, otherwise use default
-        let defaultPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("selene-n8n/data/selene.db")
-            .path
-        self.databasePath = UserDefaults.standard.string(forKey: "databasePath") ?? defaultPath
+        // Try to load saved path, otherwise use environment-aware default
+        self.databasePath = UserDefaults.standard.string(forKey: "databasePath")
+            ?? Self.defaultDatabasePath()
         connect()
     }
 
     private func connect() {
+        #if DEBUG
+        let mode = Self.isRunningFromAppBundle() ? "PRODUCTION" : "DEVELOPMENT"
+        DebugLogger.shared.log(.state, "DatabaseService.mode: \(mode)")
+        DebugLogger.shared.log(.state, "DatabaseService.defaultPath: \(Self.defaultDatabasePath())")
+        #endif
+
         do {
             // Open database with write access for chat sessions
             db = try Connection(databasePath)

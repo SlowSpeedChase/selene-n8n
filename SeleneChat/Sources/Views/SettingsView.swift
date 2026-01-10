@@ -33,6 +33,22 @@ struct SettingsView: View {
             }
 
             Section("Database") {
+                // Environment mode indicator
+                HStack {
+                    Text(DatabaseService.isRunningFromAppBundle() ? "Production" : "Development")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            DatabaseService.isRunningFromAppBundle()
+                                ? Color.green.opacity(0.2)
+                                : Color.orange.opacity(0.2)
+                        )
+                        .foregroundColor(DatabaseService.isRunningFromAppBundle() ? .green : .orange)
+                        .cornerRadius(4)
+                    Spacer()
+                }
+
                 HStack {
                     TextField("Database Path", text: $tempDatabasePath)
                         .textFieldStyle(.roundedBorder)
