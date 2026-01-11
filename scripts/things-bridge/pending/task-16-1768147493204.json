@@ -1,0 +1,5 @@
+{
+  "title": "Review current cron-based processing setup",
+  "notes": "This is to have a comparison basis for the new event-driven architecture.",
+  "heading": "Research"
+}

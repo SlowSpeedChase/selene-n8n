@@ -1,0 +1,5 @@
+{
+  "title": "Test new event-driven architecture with webhooks",
+  "notes": "Testing should trigger immediate processing without waiting for cron. This involves using the new architecture with webhooks.",
+  "heading": "Actions"
+}

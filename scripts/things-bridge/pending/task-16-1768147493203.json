@@ -1,0 +1,5 @@
+{
+  "title": "Configure Docker and n8n for real-time note processing",
+  "notes": "Ensure that both Docker and n8n are working together as intended for immediate note processing.",
+  "heading": "Actions"
+}

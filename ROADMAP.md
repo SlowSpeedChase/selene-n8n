@@ -1,8 +1,8 @@
 # Selene n8n Migration Roadmap
 
 **Created:** 2025-10-18
-**Last Updated:** 2026-01-05
-**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2e Complete ✅ | Phase 7.2f.1 Complete ✅ | n8n 2.x Upgrade Design Complete 📋
+**Last Updated:** 2026-01-10
+**Status:** Phase 1-3 Complete ✅ | Phase 7.1 Complete ✅ | Phase 7.2 Complete ✅ | Thread System Phase 1-2 Complete ✅
 
 ---
 
@@ -71,20 +71,46 @@ Task extraction with classification - route actionable items to Things:
 - Phase 7.2c: Planning Conversations ✅ COMPLETE
 - Phase 7.2d: AI Provider Toggle ✅ COMPLETE
 - Phase 7.2e: Bidirectional Things Flow ✅ COMPLETE
-- Phase 7.2f: Things Project Grouping 🔄 IN PROGRESS
+- Phase 7.2f: Things Project Grouping ✅ COMPLETE
   - **[📋 Design Document](./docs/plans/2026-01-01-project-grouping-design.md)**
   - 7.2f.1: Basic Project Creation ✅ COMPLETE
-  - 7.2f.2: Auto-Assignment for New Tasks ⬜ TODO
-  - 7.2f.3: Headings Within Projects ⬜ TODO
-  - 7.2f.4: Oversized Task Detection ⬜ TODO
-  - 7.2f.5: Project Completion ⬜ TODO
-  - 7.2f.6: Sub-Project Suggestions ⬜ TODO
+  - 7.2f.2: Auto-Assignment for New Tasks ✅ COMPLETE
+  - 7.2f.3: Headings Within Projects ✅ COMPLETE
+  - 7.2f.4: Oversized Task Detection ✅ COMPLETE
+  - 7.2f.5: Project Completion ✅ COMPLETE
+  - 7.2f.6: Sub-Project Suggestions ✅ COMPLETE
 
 **Key Changes:**
 - Phase 7.1: Task Extraction with Classification ✅ COMPLETE (2025-12-30)
-- Phase 7.2: SeleneChat Planning Integration 🔄 IN PROGRESS
+- Phase 7.2: SeleneChat Planning Integration ✅ COMPLETE (2026-01-10)
 - Phase 7.3: Cloud AI Integration (with sanitization layer)
 - Phase 7.4: Contextual Surfacing (thread continuation)
+
+### 🧵 **Thread System (Parallel Track)**
+
+Semantic note clustering and thread detection - implemented via user stories:
+
+- **[📋 User Stories Index](./docs/stories/INDEX.md)** - Story tracking and status
+- **[🎯 Thread System Design](./docs/plans/2026-01-04-selene-thread-system-design.md)** - Architecture and design
+
+**Thread System Phases:**
+- thread-system-1: Foundation (Embeddings + Associations) ✅ COMPLETE
+  - US-040: Database Migration
+  - US-041: Embedding Generation Workflow
+  - US-042: Batch Embed Existing Notes
+  - US-043: Association Computation Workflow
+  - US-044: Verify Note Clusters
+- thread-system-2: Thread Detection ✅ COMPLETE
+  - US-045: Thread Detection Workflow
+  - US-046: Thread Detection Testing & Tuning
+- thread-system-3: Living System (Future)
+  - Wire Embedding into Processing Pipeline
+  - Thread Reconsolidation Workflow
+  - Thread Splitting/Merging
+- thread-system-4: Interfaces (Future)
+  - Thread Export to Obsidian
+  - SeleneChat Thread Queries
+  - Link Tasks to Threads
 
 ### 🛠️ **Setup & Maintenance**
 
@@ -314,6 +340,10 @@ See [01-OVERVIEW.md](./docs/roadmap/01-OVERVIEW.md) for detailed architecture.
 
 ## Version History
 
+- **2026-01-10**: Synced ROADMAP with stories INDEX - Phase 7.2 fully complete, Thread System phases 1-2 complete
+  - Phase 7.2f.2-6 all implemented and merged to main
+  - TypeScript backend replaced n8n (Fastify + launchd)
+  - Thread detection workflow complete with 2 detected threads
 - **2026-01-05**: Added SeleneChat Forest Study Redesign to roadmap (design + 13-task implementation plan ready)
 - **2026-01-05**: Added SeleneChat Interface Improvements to roadmap (design research from Perplexity, Things, Sunsama, Raycast, Linear)
 - **2026-01-04**: Synced documentation - Phase 7.2e (Bidirectional Things) and 7.2f.1 (Basic Project Creation) marked complete

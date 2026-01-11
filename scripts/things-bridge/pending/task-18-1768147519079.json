@@ -1,0 +1,5 @@
+{
+  "title": "Set up Docker environment for n8n",
+  "notes": "Install and configure Docker to run the n8n workflow manager.",
+  "heading": "Actions"
+}

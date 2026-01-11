@@ -86,6 +86,8 @@ Quick reference: which stories deliver which phases.
 | thread-system-4 | Interfaces | TBD | Future |
 | infra | Infrastructure | US-029 | Done |
 
+**Related:** See [ROADMAP.md](../../ROADMAP.md) for Phase 7.x (Things Integration) which runs in parallel with the Thread System.
+
 ---
 
 ## Story Workflow
