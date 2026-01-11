@@ -1176,3 +1176,6 @@ class DatabaseService: ObservableObject {
         }
     }
 }
+
+// MARK: - DataServiceProtocol Conformance
+extension DatabaseService: DataServiceProtocol {}

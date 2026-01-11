@@ -44,6 +44,7 @@ AGENTS=(
     "com.selene.export-obsidian"
     "com.selene.detect-threads"
     "com.selene.reconsolidate-threads"
+    "com.selene.ollama"
 )
 
 echo "Step 1: Unloading existing agents..."

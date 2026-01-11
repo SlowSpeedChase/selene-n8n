@@ -17,25 +17,30 @@ private struct GenerateResponse: Codable {
 actor OllamaService {
     static let shared = OllamaService()
 
-    private let baseURL = "http://localhost:11434"
     private let session = URLSession.shared
 
     private var lastAvailabilityCheck: Date?
     private var cachedAvailability: Bool = false
+    private var cachedBaseURL: String = ""
     private let cacheTimeout: TimeInterval = 60  // Cache for 60 seconds
 
     private init() {}
 
+    /// Get the base URL from ConnectionSettings (local or remote)
+    private var baseURL: String {
+        ConnectionSettings.shared.ollamaURL
+    }
+
     enum OllamaError: Error, LocalizedError {
-        case serviceUnavailable
+        case serviceUnavailable(String)
         case invalidResponse
         case decodingError
         case networkError(Error)
 
         var errorDescription: String? {
             switch self {
-            case .serviceUnavailable:
-                return "Ollama service is not running at localhost:11434"
+            case .serviceUnavailable(let url):
+                return "Ollama service is not available at \(url)"
             case .invalidResponse:
                 return "Invalid response from Ollama service"
             case .decodingError:
@@ -48,6 +53,14 @@ actor OllamaService {
 
     /// Check if Ollama service is running and available (cached for 60s)
     func isAvailable() async -> Bool {
+        let currentURL = baseURL
+
+        // Invalidate cache if URL changed
+        if currentURL != cachedBaseURL {
+            cachedBaseURL = currentURL
+            lastAvailabilityCheck = nil
+        }
+
         // Return cached result if fresh
         if let lastCheck = lastAvailabilityCheck,
            Date().timeIntervalSince(lastCheck) < cacheTimeout {
@@ -55,7 +68,7 @@ actor OllamaService {
         }
 
         // Perform actual health check
-        guard let url = URL(string: "\(baseURL)/api/tags") else {
+        guard let url = URL(string: "\(currentURL)/api/tags") else {
             return false
         }
 
@@ -121,7 +134,7 @@ actor OllamaService {
 
             guard httpResponse.statusCode == 200 else {
                 print("⚠️ Ollama returned status \(httpResponse.statusCode)")
-                throw OllamaError.serviceUnavailable
+                throw OllamaError.serviceUnavailable(baseURL)
             }
 
             // Decode response

@@ -7,7 +7,8 @@ class ChatViewModel: ObservableObject {
     @Published var isProcessing = false
     @Published var error: String?
 
-    private let databaseService = DatabaseService.shared
+    private let dataService = DataServiceManager.shared
+    private let databaseService = DatabaseService.shared  // Keep for local-only operations
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
     private let ollamaService = OllamaService.shared
@@ -105,7 +106,7 @@ class ChatViewModel: ObservableObject {
 
         // Search by keywords
         for keyword in keywords.prefix(3) { // Limit to top 3 keywords
-            let notes = try await databaseService.searchNotes(query: keyword, limit: 5)
+            let notes = try await dataService.searchNotes(query: keyword, limit: 5)
             allNotes.append(contentsOf: notes)
         }
 
@@ -247,7 +248,7 @@ class ChatViewModel: ObservableObject {
 
         // Retrieve notes using hybrid strategy
         let limit = limitFor(queryType: analysis.queryType)
-        let notes = try await databaseService.retrieveNotesFor(
+        let notes = try await dataService.retrieveNotesFor(
             queryType: analysis.queryType,
             keywords: analysis.keywords,
             timeScope: analysis.timeScope,
@@ -357,7 +358,7 @@ class ChatViewModel: ObservableObject {
         sessions.removeAll { $0.id == session.id }
 
         Task {
-            try? await databaseService.deleteSession(session)
+            try? await dataService.deleteSession(session)
         }
 
         if currentSession.id == session.id {
@@ -377,7 +378,7 @@ class ChatViewModel: ObservableObject {
 
             Task {
                 do {
-                    try await databaseService.updateSessionPin(sessionId: session.id, isPinned: sessions[index].isPinned)
+                    try await dataService.updateSessionPin(sessionId: session.id, isPinned: sessions[index].isPinned)
                 } catch {
                     print("⚠️ Failed to update pin status: \(error.localizedDescription)")
                 }
@@ -398,7 +399,7 @@ class ChatViewModel: ObservableObject {
 
         // Persist to database
         do {
-            try await databaseService.saveSession(currentSession)
+            try await dataService.saveSession(currentSession)
         } catch {
             print("⚠️ Failed to save session: \(error.localizedDescription)")
             // Don't crash - graceful degradation
@@ -407,7 +408,7 @@ class ChatViewModel: ObservableObject {
 
     private func loadSessions() async {
         do {
-            sessions = try await databaseService.loadSessions()
+            sessions = try await dataService.loadSessions()
         } catch {
             print("⚠️ Failed to load sessions: \(error.localizedDescription)")
             // Fall back to empty list - graceful degradation

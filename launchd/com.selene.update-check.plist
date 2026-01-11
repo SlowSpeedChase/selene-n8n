@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.selene.update-check</string>
+
+    <key>Comment</key>
+    <string>Client-side launchd agent for SeleneChat auto-updates. Install on laptop only.</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/chaseeasterling/selene-client/update-selenechat.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <!-- Set your Mac mini's IP address here -->
+        <key>SELENE_SERVER_ADDRESS</key>
+        <string>192.168.1.100</string>
+        <key>SELENE_SERVER_PORT</key>
+        <string>5678</string>
+    </dict>
+
+    <!-- Run every 6 hours -->
+    <key>StartInterval</key>
+    <integer>21600</integer>
+
+    <!-- Also run shortly after login (5 minutes delay) -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartCalendarInterval</key>
+    <array>
+        <!-- Also run at 9am every day to catch morning updates -->
+        <dict>
+            <key>Hour</key>
+            <integer>9</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/selenechat-update.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/selenechat-update.log</string>
+
+    <!-- Don't retry immediately on failure -->
+    <key>ThrottleInterval</key>
+    <integer>3600</integer>
+</dict>
+</plist>

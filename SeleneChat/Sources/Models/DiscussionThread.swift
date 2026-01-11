@@ -1,6 +1,6 @@
 import Foundation
 
-struct DiscussionThread: Identifiable, Hashable {
+struct DiscussionThread: Identifiable, Hashable, Codable {
     let id: Int
     let rawNoteId: Int?
     let threadType: ThreadType
@@ -19,7 +19,7 @@ struct DiscussionThread: Identifiable, Hashable {
     var noteTitle: String?
     var noteContent: String?
 
-    enum ThreadType: String, CaseIterable {
+    enum ThreadType: String, CaseIterable, Codable {
         case planning
         case followup
         case question
@@ -41,7 +41,7 @@ struct DiscussionThread: Identifiable, Hashable {
         }
     }
 
-    enum Status: String, CaseIterable {
+    enum Status: String, CaseIterable, Codable {
         case pending
         case active
         case completed
