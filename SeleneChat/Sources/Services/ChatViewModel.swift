@@ -370,9 +370,10 @@ class ChatViewModel: ObservableObject {
         response += "---\n\n"
         response += "**Linked Notes (\(notes.count)):**\n\n"
 
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d"
+
         for (index, note) in notes.prefix(10).enumerated() {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "MMM d"
             let dateStr = dateFormatter.string(from: note.createdAt)
 
             response += "- [\(index + 1)] \"\(note.title)\" - \(dateStr)\n"
