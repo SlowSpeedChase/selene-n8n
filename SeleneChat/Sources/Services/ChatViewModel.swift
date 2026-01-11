@@ -34,6 +34,20 @@ class ChatViewModel: ObservableObject {
         currentSession.addMessage(userMessage)
 
         do {
+            // Check for thread queries first (bypass LLM for speed)
+            if let threadIntent = queryAnalyzer.detectThreadIntent(content) {
+                let response = try await handleThreadQuery(intent: threadIntent)
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .onDevice,
+                    queryType: "thread"
+                )
+                currentSession.addMessage(assistantMessage)
+                await saveSession()
+                return
+            }
+
             // Determine routing
             let relatedNotes = try await findRelatedNotes(for: content)
             let routingDecision = privacyRouter.routeQuery(content, relatedNotes: relatedNotes)
@@ -287,6 +301,88 @@ class ChatViewModel: ObservableObject {
             let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
             return (fallbackResponse, notes, notes, "error-fallback")
         }
+    }
+
+    // MARK: - Thread Query Handling
+
+    /// Handle thread queries directly without LLM
+    private func handleThreadQuery(intent: QueryAnalyzer.ThreadQueryIntent) async throws -> String {
+        switch intent {
+        case .listActive:
+            return try await formatActiveThreads()
+        case .showSpecific(let name):
+            return try await formatThreadDetails(name: name)
+        }
+    }
+
+    private func formatActiveThreads() async throws -> String {
+        let threads = try await databaseService.getActiveThreads(limit: 10)
+
+        guard !threads.isEmpty else {
+            return """
+            No active threads yet.
+
+            Threads emerge when 3+ related notes cluster together based on semantic similarity. Keep capturing notes and threads will form automatically!
+            """
+        }
+
+        var response = "**Active Threads** (by momentum)\n\n"
+
+        for (index, thread) in threads.enumerated() {
+            let momentum = thread.momentumDisplay
+            let noteCount = thread.noteCount
+            let lastActivity = thread.lastActivityDisplay
+            let summary = thread.summary ?? "No summary yet"
+
+            response += "\(index + 1). **\(thread.name)** (momentum: \(momentum))\n"
+            response += "   -> \(noteCount) notes | Last activity: \(lastActivity)\n"
+            response += "   \"\(summary.prefix(100))\(summary.count > 100 ? "..." : "")\"\n\n"
+        }
+
+        response += "_Ask \"show me [thread name] thread\" for details._"
+
+        return response
+    }
+
+    private func formatThreadDetails(name: String) async throws -> String {
+        guard let (thread, notes) = try await databaseService.getThreadByName(name) else {
+            return """
+            I couldn't find a thread matching "\(name)".
+
+            Try "what's emerging" to see your active threads.
+            """
+        }
+
+        var response = "**\(thread.name)**\n\n"
+
+        if let why = thread.why, !why.isEmpty {
+            response += "**Why:** \(why)\n\n"
+        }
+
+        if let summary = thread.summary, !summary.isEmpty {
+            response += "**Summary:** \(summary)\n\n"
+        }
+
+        response += "**Status:** \(thread.status) \(thread.statusEmoji)\n"
+        response += "**Momentum:** \(thread.momentumDisplay)\n"
+        response += "**Last Activity:** \(thread.lastActivityDisplay)\n\n"
+
+        response += "---\n\n"
+        response += "**Linked Notes (\(notes.count)):**\n\n"
+
+        for (index, note) in notes.prefix(10).enumerated() {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM d"
+            let dateStr = dateFormatter.string(from: note.createdAt)
+
+            response += "- [\(index + 1)] \"\(note.title)\" - \(dateStr)\n"
+        }
+
+        if notes.count > 10 {
+            response += "\n_...and \(notes.count - 10) more notes_"
+        }
+
+        return response
     }
 
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
