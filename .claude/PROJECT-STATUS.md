@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
 **Last Updated:** 2026-01-11
-**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | Living System Active
+**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | SeleneChat Thread Queries Complete | Living System Active
 
 ---
 
@@ -230,8 +230,8 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Resurface dormant threads
 
 **Track E: Thread System Phase 4 (Interfaces)**
+- ~~SeleneChat thread queries~~ ✅ Done
 - Thread export to Obsidian
-- SeleneChat thread queries
 - Link tasks to threads
 
 ---
@@ -239,6 +239,11 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Recent Achievements
 
 ### 2026-01-11
+- **SeleneChat Thread Queries Complete** - "what's emerging" and "show me [thread]" queries
+  - Added Thread model to SeleneChat
+  - Added thread query detection to QueryAnalyzer
+  - Added getActiveThreads/getThreadByName to DatabaseService
+  - Thread queries bypass Ollama for instant response
 - **Thread System Phase 3 Complete** - Living System active
 - Created `reconsolidate-threads.ts` workflow (summary updates + momentum)
 - Created launchd plist for hourly reconsolidation
