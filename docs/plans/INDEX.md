@@ -13,6 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-11 | 2026-01-11-obsidian-thread-export-design.md | thread-system | Export threads to Obsidian vault |
 | 2026-01-11 | 2026-01-11-selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop as server |
 | 2026-01-09 | 2026-01-09-n8n-replacement-design.md | infra | Replace n8n with plain TypeScript scripts |
 | 2026-01-06 | 2026-01-06-test-isolation-design.md | infra | Isolate production data from Claude Code during testing |
@@ -39,6 +40,7 @@ Status legend:
 
 | Date | Document | Completion |
 |------|----------|------------|
+| 2026-01-11 | 2026-01-11-selenechat-thread-queries-design.md | 2026-01-11 |
 | 2026-01-05 | 2026-01-05-batch-embed-notes-design.md | 2026-01-05 (US-042) |
 
 ---
