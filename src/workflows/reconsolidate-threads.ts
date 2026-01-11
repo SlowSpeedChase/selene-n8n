@@ -1,5 +1,7 @@
 import { createWorkflowLogger, db, generate } from '../lib';
 import type { WorkflowResult } from '../types';
+import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 const log = createWorkflowLogger('reconsolidate-threads');
 
@@ -35,6 +37,25 @@ interface MomentumData {
   thread_id: number;
   notes_7_days: number;
   notes_30_days: number;
+}
+
+interface ExportableThread {
+  id: number;
+  name: string;
+  why: string | null;
+  summary: string | null;
+  status: string;
+  note_count: number;
+  momentum_score: number | null;
+  last_activity_at: string | null;
+  created_at: string;
+}
+
+interface LinkedNote {
+  id: number;
+  title: string;
+  created_at: string;
+  exported_to_obsidian: number;
 }
 
 /**
@@ -200,6 +221,38 @@ function calculateMomentum(): number {
 
   log.info({ threadsUpdated: updated }, 'Momentum scores calculated');
   return updated;
+}
+
+/**
+ * Create URL-friendly slug from thread name
+ */
+function createSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .slice(0, 50);
+}
+
+/**
+ * Get status emoji for thread
+ */
+function getStatusEmoji(status: string): string {
+  const emojis: Record<string, string> = {
+    active: '🔥',
+    paused: '⏸️',
+    completed: '✅',
+    abandoned: '💤',
+  };
+  return emojis[status] || '📌';
+}
+
+/**
+ * Format date as YYYY-MM-DD
+ */
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return 'unknown';
+  return dateStr.split('T')[0];
 }
 
 /**
