@@ -632,6 +632,12 @@ class DatabaseService: ObservableObject {
         case .general:
             // General queries: recent notes with full context
             return try await getRecentProcessedNotes(limit: limit, timeScope: .recent)
+
+        case .thread:
+            // Thread queries: combine keyword search with recent notes for thread context
+            let keywordMatches = try await searchNotesByKeywords(keywords: keywords, limit: limit / 2)
+            let recentContext = try await getRecentProcessedNotes(limit: limit / 2, timeScope: .recent)
+            return Array(Set(keywordMatches + recentContext)).sorted { $0.createdAt > $1.createdAt }.prefix(limit).map { $0 }
         }
     }
 

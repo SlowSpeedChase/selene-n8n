@@ -16,6 +16,8 @@ class ContextBuilder {
             return buildFullContext(notes)
         case .general:
             return buildFullContext(notes)
+        case .thread:
+            return buildSummaryContext(notes)  // Thread queries use summary context
         }
     }
 

@@ -10,6 +10,7 @@ class QueryAnalyzer {
         case search       // Find specific notes: "show me...", "find notes about..."
         case knowledge    // Answer from content: "what did I say...", "remind me..."
         case general      // Open-ended: "how am I doing"
+        case thread       // Thread queries: "what's emerging", "show me X thread"
     }
 
     enum TimeScope {
@@ -18,6 +19,11 @@ class QueryAnalyzer {
         case thisMonth    // Current month
         case allTime      // No time restriction
         case custom(from: Date, to: Date)
+    }
+
+    enum ThreadQueryIntent {
+        case listActive           // "what's emerging"
+        case showSpecific(String) // "show me X thread"
     }
 
     struct AnalysisResult {
@@ -41,6 +47,17 @@ class QueryAnalyzer {
     private let knowledgeIndicators = [
         "what did i", "remind me", "what was", "tell me about",
         "what have i", "did i mention", "what do i think"
+    ]
+
+    private let threadListIndicators = [
+        "what's emerging", "whats emerging", "emerging threads",
+        "active threads", "my threads", "show threads",
+        "what threads", "thread overview"
+    ]
+
+    private let threadShowIndicators = [
+        "show me", "tell me about", "what's the", "whats the",
+        "details on", "more about"
     ]
 
     private let stopWords = Set([
@@ -71,7 +88,12 @@ class QueryAnalyzer {
     // MARK: - Private Detection Methods
 
     private func detectQueryType(_ query: String) -> QueryType {
-        // Check pattern indicators first (most specific)
+        // Check thread queries first (most specific)
+        if detectThreadIntent(query) != nil {
+            return .thread
+        }
+
+        // Check pattern indicators
         for indicator in patternIndicators {
             if query.contains(indicator) {
                 return .pattern
@@ -145,6 +167,54 @@ class QueryAnalyzer {
         // Default to all time if no time scope specified
         return .allTime
     }
+
+    /// Detect if query is thread-related and extract intent
+    func detectThreadIntent(_ query: String) -> ThreadQueryIntent? {
+        let lowercased = query.lowercased()
+
+        // Check for list queries first
+        for indicator in threadListIndicators {
+            if lowercased.contains(indicator) {
+                return .listActive
+            }
+        }
+
+        // Check for specific thread queries
+        // Pattern: "show me X thread" or "X thread"
+        if lowercased.contains("thread") {
+            // Try to extract thread name
+            if let name = extractThreadName(from: lowercased) {
+                return .showSpecific(name)
+            }
+        }
+
+        return nil
+    }
+
+    private func extractThreadName(from query: String) -> String? {
+        // Pattern 1: "show me [name] thread"
+        let showPattern = #"(?:show me|tell me about|what's the|whats the|details on|more about)\s+(?:the\s+)?(.+?)\s+thread"#
+        if let regex = try? NSRegularExpression(pattern: showPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: query, range: NSRange(query.startIndex..., in: query)),
+           let range = Range(match.range(at: 1), in: query) {
+            return String(query[range]).trimmingCharacters(in: .whitespaces)
+        }
+
+        // Pattern 2: "[name] thread" at end of query
+        let endPattern = #"(.+?)\s+thread\s*$"#
+        if let regex = try? NSRegularExpression(pattern: endPattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: query, range: NSRange(query.startIndex..., in: query)),
+           let range = Range(match.range(at: 1), in: query) {
+            let name = String(query[range]).trimmingCharacters(in: .whitespaces)
+            // Filter out common false positives
+            let falsePositives = ["the", "a", "my", "this", "that", "any"]
+            if !falsePositives.contains(name.lowercased()) {
+                return name
+            }
+        }
+
+        return nil
+    }
 }
 
 // MARK: - CustomStringConvertible
@@ -156,6 +226,7 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
         case .search: return "search"
         case .knowledge: return "knowledge"
         case .general: return "general"
+        case .thread: return "thread"
         }
     }
 }

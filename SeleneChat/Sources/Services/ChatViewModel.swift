@@ -295,6 +295,7 @@ class ChatViewModel: ObservableObject {
         case .search: return 50
         case .knowledge: return 15
         case .general: return 30
+        case .thread: return 50  // Thread queries need moderate context
         }
     }
 
@@ -334,6 +335,8 @@ class ChatViewModel: ObservableObject {
             querySpecific = "\n\nAnswer this question based on the note content. Cite specific notes that contain the answer."
         case .general:
             querySpecific = "\n\nProvide insights based on recent notes. Highlight interesting patterns and cite specific examples."
+        case .thread:
+            querySpecific = "\n\nThis is a thread-related query. Show emerging threads and patterns in the notes. Group related ideas and cite specific notes."
         }
 
         return basePrompt + querySpecific
