@@ -375,6 +375,48 @@ ${notesSection}
 }
 
 /**
+ * Export all threads to Obsidian vault
+ */
+function exportThreadsToObsidian(): number {
+  const vaultPath = process.env.OBSIDIAN_VAULT_PATH;
+  if (!vaultPath) {
+    log.warn('OBSIDIAN_VAULT_PATH not set, skipping thread export');
+    return 0;
+  }
+
+  const threadsDir = join(vaultPath, 'Selene', 'Threads');
+
+  // Ensure directory exists
+  if (!existsSync(threadsDir)) {
+    mkdirSync(threadsDir, { recursive: true });
+    log.info({ threadsDir }, 'Created Threads directory');
+  }
+
+  const threads = getAllThreadsForExport();
+  let exported = 0;
+
+  for (const thread of threads) {
+    try {
+      const notes = getLinkedNotesForExport(thread.id);
+      const markdown = generateThreadMarkdown(thread, notes);
+      const slug = createSlug(thread.name);
+      const filePath = join(threadsDir, `${slug}.md`);
+
+      writeFileSync(filePath, markdown, 'utf-8');
+      exported++;
+
+      log.debug({ threadId: thread.id, filePath }, 'Exported thread to Obsidian');
+    } catch (err) {
+      const error = err as Error;
+      log.error({ err: error, threadId: thread.id }, 'Failed to export thread');
+    }
+  }
+
+  log.info({ exported, total: threads.length }, 'Thread export to Obsidian complete');
+  return exported;
+}
+
+/**
  * Main workflow: reconsolidate thread summaries and calculate momentum
  */
 export async function reconsolidateThreads(): Promise<WorkflowResult> {
@@ -435,10 +477,14 @@ export async function reconsolidateThreads(): Promise<WorkflowResult> {
   // Phase 3: Calculate momentum for ALL active threads
   const momentumUpdated = calculateMomentum();
 
+  // Phase 4: Export threads to Obsidian
+  const threadsExported = exportThreadsToObsidian();
+
   log.info(
     {
       threadsResynthesized: result.processed,
       momentumUpdated,
+      threadsExported,
       errors: result.errors,
     },
     'Thread reconsolidation complete'
