@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { config, logger } from './lib';
 import { ingest } from './workflows/ingest';
+import { exportObsidian } from './workflows/export-obsidian';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -40,6 +41,23 @@ server.post<{ Body: IngestInput }>('/webhook/api/drafts', async (request, reply)
     logger.error({ err: error, title }, 'Ingestion failed');
     reply.status(500);
     return { status: 'error', message: error.message } as WebhookResponse;
+  }
+});
+
+// Manual export trigger endpoint
+server.post<{ Body: { noteId?: number } }>('/webhook/api/export-obsidian', async (request, reply) => {
+  const { noteId } = request.body || {};
+
+  logger.info({ noteId }, 'Export-obsidian webhook received');
+
+  try {
+    const result = await exportObsidian(noteId);
+    return result;
+  } catch (err) {
+    const error = err as Error;
+    logger.error({ err: error }, 'Export-obsidian failed');
+    reply.status(500);
+    return { success: false, exported_count: 0, errors: 1, message: error.message };
   }
 });
 
