@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-01-10
-**Status:** Thread Detection Workflow Complete
+**Last Updated:** 2026-01-11
+**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | Living System Active
 
 ---
 
@@ -15,12 +15,15 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 **Location:** `/Users/chaseeasterling/selene-n8n`
 
 ---
+## Current Focus: Thread System Phase 3 Complete
 
-## Current Focus: TypeScript Backend
+**Branch:** `main` (all work merged)
 
-**Branch:** `n8n-replacement` (this branch)
-
-The n8n workflow engine has been replaced with a pure TypeScript backend:
+The thread system is now a **living system** - new notes flow through the full pipeline automatically:
+- Embedding generation (every 5 min)
+- Association computation (every 5 min)
+- Thread detection (every 30 min)
+- Thread reconsolidation (hourly) - updates summaries + calculates momentum
 
 ### Completed Components
 
@@ -37,6 +40,7 @@ The n8n workflow engine has been replaced with a pure TypeScript backend:
 | Embedding Generation | `src/workflows/compute-embeddings.ts` | Done |
 | Association Computation | `src/workflows/compute-associations.ts` | Done |
 | Thread Detection | `src/workflows/detect-threads.ts` | Done |
+| Thread Reconsolidation | `src/workflows/reconsolidate-threads.ts` | Done |
 | Daily Summary | `src/workflows/daily-summary.ts` | Done |
 | Launchd Agents | `launchd/*.plist` | Done |
 | Install Script | `scripts/install-launchd.sh` | Done |
@@ -68,8 +72,10 @@ SQLite Database (data/selene.db)
 launchd Scheduled Jobs:
   - process-llm (every 5 min)
   - extract-tasks (every 5 min)
-  - compute-embeddings (every 10 min)
-  - compute-associations (every 10 min)
+  - compute-embeddings (every 5 min)
+  - compute-associations (every 5 min)
+  - detect-threads (every 30 min)
+  - reconsolidate-threads (hourly)
   - daily-summary (midnight)
     |
     v
@@ -197,16 +203,55 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 ## Next Steps
 
-1. **Merge this branch** - Complete the n8n replacement
-2. **Phase 7.2** - SeleneChat Planning Integration
-3. **Phase 7.3** - Cloud AI Integration (sanitization layer)
-4. **Phase 7.4** - Contextual Surfacing
+**Completed:**
+- ✅ n8n replacement merged to main (TypeScript + Fastify + launchd)
+- ✅ Phase 7.2 complete (SeleneChat Planning Integration)
+- ✅ Thread System Phase 1-2 complete (Embeddings, Associations, Detection)
+- ✅ Thread System Phase 3 complete (Living System with reconsolidation)
+
+**Up Next (choose one track):**
+
+**Track A: Thread System Phase 3+ (Advanced Features)**
+- Thread splitting (sub-clusters emerge)
+- Thread merging (related threads combine)
+- Stale thread archiving (60+ days inactive)
+
+**Track B: Phase 7.3 (Cloud AI Integration)**
+- Sanitization layer for sensitive content
+- Claude API for complex queries
+- Privacy-aware routing
+
+**Track C: SeleneChat UI**
+- Forest Study visual redesign (design docs ready)
+- Interface improvements (command palette, focus mode)
+
+**Track D: Phase 7.4 (Contextual Surfacing)**
+- Thread continuation prompts
+- Resurface dormant threads
+
+**Track E: Thread System Phase 4 (Interfaces)**
+- Thread export to Obsidian
+- SeleneChat thread queries
+- Link tasks to threads
 
 ---
 
 ## Recent Achievements
 
+### 2026-01-11
+- **Thread System Phase 3 Complete** - Living System active
+- Created `reconsolidate-threads.ts` workflow (summary updates + momentum)
+- Created launchd plist for hourly reconsolidation
+- Updated launchd intervals: embeddings/associations now 5 min, detect-threads 30 min
+- Fixed server launchd plist to use `npm run start`
+- End-to-end pipeline tested and verified
+- 2 active threads with momentum scores calculated
+
 ### 2026-01-10
+- Synced ROADMAP.md with stories INDEX.md
+- Confirmed Phase 7.2 fully complete (7.2f.2-6 all merged)
+- Confirmed Thread System Phase 1-2 complete
+- Updated documentation with four next-track options
 - Completed US-045: Thread Detection Workflow
 - Applied thread system database migration (013_thread_system.sql)
 - Generated embeddings for 15 production notes
@@ -251,6 +296,6 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 ## Questions for Next Session
 
-1. Should we merge the n8n-replacement branch to main?
-2. Any issues with the launchd scheduling?
-3. Ready to start Phase 7.2 (SeleneChat Planning)?
+1. Which track to pursue next? (A: Thread Advanced, B: Cloud AI, C: UI Redesign, D: Contextual Surfacing, E: Thread Interfaces)
+2. Should we clean up stale branches? (phase-7.2/selenechat-planning is 247 commits behind)
+3. Monitor the living system over the next few days - are thread summaries updating correctly?
