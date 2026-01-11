@@ -7,9 +7,9 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/npx</string>
-        <string>ts-node</string>
-        <string>src/server.ts</string>
+        <string>/usr/local/bin/npm</string>
+        <string>run</string>
+        <string>start</string>
     </array>
 
     <key>WorkingDirectory</key>
