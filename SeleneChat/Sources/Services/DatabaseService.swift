@@ -96,6 +96,23 @@ class DatabaseService: ObservableObject {
     private let threadProjectId = Expression<Int64?>("project_id")
     private let threadName = Expression<String?>("thread_name")
 
+    // threads table (Phase 3 living system)
+    private let threadsTable = Table("threads")
+    private let threadsId = Expression<Int64>("id")
+    private let threadsName = Expression<String>("name")
+    private let threadsWhy = Expression<String?>("why")
+    private let threadsSummary = Expression<String?>("summary")
+    private let threadsStatus = Expression<String>("status")
+    private let threadsNoteCount = Expression<Int64>("note_count")
+    private let threadsMomentumScore = Expression<Double?>("momentum_score")
+    private let threadsLastActivityAt = Expression<String?>("last_activity_at")
+    private let threadsCreatedAt = Expression<String>("created_at")
+
+    // thread_notes table (Phase 3 living system)
+    private let threadNotesTable = Table("thread_notes")
+    private let threadNotesThreadId = Expression<Int64>("thread_id")
+    private let threadNotesRawNoteId = Expression<Int64>("raw_note_id")
+
     init() {
         // Try to load saved path, otherwise use environment-aware default
         self.databasePath = UserDefaults.standard.string(forKey: "databasePath")
@@ -315,6 +332,101 @@ class DatabaseService: ObservableObject {
         }
 
         return try parseNote(from: row)
+    }
+
+    // MARK: - Thread Queries (Phase 3 Living System)
+
+    /// Get active threads sorted by momentum
+    func getActiveThreads(limit: Int = 10) async throws -> [Thread] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if table exists first
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='threads'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = threadsTable
+            .filter(threadsStatus == "active")
+            .order(threadsMomentumScore.desc)
+            .limit(limit)
+
+        var threads: [Thread] = []
+
+        for row in try db.prepare(query) {
+            let thread = Thread(
+                id: row[threadsId],
+                name: row[threadsName],
+                why: row[threadsWhy],
+                summary: row[threadsSummary],
+                status: row[threadsStatus],
+                noteCount: Int(row[threadsNoteCount]),
+                momentumScore: row[threadsMomentumScore],
+                lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
+                createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+            )
+            threads.append(thread)
+        }
+
+        return threads
+    }
+
+    /// Get thread by fuzzy name match with its linked notes
+    func getThreadByName(_ name: String) async throws -> (Thread, [Note])? {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if table exists first
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='threads'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return nil
+        }
+
+        // Find thread by fuzzy name match
+        let threadQuery = threadsTable
+            .filter(threadsName.like("%\(name)%"))
+            .filter(threadsStatus == "active")
+            .limit(1)
+
+        guard let row = try db.pluck(threadQuery) else {
+            return nil
+        }
+
+        let thread = Thread(
+            id: row[threadsId],
+            name: row[threadsName],
+            why: row[threadsWhy],
+            summary: row[threadsSummary],
+            status: row[threadsStatus],
+            noteCount: Int(row[threadsNoteCount]),
+            momentumScore: row[threadsMomentumScore],
+            lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
+            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+        )
+
+        // Get linked notes
+        let notesQuery = rawNotes
+            .join(.inner, threadNotesTable, on: rawNotes[id] == threadNotesTable[threadNotesRawNoteId])
+            .join(.leftOuter, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .filter(threadNotesTable[threadNotesThreadId] == thread.id)
+            .order(rawNotes[createdAt].desc)
+
+        var notes: [Note] = []
+        for noteRow in try db.prepare(notesQuery) {
+            let note = try parseNote(from: noteRow)
+            notes.append(note)
+        }
+
+        return (thread, notes)
     }
 
     private func parseNote(from row: Row) throws -> Note {
