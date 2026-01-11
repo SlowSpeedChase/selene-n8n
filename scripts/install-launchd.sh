@@ -41,6 +41,9 @@ AGENTS=(
     "com.selene.compute-embeddings"
     "com.selene.compute-associations"
     "com.selene.daily-summary"
+    "com.selene.export-obsidian"
+    "com.selene.detect-threads"
+    "com.selene.reconsolidate-threads"
 )
 
 echo "Step 1: Unloading existing agents..."
