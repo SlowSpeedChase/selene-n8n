@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
 **Last Updated:** 2026-01-11
-**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | SeleneChat Thread Queries Complete | Living System Active
+**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | Thread Obsidian Export Complete | SeleneChat Thread Queries Complete | Living System Active
 
 ---
 
@@ -231,7 +231,7 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 **Track E: Thread System Phase 4 (Interfaces)**
 - ~~SeleneChat thread queries~~ ✅ Done
-- Thread export to Obsidian
+- ~~Thread export to Obsidian~~ ✅ Done
 - Link tasks to threads
 
 ---
@@ -239,6 +239,10 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Recent Achievements
 
 ### 2026-01-11
+- **Obsidian Thread Export Complete** - Threads export to `Selene/Threads/` during reconsolidation
+  - Markdown with frontmatter for Dataview queries
+  - Wiki-links to exported notes
+  - Integrated into hourly reconsolidation workflow
 - **SeleneChat Thread Queries Complete** - "what's emerging" and "show me [thread]" queries
   - Added Thread model to SeleneChat
   - Added thread query detection to QueryAnalyzer

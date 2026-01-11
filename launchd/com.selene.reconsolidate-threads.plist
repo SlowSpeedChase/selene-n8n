@@ -22,6 +22,8 @@
         <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>SELENE_DB_PATH</key>
         <string>/Users/chaseeasterling/selene-data/selene.db</string>
+        <key>OBSIDIAN_VAULT_PATH</key>
+        <string>/Users/chaseeasterling/selene-n8n/vault</string>
     </dict>
 
     <!-- Run every hour (3600 seconds) -->
