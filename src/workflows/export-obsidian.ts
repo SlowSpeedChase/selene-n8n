@@ -148,7 +148,7 @@ function generateAdhdMarkdown(note: ExportableNote): MarkdownData {
     note.primary_theme,
     ...secondaryThemes,
     ...tags,
-    `energy-${note.energy_level}`,
+    `energy-${note.energy_level || 'medium'}`,
     `mood-${note.emotional_tone}`,
     `sentiment-${note.overall_sentiment}`,
   ];
@@ -171,7 +171,7 @@ date: ${dateStr}
 time: "${timeStr}"
 day: ${dayOfWeek}
 theme: ${note.primary_theme || 'uncategorized'}
-energy: ${note.energy_level}
+energy: ${note.energy_level || 'medium'}
 mood: ${note.emotional_tone || 'neutral'}
 sentiment: ${note.overall_sentiment}
 sentiment_score: ${sentimentScore}
@@ -201,7 +201,7 @@ automated: true
 
 | Indicator | Status | Details |
 |-----------|--------|----------|
-| Energy | ${energyEmoji} ${note.energy_level.toUpperCase()} | Brain capacity indicator |
+| Energy | ${energyEmoji} ${(note.energy_level || 'medium').toUpperCase()} | Brain capacity indicator |
 | Mood | ${emotionEmoji} ${note.emotional_tone || 'neutral'} | Emotional state |
 | Sentiment | ${sentimentEmoji} ${note.overall_sentiment} | Overall tone (${Math.round(sentimentScore * 100)}%) |
 | ADHD | ${adhdBadgeStr} | Markers detected |
@@ -221,7 +221,7 @@ automated: true
 >
 > **Why this matters:** Related to ${contextConcepts}
 > **Reading time:** ${readingTime} min
-> **Brain state:** ${note.energy_level} energy, ${note.emotional_tone || 'neutral'}`;
+> **Brain state:** ${note.energy_level || 'medium'} energy, ${note.emotional_tone || 'neutral'}`;
 
   const metadataSection = `
 **🏷️ Theme**: ${themeLinks || 'uncategorized'}
@@ -284,7 +284,7 @@ ${keyEmotions.map((e) => `- ${e}`).join('\n')}`;
 
 ### Brain State Analysis
 
-- **Energy Level**: ${note.energy_level} ${energyEmoji}
+- **Energy Level**: ${note.energy_level || 'medium'} ${energyEmoji}
   - ${energyInterpretation[note.energy_level] || ''}
 
 - **Emotional Tone**: ${note.emotional_tone || 'neutral'} ${emotionEmoji}${emotionalInsightsStr}
@@ -340,7 +340,7 @@ ${metadataFooter}`;
     month,
     concepts,
     theme: note.primary_theme || 'uncategorized',
-    energy: note.energy_level,
+    energy: note.energy_level || 'medium',
     title: note.title,
     slug: createSlug(note.title),
   };
