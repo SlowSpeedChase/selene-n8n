@@ -256,6 +256,125 @@ function formatDate(dateStr: string | null): string {
 }
 
 /**
+ * Get all threads for Obsidian export
+ */
+function getAllThreadsForExport(): ExportableThread[] {
+  return db
+    .prepare(
+      `SELECT id, name, why, summary, status, note_count,
+              momentum_score, last_activity_at, created_at
+       FROM threads
+       ORDER BY momentum_score DESC NULLS LAST`
+    )
+    .all() as ExportableThread[];
+}
+
+/**
+ * Get linked notes for a thread
+ */
+function getLinkedNotesForExport(threadId: number): LinkedNote[] {
+  return db
+    .prepare(
+      `SELECT r.id, r.title, r.created_at, r.exported_to_obsidian
+       FROM raw_notes r
+       JOIN thread_notes tn ON r.id = tn.raw_note_id
+       WHERE tn.thread_id = ?
+       ORDER BY r.created_at DESC`
+    )
+    .all(threadId) as LinkedNote[];
+}
+
+/**
+ * Generate Obsidian markdown for a thread
+ */
+function generateThreadMarkdown(thread: ExportableThread, notes: LinkedNote[]): string {
+  const statusEmoji = getStatusEmoji(thread.status);
+  const momentum = thread.momentum_score?.toFixed(1) || '0.0';
+  const lastActivity = formatDate(thread.last_activity_at);
+  const created = formatDate(thread.created_at);
+  const today = new Date().toISOString().split('T')[0];
+
+  // Build frontmatter
+  const frontmatter = `---
+title: "${thread.name.replace(/"/g, '\\"')}"
+type: thread
+status: ${thread.status}
+momentum: ${thread.momentum_score || 0}
+note_count: ${thread.note_count}
+last_activity: ${lastActivity}
+created: ${created}
+tags:
+  - selene/thread
+  - status/${thread.status}
+---`;
+
+  // Build why section
+  const whySection = thread.why
+    ? `## Why This Thread Exists
+
+${thread.why}`
+    : '';
+
+  // Build summary section
+  const summarySection = thread.summary
+    ? `## Current Summary
+
+${thread.summary}`
+    : `## Current Summary
+
+*No summary generated yet.*`;
+
+  // Build status line
+  const statusLine = `## Status
+
+${statusEmoji} **${thread.status.charAt(0).toUpperCase() + thread.status.slice(1)}** | Momentum: ${momentum} | ${thread.note_count} notes`;
+
+  // Build linked notes section
+  let notesSection = '## Linked Notes\n\n';
+  if (notes.length === 0) {
+    notesSection += '*No notes linked yet.*';
+  } else {
+    for (const note of notes) {
+      const noteDate = formatDate(note.created_at);
+      const dateDisplay = new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      if (note.exported_to_obsidian) {
+        // Create wiki-link to exported note
+        const slug = note.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .slice(0, 50);
+        notesSection += `- [[${noteDate}-${slug}]] - ${dateDisplay}\n`;
+      } else {
+        // Just show title without link
+        notesSection += `- "${note.title}" *(not exported)* - ${dateDisplay}\n`;
+      }
+    }
+  }
+
+  // Combine all sections
+  return `${frontmatter}
+
+# ${thread.name}
+
+${whySection}
+
+${summarySection}
+
+${statusLine}
+
+---
+
+${notesSection}
+
+---
+
+*Last updated: ${today} by Selene*
+`;
+}
+
+/**
  * Main workflow: reconsolidate thread summaries and calculate momentum
  */
 export async function reconsolidateThreads(): Promise<WorkflowResult> {
