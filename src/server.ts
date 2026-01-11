@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { config, logger } from './lib';
 import { ingest } from './workflows/ingest';
 import { exportObsidian } from './workflows/export-obsidian';
+import { notesRoutes } from './routes/api/notes';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -64,6 +65,9 @@ server.post<{ Body: { noteId?: number } }>('/webhook/api/export-obsidian', async
 // Start server
 async function start() {
   try {
+    // Register API routes
+    await server.register(notesRoutes);
+
     await server.listen({ port: config.port, host: config.host });
     logger.info({ port: config.port, host: config.host }, 'Selene webhook server started');
   } catch (err) {
