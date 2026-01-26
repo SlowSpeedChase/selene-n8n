@@ -15,6 +15,26 @@ Load plan, review critically, execute tasks in batches, report for review betwee
 
 **Announce at start:** "I'm using the Executing Plans skill to implement this plan."
 
+## TDD is Mandatory
+
+**Before writing ANY implementation code, you MUST invoke `superpowers:test-driven-development`.**
+
+This is not optional. This is not "if the plan mentions tests." Every feature, every bugfix, every behavior change requires TDD.
+
+```
+Plan says "implement X" → Write failing test FIRST → Then implement
+Plan says "add Y feature" → Write failing test FIRST → Then implement
+Plan says "fix Z bug" → Write failing test FIRST → Then implement
+```
+
+**Red flags (you're rationalizing):**
+- "The plan doesn't mention tests" → TDD is implicit in ALL dev work
+- "This is too simple to test" → Simple code breaks. Test it.
+- "I'll add tests after" → Tests-after prove nothing. Start over.
+- "Let me just get it working first" → That's not TDD. Stop.
+
+**If you wrote implementation code before a failing test existed, delete it and start over.**
+
 ## The Process
 
 ### Step 0: Session Start Ritual (if in worktree)
@@ -44,11 +64,22 @@ If behind: "Main has [X] new commits. Rebase now before continuing?"
 
 For each task:
 1. Mark as in_progress
-2. **Invoke required skill for current stage** (see GitOps Skills below)
-3. Follow each step exactly (plan has bite-sized steps)
-4. Run verifications as specified
-5. Mark as completed
-6. **Update BRANCH-STATUS.md** checklist if in worktree
+2. **If task involves writing code:** Invoke `superpowers:test-driven-development` FIRST
+   - Write failing test before ANY implementation
+   - Watch test fail (mandatory - never skip)
+   - Write minimal code to pass
+   - Refactor only after green
+3. **Invoke other required skills for current stage** (see GitOps Skills below)
+4. Follow each step exactly (plan has bite-sized steps)
+5. Run verifications as specified
+6. Mark as completed
+7. **Update BRANCH-STATUS.md** checklist if in worktree
+
+**TDD Checkpoint:** Before marking a coding task complete, verify:
+- [ ] Test existed before implementation
+- [ ] Watched test fail
+- [ ] Implementation is minimal (no YAGNI)
+- [ ] All tests pass
 
 ### Step 3: Report
 When batch complete:
@@ -91,6 +122,7 @@ After all tasks complete and verified:
 **Don't force through blockers** - stop and ask.
 
 ## Remember
+- **TDD is mandatory** - test before code, always
 - Review plan critically first
 - Follow plan steps exactly
 - Don't skip verifications
