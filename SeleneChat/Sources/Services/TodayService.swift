@@ -34,8 +34,12 @@ class TodayService {
 
     /// Get notes created after cutoff date, with thread info if connected
     func getNewCaptures(since cutoff: Date, limit: Int = 10) throws -> [NoteWithThread] {
+        #if DEBUG
+        DebugLogger.shared.log(.state, "TodayService: fetching new captures since \(cutoff)")
+        #endif
+
         let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        dateFormatter.formatOptions = [.withInternetDateTime]
         let cutoffString = dateFormatter.string(from: cutoff)
 
         // Query notes with optional thread join
@@ -75,6 +79,10 @@ class TodayService {
 
     /// Get threads with momentum, sorted by score descending
     func getHeatingUpThreads(limit: Int = 5) throws -> [ThreadSummary] {
+        #if DEBUG
+        DebugLogger.shared.log(.state, "TodayService: fetching heating up threads (limit: \(limit))")
+        #endif
+
         let query = threadsTable
             .filter(threadStatus == "active")
             .filter(threadMomentumScore > 0)
