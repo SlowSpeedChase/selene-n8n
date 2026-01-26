@@ -13,6 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-26 | 2026-01-26-selenechat-contextual-evolution.md | selenechat | Vision: project-scoped chats, connected info, lab notes, task refinement |
 | 2026-01-26 | 2026-01-26-today-view-design.md | selenechat | ADHD landing page with new captures + heating threads |
 | 2026-01-11 | 2026-01-11-obsidian-thread-export-design.md | thread-system | Export threads to Obsidian vault |
 | 2026-01-11 | 2026-01-11-selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop as server |
