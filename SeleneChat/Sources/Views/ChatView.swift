@@ -8,6 +8,8 @@ struct ChatView: View {
     @FocusState private var isInputFocused: Bool
     @Namespace private var focusNamespace
 
+    var initialQuery: String?
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -68,6 +70,16 @@ struct ChatView: View {
             DebugLogger.shared.log(.nav, "Appeared: ChatView")
             ActionTracker.shared.track(action: "viewAppeared", params: ["view": "ChatView"])
             #endif
+
+            // Handle initial query from Today view thread tap
+            if let query = initialQuery, !query.isEmpty {
+                messageText = query
+                // Auto-send the query
+                Task {
+                    await chatViewModel.sendMessage(query)
+                }
+                // Note: We don't clear messageText here since sendMessage handles that logic
+            }
         }
         .onDisappear {
             #if DEBUG

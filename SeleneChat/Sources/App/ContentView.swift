@@ -1,16 +1,19 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedView: NavigationItem = .chat
+    @State private var selectedView: NavigationItem = .today
+    @State private var pendingThreadQuery: String?
     @EnvironmentObject var databaseService: DatabaseService
 
     enum NavigationItem: String, CaseIterable {
+        case today = "Today"
         case chat = "Chat"
         case search = "Search"
         case planning = "Planning"
 
         var icon: String {
             switch self {
+            case .today: return "sun.horizon.fill"
             case .chat: return "message.fill"
             case .search: return "magnifyingglass"
             case .planning: return "list.bullet.clipboard"
@@ -28,8 +31,22 @@ struct ContentView: View {
             .frame(minWidth: 200)
         } detail: {
             switch selectedView {
+            case .today:
+                TodayView(
+                    onThreadSelected: { thread in
+                        pendingThreadQuery = "What's happening with \(thread.name)?"
+                        selectedView = .chat
+                    },
+                    onNoteThreadTap: { note in
+                        if let threadName = note.threadName {
+                            pendingThreadQuery = "What's happening with \(threadName)?"
+                            selectedView = .chat
+                        }
+                    }
+                )
             case .chat:
-                ChatView()
+                ChatView(initialQuery: pendingThreadQuery)
+                    .onAppear { pendingThreadQuery = nil }
             case .search:
                 SearchView()
             case .planning:
