@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-01-11
+**Last Updated:** 2026-01-26
 
 Status legend:
 - **Active** - Ready for implementation or in progress
@@ -13,6 +13,7 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-26 | 2026-01-26-today-view-design.md | selenechat | ADHD landing page with new captures + heating threads |
 | 2026-01-11 | 2026-01-11-obsidian-thread-export-design.md | thread-system | Export threads to Obsidian vault |
 | 2026-01-11 | 2026-01-11-selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop as server |
 | 2026-01-09 | 2026-01-09-n8n-replacement-design.md | infra | Replace n8n with plain TypeScript scripts |
