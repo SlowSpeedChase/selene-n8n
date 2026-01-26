@@ -9,21 +9,6 @@ struct TodayView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Today")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                Spacer()
-                Button(action: { Task { await viewModel.refresh() } }) {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .disabled(viewModel.isLoading)
-            }
-            .padding()
-
-            Divider()
-
             // Content
             if viewModel.isLoading && viewModel.newCaptures.isEmpty {
                 loadingView
@@ -33,6 +18,15 @@ struct TodayView: View {
                 emptyStateView
             } else {
                 columnsView
+            }
+        }
+        .navigationTitle("Today")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { Task { await viewModel.refresh() } }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(viewModel.isLoading)
             }
         }
         .onAppear {
