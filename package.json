@@ -10,8 +10,8 @@
     "dev": "ts-node-dev src/server.ts",
     "workflow:process-llm": "ts-node src/workflows/process-llm.ts",
     "workflow:extract-tasks": "ts-node src/workflows/extract-tasks.ts",
-    "workflow:compute-embeddings": "ts-node src/workflows/compute-embeddings.ts",
-    "workflow:compute-associations": "ts-node src/workflows/compute-associations.ts",
+    "workflow:compute-embeddings": "echo 'DEPRECATED: Use workflow:index-vectors instead' && exit 1",
+    "workflow:compute-associations": "echo 'DEPRECATED: Use workflow:compute-relationships instead' && exit 1",
     "workflow:daily-summary": "ts-node src/workflows/daily-summary.ts",
     "workflow:index-vectors": "ts-node src/workflows/index-vectors.ts",
     "workflow:compute-relationships": "ts-node src/workflows/compute-relationships.ts"
