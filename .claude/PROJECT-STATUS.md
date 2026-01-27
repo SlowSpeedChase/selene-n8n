@@ -1,6 +1,6 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-01-11
+**Last Updated:** 2026-01-27
 **Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | Thread Obsidian Export Complete | SeleneChat Thread Queries Complete | Living System Active
 
 ---
@@ -216,23 +216,27 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Thread merging (related threads combine)
 - Stale thread archiving (60+ days inactive)
 
-**Track B: Phase 7.3 (Cloud AI Integration)**
-- Sanitization layer for sensitive content
-- Claude API for complex queries
-- Privacy-aware routing
-
-**Track C: SeleneChat UI**
+**Track B: SeleneChat UI**
 - Forest Study visual redesign (design docs ready)
 - Interface improvements (command palette, focus mode)
 
-**Track D: Phase 7.4 (Contextual Surfacing)**
+**Track C: Phase 7.4 (Contextual Surfacing)**
 - Thread continuation prompts
 - Resurface dormant threads
 
-**Track E: Thread System Phase 4 (Interfaces)**
+**Track D: Thread System Phase 4 (Interfaces)**
 - ~~SeleneChat thread queries~~ ✅ Done
 - ~~Thread export to Obsidian~~ ✅ Done
 - Link tasks to threads
+
+**Track E: LanceDB Migration**
+- Vector database for better embedding storage/queries
+- Design doc ready in `docs/plans/`
+
+**Deprioritized (bundled for future):**
+- Phase 7.3 (Cloud AI Integration) + Things Checklist Generation
+- Rationale: Checklist quality would benefit significantly from Cloud AI
+- Branch `feature/things-checklist` preserved with implementation (7 commits)
 
 ---
 
@@ -305,6 +309,5 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 ## Questions for Next Session
 
-1. Which track to pursue next? (A: Thread Advanced, B: Cloud AI, C: UI Redesign, D: Contextual Surfacing, E: Thread Interfaces)
-2. Should we clean up stale branches? (phase-7.2/selenechat-planning is 247 commits behind)
-3. Monitor the living system over the next few days - are thread summaries updating correctly?
+1. Which track to pursue next? (A: Thread Advanced, B: UI Redesign, C: Contextual Surfacing, D: Thread Interfaces, E: LanceDB)
+2. Monitor the living system over the next few days - are thread summaries updating correctly?

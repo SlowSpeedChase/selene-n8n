@@ -45,9 +45,21 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
+| 2026-01-26 | lancedb-transition.md | infra | Vector DB migration |
+
+---
+
+## Deprioritized
+
+Designs that are ready but not currently a priority. These are bundled together for future implementation.
+
+| Date | Document | Topic | Notes |
+|------|----------|-------|-------|
 | 2026-01-26 | phase-7.3-cloud-ai-integration.md | cloud-ai | Privacy-preserving cloud AI with sanitization |
 | 2026-01-26 | phase-7.3-implementation-plan.md | cloud-ai | 21 tasks, implementation ready |
-| 2026-01-26 | lancedb-transition.md | infra | Vector DB migration |
+| 2026-01-11 | things-checklist-integration-design.md | things | Checklist generation - benefits from Cloud AI |
+
+**Bundle rationale:** Things checklist generation uses LLM for task breakdown. Local Ollama produces adequate results, but Cloud AI would significantly improve quality. Implement together when Cloud AI is prioritized.
 
 ---
 

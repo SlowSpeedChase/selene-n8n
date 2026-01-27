@@ -1,8 +1,10 @@
 # Things 3 Checklist Integration Design
 
-**Status:** Ready for Implementation
+**Status:** Deprioritized (bundled with Cloud AI Integration)
 **Created:** 2026-01-11
 **Scope:** Add automatic checklist generation for planning/research tasks
+
+> **Note:** This feature would benefit significantly from Cloud AI (Phase 7.3) for higher quality checklist generation. Local Ollama with mistral:7b produces adequate but not great breakdowns. Bundled with Cloud AI integration for future implementation.
 
 ---
 
