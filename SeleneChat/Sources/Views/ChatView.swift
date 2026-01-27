@@ -5,6 +5,7 @@ struct ChatView: View {
     @EnvironmentObject var databaseService: DatabaseService
     @State private var messageText = ""
     @State private var showingSessionHistory = false
+    @State private var isAPIAvailable = false
     @FocusState private var isInputFocused: Bool
     @Namespace private var focusNamespace
 
@@ -71,6 +72,11 @@ struct ChatView: View {
             ActionTracker.shared.track(action: "viewAppeared", params: ["view": "ChatView"])
             #endif
 
+            // Check API availability for vector search
+            Task {
+                isAPIAvailable = await databaseService.isAPIAvailable()
+            }
+
             // Handle initial query from Today view thread tap
             if let query = initialQuery, !query.isEmpty {
                 messageText = query
@@ -94,14 +100,26 @@ struct ChatView: View {
                 Text(chatViewModel.currentSession.title)
                     .font(.headline)
 
-                HStack(spacing: 4) {
-                    Image(systemName: databaseService.isConnected ? "circle.fill" : "circle")
-                        .foregroundColor(databaseService.isConnected ? .green : .red)
-                        .font(.caption)
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Image(systemName: databaseService.isConnected ? "circle.fill" : "circle")
+                            .foregroundColor(databaseService.isConnected ? .green : .red)
+                            .font(.caption)
 
-                    Text(databaseService.isConnected ? "Connected to Selene" : "Database disconnected")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        Text(databaseService.isConnected ? "Connected" : "Disconnected")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(isAPIAvailable ? Color.green : Color.orange)
+                            .frame(width: 8, height: 8)
+                        Text(isAPIAvailable ? "Semantic" : "Keywords")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .help(isAPIAvailable ? "Vector search available" : "Using keyword search (server offline)")
                 }
             }
 

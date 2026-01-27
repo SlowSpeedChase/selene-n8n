@@ -260,14 +260,25 @@ class ChatViewModel: ObservableObject {
         // IMPORTANT: Analyze the user's query, NOT the full context (which includes note metadata)
         let analysis = queryAnalyzer.analyze(query)
 
-        // Retrieve notes using hybrid strategy
+        // Determine if semantic search should be used
+        let useSemantic = queryAnalyzer.shouldUseSemanticSearch(query)
         let limit = limitFor(queryType: analysis.queryType)
-        let notes = try await databaseService.retrieveNotesFor(
-            queryType: analysis.queryType,
-            keywords: analysis.keywords,
-            timeScope: analysis.timeScope,
-            limit: limit
-        )
+
+        // Retrieve notes - semantic or traditional based on query type
+        let notes: [Note]
+        if useSemantic {
+            notes = await databaseService.searchNotesSemantically(
+                query: query,
+                limit: limit
+            )
+        } else {
+            notes = try await databaseService.retrieveNotesFor(
+                queryType: analysis.queryType,
+                keywords: analysis.keywords,
+                timeScope: analysis.timeScope,
+                limit: limit
+            )
+        }
 
         guard !notes.isEmpty else {
             let emptyResponse = "I don't have any notes matching that query yet. Try asking about something else or capture more notes first."
@@ -394,6 +405,7 @@ class ChatViewModel: ObservableObject {
         case .knowledge: return 15
         case .general: return 30
         case .thread: return 50  // Thread queries need moderate context
+        case .semantic: return 20  // Semantic queries return focused, conceptually related notes
         }
     }
 
@@ -435,6 +447,8 @@ class ChatViewModel: ObservableObject {
             querySpecific = "\n\nProvide insights based on recent notes. Highlight interesting patterns and cite specific examples."
         case .thread:
             querySpecific = "\n\nThis is a thread-related query. Show emerging threads and patterns in the notes. Group related ideas and cite specific notes."
+        case .semantic:
+            querySpecific = "\n\nThese notes are conceptually related to the query. Explore the connections and themes. Highlight how ideas relate to each other and cite specific notes."
         }
 
         return basePrompt + querySpecific
