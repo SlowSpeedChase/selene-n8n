@@ -12,7 +12,8 @@
     "workflow:extract-tasks": "ts-node src/workflows/extract-tasks.ts",
     "workflow:compute-embeddings": "ts-node src/workflows/compute-embeddings.ts",
     "workflow:compute-associations": "ts-node src/workflows/compute-associations.ts",
-    "workflow:daily-summary": "ts-node src/workflows/daily-summary.ts"
+    "workflow:daily-summary": "ts-node src/workflows/daily-summary.ts",
+    "workflow:index-vectors": "ts-node src/workflows/index-vectors.ts"
   },
   "dependencies": {
     "@lancedb/lancedb": "^0.23.0",
