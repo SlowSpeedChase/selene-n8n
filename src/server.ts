@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { config, logger } from './lib';
 import { ingest } from './workflows/ingest';
 import { exportObsidian } from './workflows/export-obsidian';
+import { getRelatedNotes, searchNotes } from './queries/related-notes';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -58,6 +59,55 @@ server.post<{ Body: { noteId?: number } }>('/webhook/api/export-obsidian', async
     logger.error({ err: error }, 'Export-obsidian failed');
     reply.status(500);
     return { success: false, exported_count: 0, errors: 1, message: error.message };
+  }
+});
+
+// Related notes API - for SeleneChat vector search
+server.post<{
+  Body: { noteId: number; limit?: number; includeLive?: boolean };
+}>('/api/related-notes', async (request, reply) => {
+  const { noteId, limit = 10, includeLive = true } = request.body || {};
+
+  if (!noteId || typeof noteId !== 'number') {
+    reply.status(400);
+    return { error: 'noteId is required and must be a number' };
+  }
+
+  try {
+    const results = await getRelatedNotes(noteId, { limit, includeLive });
+    return { noteId, count: results.length, results };
+  } catch (err) {
+    const error = err as Error;
+    logger.error({ err: error, noteId }, 'Related notes query failed');
+    reply.status(500);
+    return { error: error.message };
+  }
+});
+
+// Semantic search API - for SeleneChat
+server.post<{
+  Body: {
+    query: string;
+    limit?: number;
+    noteType?: string;
+    actionability?: string;
+  };
+}>('/api/search', async (request, reply) => {
+  const { query, limit = 10, noteType, actionability } = request.body || {};
+
+  if (!query || typeof query !== 'string') {
+    reply.status(400);
+    return { error: 'query is required and must be a string' };
+  }
+
+  try {
+    const results = await searchNotes(query, { limit, noteType, actionability });
+    return { query, count: results.length, results };
+  } catch (err) {
+    const error = err as Error;
+    logger.error({ err: error, query }, 'Semantic search failed');
+    reply.status(500);
+    return { error: error.message };
   }
 });
 
