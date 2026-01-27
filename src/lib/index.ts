@@ -19,5 +19,8 @@ export {
   indexNotes,
   deleteNoteVector,
   getIndexedNoteIds,
+  searchSimilarNotes,
   type NoteVector,
+  type SimilarNote,
+  type SearchOptions,
 } from './lancedb';

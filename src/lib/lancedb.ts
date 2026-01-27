@@ -159,3 +159,88 @@ export async function getIndexedNoteIds(): Promise<Set<number>> {
   const results = await table.query().select(['id']).toArray();
   return new Set(results.map(r => r.id as number));
 }
+
+/**
+ * Result from similarity search
+ */
+export interface SimilarNote {
+  id: number;
+  title: string;
+  primary_theme: string | null;
+  note_type: string | null;
+  distance: number;  // L2 distance (lower = more similar)
+}
+
+/**
+ * Options for similarity search
+ */
+export interface SearchOptions {
+  limit?: number;
+  maxDistance?: number;        // Filter results above this distance
+  excludeIds?: number[];       // Don't return these note IDs
+  filterNoteType?: string;     // Only return specific note types
+  filterActionability?: string; // Only return specific actionability
+}
+
+/**
+ * Search for similar notes by vector
+ */
+export async function searchSimilarNotes(
+  queryVector: number[],
+  options: SearchOptions = {}
+): Promise<SimilarNote[]> {
+  const {
+    limit = 10,
+    maxDistance,
+    excludeIds = [],
+    filterNoteType,
+    filterActionability,
+  } = options;
+
+  const table = await getNotesTable();
+
+  // Build filter conditions
+  const filters: string[] = [];
+
+  if (excludeIds.length > 0) {
+    filters.push(`id NOT IN (${excludeIds.join(',')})`);
+  }
+  if (filterNoteType) {
+    filters.push(`note_type = '${filterNoteType}'`);
+  }
+  if (filterActionability) {
+    filters.push(`actionability = '${filterActionability}'`);
+  }
+
+  // Build and execute query
+  let query = table.vectorSearch(queryVector);
+
+  if (filters.length > 0) {
+    query = query.where(filters.join(' AND '));
+  }
+
+  const results = await query
+    .select(['id', 'title', 'primary_theme', 'note_type', '_distance'])
+    .limit(limit * 2)  // Fetch extra for post-filtering
+    .toArray();
+
+  // Map and filter results
+  const mapped: SimilarNote[] = results
+    .map(r => ({
+      id: r.id as number,
+      title: r.title as string,
+      primary_theme: (r.primary_theme as string) || null,
+      note_type: (r.note_type as string) || null,
+      distance: r._distance as number,
+    }))
+    .filter(r => maxDistance === undefined || r.distance <= maxDistance)
+    .slice(0, limit);
+
+  log.debug({
+    queryLength: queryVector.length,
+    resultsCount: mapped.length,
+    filters
+  }, 'Vector search complete');
+
+  return mapped;
+}
