@@ -10,23 +10,26 @@
     "dev": "ts-node-dev src/server.ts",
     "workflow:process-llm": "ts-node src/workflows/process-llm.ts",
     "workflow:extract-tasks": "ts-node src/workflows/extract-tasks.ts",
-    "workflow:compute-embeddings": "ts-node src/workflows/compute-embeddings.ts",
-    "workflow:compute-associations": "ts-node src/workflows/compute-associations.ts",
-    "workflow:daily-summary": "ts-node src/workflows/daily-summary.ts"
+    "workflow:compute-embeddings": "echo 'DEPRECATED: Use workflow:index-vectors instead' && exit 1",
+    "workflow:compute-associations": "echo 'DEPRECATED: Use workflow:compute-relationships instead' && exit 1",
+    "workflow:daily-summary": "ts-node src/workflows/daily-summary.ts",
+    "workflow:index-vectors": "ts-node src/workflows/index-vectors.ts",
+    "workflow:compute-relationships": "ts-node src/workflows/compute-relationships.ts"
   },
   "dependencies": {
+    "@lancedb/lancedb": "^0.23.0",
+    "better-sqlite3": "^11.0.0",
     "express": "^4.18.2",
     "fastify": "^4.26.0",
-    "better-sqlite3": "^11.0.0",
     "pino": "^8.18.0",
     "pino-pretty": "^10.3.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.11.0",
     "ts-node": "^10.9.0",
     "ts-node-dev": "^2.0.0",
-    "@types/node": "^20.11.0",
-    "@types/better-sqlite3": "^7.6.8"
+    "typescript": "^5.3.0"
   },
   "keywords": [
     "n8n",
