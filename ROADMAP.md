@@ -90,7 +90,7 @@ Task extraction with classification - route actionable items to Things:
 
 Semantic note clustering and thread detection - implemented via user stories:
 
-- **[📋 User Stories Index](./docs/stories/INDEX.md)** - Story tracking and status
+- **[📋 Design Docs Index](./docs/plans/INDEX.md)** - Design document tracking and status
 - **[🎯 Thread System Design](./docs/plans/2026-01-04-selene-thread-system-design.md)** - Architecture and design
 
 **Thread System Phases:**

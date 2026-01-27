@@ -292,7 +292,7 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 **Must Read:**
 - `docs/plans/2026-01-04-selene-thread-system-design.md` - Thread system design
-- `docs/stories/INDEX.md` - User stories for implementation
+- `docs/plans/INDEX.md` - Design documents for implementation
 - `database/schema.sql` - Database structure
 
 **Source Code:**

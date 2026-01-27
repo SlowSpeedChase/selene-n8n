@@ -1,11 +1,38 @@
 # GitOps Development Practices
 
-**Purpose:** Standardized workflow for parallel development streams. Claude MUST follow these practices for all development work.
+**Purpose:** Standardized workflow for development. Claude MUST follow these practices for all implementation work.
 
 **Related Context:**
-- `@.claude/DEVELOPMENT.md` - Architecture and patterns
+- `@docs/plans/INDEX.md` - Design documents (planning layer)
 - `@.claude/OPERATIONS.md` - Daily commands
 - `@templates/BRANCH-STATUS.md` - Branch status template
+- `@templates/DESIGN-DOC-TEMPLATE.md` - Design doc template
+
+---
+
+## Two-Layer System
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 1: DESIGN DOCS                                           │
+│  (Ideas, architecture, decisions)                               │
+│                                                                 │
+│  Status: Vision → Ready → In Progress → Done                    │
+│  Location: docs/plans/INDEX.md                                  │
+│                                                                 │
+│  "Ready" = acceptance criteria + ADHD check + scope check       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Design doc is "Ready"
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  LAYER 2: GITOPS BRANCHES                                       │
+│  (Implementation tracking)                                      │
+│                                                                 │
+│  Stages: planning → dev → testing → docs → review → ready       │
+│  Location: BRANCH-STATUS.md in each worktree                    │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -14,7 +41,7 @@
 1. **Visibility** - All work state visible in BRANCH-STATUS.md
 2. **Isolation** - Each piece of work in its own worktree/branch
 3. **Checkpoints** - Explicit stages with checklists
-4. **Traceability** - Phase-based naming; full closure ritual
+4. **Traceability** - Design doc links to branch; full closure ritual
 5. **Currency** - Frequent rebasing keeps branches healthy
 
 ---
@@ -52,20 +79,15 @@ If rebasing and conflicts occur:
 
 ## Branch Naming Convention
 
-Two formats supported:
-
 ```
-US-NNN/short-description    # Story-driven (preferred)
-phase-X.Y/short-description # Phase-driven (legacy)
+feature-name           # Simple, descriptive
+phase-X.Y/feature-name # Phase-driven (for roadmap items)
 ```
 
 **Examples:**
-- `US-001/auto-extract-tasks` (story-driven)
-- `US-017/daily-planning` (story-driven)
-- `phase-7.1/task-extraction` (phase-driven)
-- `phase-7.2/selenechat-planning` (phase-driven)
-
-**See:** `@.claude/STORIES.md` for story workflow
+- `cloud-ai-integration`
+- `selenechat-contextual-evolution`
+- `phase-7.3/cloud-ai`
 
 ---
 
@@ -74,7 +96,7 @@ phase-X.Y/short-description # Phase-driven (legacy)
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 1. KICKOFF                                                       │
-│    Design doc approved → Conflict check → Create worktree       │
+│    Design doc "Ready" → Conflict check → Create worktree        │
 │    → Initialize BRANCH-STATUS.md                                │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -88,7 +110,7 @@ phase-X.Y/short-description # Phase-driven (legacy)
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │ 3. CLOSURE RITUAL                                                │
-│    Merge → Archive summary → Update roadmap →                   │
+│    Merge → Archive summary → Update docs/plans/INDEX.md →       │
 │    Update PROJECT-STATUS → Remove worktree → Announce           │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -99,23 +121,26 @@ phase-X.Y/short-description # Phase-driven (legacy)
 
 Before creating a branch, complete this formal intake:
 
-### Step 1: Design Document
-- Must have approved design in `docs/plans/YYYY-MM-DD-<topic>-design.md`
-- Design includes: scope, architecture, success criteria
-- User approves design before proceeding
+### Step 1: Design Document Ready
+
+Design doc must have all "Ready for Implementation" items checked:
+- [ ] Acceptance criteria defined
+- [ ] ADHD check passed (reduces friction? visible? externalizes cognition?)
+- [ ] Scope check (< 1 week of focused work)
+- [ ] No blockers
 
 ### Step 2: Conflict Check
 ```bash
 # List all active worktrees
 git worktree list
 
-# Review each BRANCH-STATUS.md for potential overlaps
+# Check docs/plans/INDEX.md "In Progress" section
 ```
 - Note any dependencies or coordination needed
 
 ### Step 3: Create Branch and Worktree
 ```bash
-git worktree add -b phase-X.Y/feature-name .worktrees/feature-name main
+git worktree add -b feature-name .worktrees/feature-name main
 cd .worktrees/feature-name
 ```
 
@@ -125,6 +150,9 @@ Copy from `templates/BRANCH-STATUS.md` and fill in:
 - Link to design doc
 - Overview of work
 - Any dependencies
+
+### Step 5: Update docs/plans/INDEX.md
+Move design doc from "Ready" to "In Progress" section.
 
 ---
 
@@ -136,7 +164,7 @@ Copy from `templates/BRANCH-STATUS.md` and fill in:
 |-------|---------|---------------------|
 | **planning** | Finalize approach | Design approved, plan written |
 | **dev** | Build it | Tests first, implementation, no errors |
-| **testing** | Verify it works | All tests pass, manual testing, edge cases, UAT sign-off (SeleneChat) |
+| **testing** | Verify it works | All tests pass, manual testing, edge cases |
 | **docs** | Document it | STATUS.md, README, roadmap |
 | **review** | Get approval | Code reviewed, feedback addressed |
 | **ready** | Prepare to merge | Rebased, final tests, all checks complete |
@@ -145,7 +173,7 @@ Copy from `templates/BRANCH-STATUS.md` and fill in:
 
 | Stage | Required Skills |
 |-------|-----------------|
-| **planning** | `superpowers:brainstorming`, `superpowers:writing-plans`, `superpowers:using-git-worktrees` |
+| **planning** | `superpowers:brainstorming`, `superpowers:writing-plans` |
 | **dev** | `superpowers:test-driven-development`, `superpowers:subagent-driven-development` |
 | **testing** | `superpowers:systematic-debugging`, `superpowers:verification-before-completion` |
 | **review** | `superpowers:requesting-code-review`, `superpowers:receiving-code-review` |
@@ -236,18 +264,18 @@ When work is merged, complete this full closure:
 ```bash
 git checkout main
 git pull origin main
-git merge phase-X.Y/feature-name
+git merge feature-name
 git push origin main
 ```
 
 ### Step 2: Archive Summary
-Create `docs/completed/YYYY-MM-DD-phase-X.Y-feature-name.md`:
+Create `docs/completed/YYYY-MM-DD-feature-name.md`:
 
 ```markdown
-# Completed: Phase X.Y - Feature Name
+# Completed: Feature Name
 
 **Completed:** YYYY-MM-DD
-**Branch:** phase-X.Y/feature-name
+**Branch:** feature-name
 **Duration:** X days (started YYYY-MM-DD)
 
 ## Summary
@@ -267,30 +295,28 @@ Link to: docs/plans/YYYY-MM-DD-design.md
 - Notes for future similar work
 ```
 
-### Step 3: Update Roadmap
-- Mark phase/feature complete in `docs/roadmap/`
-- Update `ROADMAP.md` status
-- Add to version history
+### Step 3: Update docs/plans/INDEX.md
+Move design doc from "In Progress" to "Done" section.
 
 ### Step 4: Update PROJECT-STATUS.md
-- Move from "In Progress" to "Completed"
-- Update any related status
+- Update current status
+- Add to recent achievements
 
 ### Step 5: Cleanup
 ```bash
 git worktree remove .worktrees/feature-name
-git branch -d phase-X.Y/feature-name  # optional
+git branch -d feature-name  # optional
 ```
 
 ### Step 6: Announce
-Claude summarizes: "Phase X.Y complete. [Brief summary]. Archived to docs/completed/."
+Claude summarizes: "Feature complete. [Brief summary]. Archived to docs/completed/."
 
 ### Post-Merge Verification Checklist
 
 **Claude MUST verify all items before announcing completion:**
 
 - [ ] Archive summary created in `docs/completed/`
-- [ ] `docs/plans/INDEX.md` updated - design doc moved to "Completed" section
+- [ ] `docs/plans/INDEX.md` updated - design doc moved to "Done"
 - [ ] `.claude/PROJECT-STATUS.md` updated
 - [ ] Worktree removed
 - [ ] No `BRANCH-STATUS.md` in main root: `ls BRANCH-STATUS.md` should fail
@@ -304,8 +330,8 @@ Claude summarizes: "Phase X.Y complete. [Brief summary]. Archived to docs/comple
 
 ```bash
 # Start new work
-git worktree add -b phase-X.Y/name .worktrees/name main
-cd .worktrees/name
+git worktree add -b feature-name .worktrees/feature-name main
+cd .worktrees/feature-name
 cp ../../templates/BRANCH-STATUS.md ./BRANCH-STATUS.md
 
 # Check active work
@@ -322,8 +348,8 @@ git rebase origin/main
 git commit -m "checkpoint: [stage] complete"
 
 # Cleanup after merge
-git worktree remove .worktrees/name
-git branch -d phase-X.Y/name
+git worktree remove .worktrees/feature-name
+git branch -d feature-name
 ```
 
 ---
@@ -331,14 +357,14 @@ git branch -d phase-X.Y/name
 ## Quick Reference: Stage Checklists
 
 ### Planning
-- [ ] Design doc exists and approved
-- [ ] Conflict check completed
-- [ ] Dependencies identified
+- [ ] Design doc exists and is "Ready"
+- [ ] Conflict check completed (no overlapping work)
+- [ ] Dependencies identified and noted
 - [ ] Branch and worktree created
-- [ ] Implementation plan written
+- [ ] Implementation plan written (superpowers:writing-plans)
 
 ### Dev
-- [ ] Tests written first (TDD)
+- [ ] Tests written first (superpowers:test-driven-development)
 - [ ] Core implementation complete
 - [ ] All tests passing
 - [ ] No linting/type errors
@@ -350,12 +376,11 @@ git branch -d phase-X.Y/name
 - [ ] Manual testing completed
 - [ ] Edge cases verified
 - [ ] Verified with superpowers:verification-before-completion
-- [ ] UAT sign-off (SeleneChat only - see `SeleneChat/Tests/UAT/`)
 
 ### Docs
 - [ ] workflow STATUS.md updated (if workflow changed)
 - [ ] README updated (if interface changed)
-- [ ] Roadmap docs updated
+- [ ] docs/plans/INDEX.md updated
 - [ ] Code comments where needed
 
 ### Review
@@ -380,20 +405,18 @@ type(scope): description
 
 [optional body]
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
-**Scopes:** workflow number (01, 07), component name (selenechat, scripts), or `docs`
+**Scopes:** component name (selenechat, workflows, scripts), or `docs`
 
 **Examples:**
 ```
-feat(07): add task classification node
+feat(workflows): add task classification
 fix(selenechat): resolve database connection timeout
-docs: update GITOPS with commit conventions
+docs: update GITOPS with two-layer system
 refactor(scripts): simplify workflow export logic
 ```
 
@@ -412,9 +435,7 @@ refactor(scripts): simplify workflow export logic
 - [ ] Manual verification completed
 
 ## Design Doc
-Link: docs/plans/YYYY-MM-DD-*.md (if applicable)
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Link: docs/plans/YYYY-MM-DD-*.md
 ```
 
 ### Branch Merge Process
@@ -435,10 +456,10 @@ When changing how a process works, **search for all references before updating**
 
 ```bash
 # Before changing a pattern, find all docs that reference it
-grep -r "old-pattern-name" docs/ .claude/ workflows/ scripts/
+grep -r "old-pattern-name" docs/ .claude/
 
-# Example: before removing workflow-test.json pattern
-grep -r "workflow-test" docs/ .claude/ workflows/
+# Example: before changing branch naming
+grep -r "phase-X.Y" docs/ .claude/
 ```
 
 **Rule:** Don't leave old patterns documented alongside new ones. Update or delete ALL references.
@@ -449,7 +470,7 @@ grep -r "workflow-test" docs/ .claude/ workflows/
 |---------|--------|
 | Process changes | Search and update all references |
 | File moves | Update all path references |
-| Feature completes | Move design doc to "Completed" in INDEX.md |
+| Feature completes | Move design doc to "Done" in INDEX.md |
 | Pattern deprecated | Remove from all docs, not just primary one |
 
 ---
@@ -457,6 +478,8 @@ grep -r "workflow-test" docs/ .claude/ workflows/
 ## Related Documents
 
 - `@templates/BRANCH-STATUS.md` - Full template for branch status
+- `@templates/DESIGN-DOC-TEMPLATE.md` - Template for design docs
+- `@docs/plans/INDEX.md` - Design document tracking
 - `@docs/completed/` - Archive of completed work
-- `@.claude/DEVELOPMENT.md` - Architecture and patterns
+- `@.claude/OPERATIONS.md` - Daily commands
 - `@.claude/PROJECT-STATUS.md` - Current project state

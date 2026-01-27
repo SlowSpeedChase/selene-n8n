@@ -1,112 +1,153 @@
 # Design Documents Index
 
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-27
 
-Status legend:
-- **Active** - Ready for implementation or in progress
-- **Completed** - Implemented and merged
-- **Superseded** - Replaced by newer design
+Design docs are the planning unit for Selene development. Each doc captures an idea, architecture, and implementation plan.
 
 ---
 
-## Active (Ready for Implementation)
+## Status Definitions
 
-| Date | Document | Phase | Notes |
+| Status | Meaning | Next Step |
+|--------|---------|-----------|
+| **Vision** | Idea captured, needs refinement | Add acceptance criteria, ADHD check, scope check |
+| **Ready** | Implementation-ready | Create branch, start GitOps workflow |
+| **In Progress** | Branch exists, being built | Complete GitOps stages |
+| **Done** | Implemented and merged | Archive if old |
+
+**A design is "Ready" when it has:**
+- [ ] Acceptance criteria defined
+- [ ] ADHD check passed (reduces friction? visible? externalizes cognition?)
+- [ ] Scope check passed (< 1 week of focused work)
+- [ ] No blockers
+
+---
+
+## Vision (Needs Refinement)
+
+Ideas captured but not yet ready for implementation.
+
+| Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| 2026-01-26 | 2026-01-26-phase-7.3-cloud-ai-integration.md | cloud-ai | Design: Privacy-preserving cloud AI with sanitization layer |
-| 2026-01-26 | 2026-01-26-phase-7.3-implementation-plan.md | cloud-ai | Implementation: 21 tasks over 3 weeks |
-| 2026-01-26 | 2026-01-26-selenechat-contextual-evolution.md | selenechat | Vision: project-scoped chats, connected info, lab notes, task refinement |
-| 2026-01-26 | 2026-01-26-today-view-design.md | selenechat | ADHD landing page with new captures + heating threads |
-| 2026-01-11 | 2026-01-11-obsidian-thread-export-design.md | thread-system | Export threads to Obsidian vault |
-| 2026-01-11 | 2026-01-11-selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop as server |
-| 2026-01-09 | 2026-01-09-n8n-replacement-design.md | infra | Replace n8n with plain TypeScript scripts |
-| 2026-01-06 | 2026-01-06-test-isolation-design.md | infra | Isolate production data from Claude Code during testing |
-| 2026-01-05 | 2026-01-05-weekly-review-react-flow-design.md | ux-core | "Present -> React -> File" paradigm starting with weekly review |
-| 2026-01-05 | 2026-01-05-selenechat-interface-inspiration-design.md | selenechat | Design patterns from Perplexity, Things, Sunsama, Raycast |
-| 2026-01-05 | 2026-01-05-selenechat-redesign-design.md | selenechat | Forest Study design system - earthy, calm + sharp |
-| 2026-01-04 | 2026-01-04-selene-thread-system-design.md | thread-system | Transform Selene into thought consolidation system |
-| 2025-12-31 | workflow-standardization-design.md | infra | Bring workflows 02-06 to production standard |
+| 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
+| 2026-01-26 | today-view-design.md | selenechat | ADHD landing page - needs acceptance criteria |
+| 2026-01-11 | selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop server |
+| 2026-01-05 | weekly-review-react-flow-design.md | ux-core | "Present -> React -> File" paradigm |
+| 2026-01-05 | selenechat-interface-inspiration-design.md | selenechat | Design patterns research - reference doc |
+| 2026-01-05 | selenechat-redesign-design.md | selenechat | Forest Study design system |
+| 2026-01-01 | n8n-upgrade-design.md | infra | Superseded by TypeScript replacement |
+
+---
+
+## Ready (Implementation-Ready)
+
+These have acceptance criteria, ADHD check, and scope check. Ready to create a branch.
+
+| Date | Document | Topic | Notes |
+|------|----------|-------|-------|
+| 2026-01-26 | phase-7.3-cloud-ai-integration.md | cloud-ai | Privacy-preserving cloud AI with sanitization |
+| 2026-01-26 | phase-7.3-implementation-plan.md | cloud-ai | 21 tasks, implementation ready |
+| 2026-01-26 | lancedb-transition.md | infra | Vector DB migration |
 
 ---
 
 ## In Progress
 
-| Date | Document | Notes |
-|------|----------|-------|
-| 2026-01-09 | 2026-01-09-n8n-replacement-implementation.md | 21 tasks to replace n8n with TypeScript |
-| 2026-01-06 | 2026-01-06-test-isolation-implementation.md | 11 tasks to isolate production data |
-| 2026-01-05 | 2026-01-05-association-computation-design.md | US-043: Compute note similarities |
-| 2026-01-05 | 2026-01-05-selenechat-redesign-implementation.md | Forest Study implementation - 13 tasks |
+Branch exists, actively being worked on.
+
+| Date | Document | Branch | Notes |
+|------|----------|--------|-------|
+| - | - | - | No active branches |
 
 ---
 
-## Completed (Implemented)
+## Done (Implemented)
 
-| Date | Document | Completion |
-|------|----------|------------|
-| 2026-01-11 | 2026-01-11-selenechat-thread-queries-design.md | 2026-01-11 |
-| 2026-01-05 | 2026-01-05-batch-embed-notes-design.md | 2026-01-05 (US-042) |
+| Date | Document | Completed | Notes |
+|------|----------|-----------|-------|
+| 2026-01-11 | selenechat-thread-queries-design.md | 2026-01-11 | Thread queries in SeleneChat |
+| 2026-01-11 | obsidian-thread-export-design.md | 2026-01-11 | Thread export to Obsidian |
+| 2026-01-10 | phase-3-living-system-design.md | 2026-01-11 | Thread reconsolidation |
+| 2026-01-09 | n8n-replacement-design.md | 2026-01-10 | TypeScript backend |
+| 2026-01-06 | test-isolation-design.md | 2026-01-06 | Test data isolation |
+| 2026-01-05 | batch-embed-notes-design.md | 2026-01-05 | Batch embedding |
+| 2026-01-05 | association-computation-design.md | 2026-01-06 | Note associations |
+| 2026-01-04 | selene-thread-system-design.md | 2026-01-11 | Core thread system |
+| 2026-01-04 | embedding-workflow-implementation.md | 2026-01-05 | Embedding workflow |
 
 ---
 
-## Superseded (Replaced)
+## Archived
 
-| Date | Document | Superseded By |
-|------|----------|---------------|
-| 2025-11-24 | auto-create-tasks-from-notes.md | 2025-12-30-phase-7-1-implementation.md |
-
----
-
-## Maintenance
-
-When creating a new design doc:
-1. Use format: `YYYY-MM-DD-topic-type.md` (type: design, implementation, analysis)
-2. Add entry to this INDEX.md in appropriate section
-3. Update status when work begins/completes
----
+Superseded, abandoned, or very old designs. Kept for reference.
 
 <details>
-<summary>Archived</summary>
+<summary>View Archived (40+)</summary>
 
-| Date | Document | Archived |
-|------|----------|----------|
-| 2026-01-04 | user-story-system-design.md | 2026-01-04 |
-| 2026-01-01 | n8n-upgrade-design.md | 2026-01-04 |
-| 2026-01-02 | plan-archive-agent-design.md | 2026-01-04 |
-| 2026-01-02 | selenechat-auto-builder-design.md | 2026-01-04 |
-| 2026-01-02 | feedback-pipeline-design.md | 2026-01-04 |
-| 2026-01-02 | selenechat-uat-system-design.md | 2026-01-04 |
-| 2026-01-03 | process-gap-fixes-design.md | 2026-01-04 |
-| 2026-01-02 | subproject-suggestions-implementation.md | 2026-01-04 |
-| 2026-01-03 | worktree-sync-ritual-design.md | 2026-01-03 |
-| 2025-12-31 | ai-provider-toggle-design.md | 2026-01-03 |
-| 2025-12-30 | task-extraction-planning-design.md | 2026-01-03 |
-| 2025-12-30 | daily-summary-design.md | 2026-01-03 |
-| 2025-12-31 | phase-7.2-selenechat-planning-design.md | 2026-01-03 |
-| 2025-12-31 | workflow-lifecycle-management-design.md | 2026-01-03 |
-| 2025-12-31 | feedback-pipeline-implementation.md | 2026-01-03 |
-| 2026-01-01 | selenechat-debug-system-design.md | 2026-01-03 |
-| 2025-11-14 | ollama-integration-design.md | 2026-01-03 |
-| 2025-11-14 | selenechat-database-integration-design.md | 2026-01-03 |
-| 2025-11-15 | selenechat-clickable-citations-design.md | 2026-01-03 |
-| 2025-11-27 | modular-context-structure.md | 2026-01-03 |
-| 2025-11-30 | dev-environment-design.md | 2026-01-03 |
-| 2025-11-25 | phase-7-1-gatekeeping-design.md | 2026-01-03 |
-| 2025-11-14 | selenechat-db-integration.md | 2026-01-03 |
-| 2025-11-15 | selenechat-data-integration-design.md | 2026-01-03 |
-| 2025-11-15 | selenechat-icon-design.md | 2026-01-03 |
-| 2025-11-30 | stop-and-research-skill-design.md | 2026-01-03 |
-| 2025-12-30 | trmnl-integration-design.md | 2026-01-03 |
-| 2025-12-31 | workflow-procedures-design.md | 2026-01-03 |
-| 2026-01-03 | new-thread-button-fix.md | 2026-01-03 |
-| 2026-01-02 | bidirectional-things-flow-design.md | 2026-01-03 |
-| 2026-01-02 | bidirectional-things-implementation.md | 2026-01-03 |
-| 2026-01-03 | planning-tab-redesign.md | 2026-01-03 |
-| 2026-01-03 | planning-tab-implementation.md | 2026-01-03 |
-| 2026-01-03 | things-heading-and-cleanup.md | 2026-01-03 |
-| 2026-01-01 | project-grouping-7.2f.1-implementation.md | 2026-01-04 |
-| 2025-12-31 | selenechat-vision-and-feedback-loop-design.md | 2026-01-04 |
-| 2026-01-01 | project-grouping-design.md | 2026-01-04 |
-| 2026-01-02 | planning-persistence-refinement-design.md | 2026-01-04 |
+| Date | Document | Reason |
+|------|----------|--------|
+| 2026-01-04 | user-story-system-design.md | Replaced by simplified two-layer system |
+| 2026-01-02 | plan-archive-agent-design.md | Deprioritized |
+| 2026-01-02 | selenechat-auto-builder-design.md | Deprioritized |
+| 2026-01-02 | feedback-pipeline-design.md | Deprioritized |
+| 2026-01-02 | selenechat-uat-system-design.md | Deprioritized |
+| 2026-01-03 | process-gap-fixes-design.md | Deprioritized |
+| 2025-12-31 | ai-provider-toggle-design.md | Implemented |
+| 2025-12-30 | task-extraction-planning-design.md | Implemented |
+| 2025-12-30 | daily-summary-design.md | Implemented |
+| 2025-12-31 | phase-7.2-selenechat-planning-design.md | Implemented |
+| 2025-12-31 | workflow-lifecycle-management-design.md | Superseded |
+| 2025-12-31 | workflow-standardization-design.md | Superseded by TS replacement |
+| 2026-01-01 | selenechat-debug-system-design.md | Implemented |
+| 2025-11-14 | ollama-integration-design.md | Implemented |
+| 2025-11-14 | selenechat-database-integration-design.md | Implemented |
+| 2025-11-15 | selenechat-clickable-citations-design.md | Implemented |
+| 2025-11-27 | modular-context-structure.md | Implemented |
+| 2025-11-30 | dev-environment-design.md | Implemented |
+| 2025-11-25 | phase-7-1-gatekeeping-design.md | Superseded |
+| 2026-01-02 | bidirectional-things-flow-design.md | Implemented |
+| 2026-01-01 | project-grouping-design.md | Implemented |
 
 </details>
+
+---
+
+## Workflow
+
+### Creating a Design Doc
+
+1. Use brainstorming skill to explore the idea
+2. Write to `docs/plans/YYYY-MM-DD-topic-design.md`
+3. Add entry to this INDEX in "Vision" section
+4. Status: **Vision**
+
+### Making It Ready
+
+1. Add acceptance criteria (testable)
+2. Complete ADHD check
+3. Verify scope (< 1 week)
+4. Move to "Ready" section
+5. Status: **Ready**
+
+### Starting Implementation
+
+1. Create branch: `git worktree add -b feature-name .worktrees/feature-name main`
+2. Copy BRANCH-STATUS.md template
+3. Move doc to "In Progress" section
+4. Follow GitOps stages (see `.claude/GITOPS.md`)
+5. Status: **In Progress**
+
+### Completing
+
+1. Merge to main
+2. Move doc to "Done" section
+3. Complete closure ritual
+4. Status: **Done**
+
+---
+
+## Related
+
+- `templates/DESIGN-DOC-TEMPLATE.md` - Template for new designs
+- `.claude/GITOPS.md` - Implementation workflow
+- `.claude/PROJECT-STATUS.md` - Current project state

@@ -28,14 +28,14 @@ ADHD-focused knowledge management system using TypeScript workflows, SQLite, and
 
 | Task | Primary Context | Supporting Context |
 |------|-----------------|-------------------|
-| **Work on a story** | `@.claude/STORIES.md` | `@docs/stories/INDEX.md` |
+| **Plan new work** | `@docs/plans/INDEX.md` | `@.claude/GITOPS.md` |
 | **Modify workflows** | `@src/workflows/` | `@.claude/OPERATIONS.md` |
 | **Understand architecture** | `@.claude/DEVELOPMENT.md` | `@ROADMAP.md` |
 | **Run tests** | `@.claude/OPERATIONS.md` | - |
 | **Design ADHD features** | `@.claude/ADHD_Principles.md` | `@.claude/DEVELOPMENT.md` |
 | **Daily operations** | `@.claude/OPERATIONS.md` | `@scripts/CLAUDE.md` |
-| **Check status** | `@.claude/PROJECT-STATUS.md` | `@docs/stories/INDEX.md` |
-| **Development workflow** | `@.claude/GITOPS.md` | `@.claude/STORIES.md` |
+| **Check status** | `@.claude/PROJECT-STATUS.md` | `@docs/plans/INDEX.md` |
+| **Development workflow** | `@.claude/GITOPS.md` | `@docs/plans/INDEX.md` |
 
 ---
 
@@ -43,29 +43,30 @@ ADHD-focused knowledge management system using TypeScript workflows, SQLite, and
 
 **Claude MUST follow `@.claude/GITOPS.md` for all development work.**
 
-Key requirements:
-- All work starts with a user story in `docs/stories/` (see `@.claude/STORIES.md`)
-- Branch naming: `US-NNN/feature-name` or `phase-X.Y/feature-name`
-- Every branch has `BRANCH-STATUS.md` with stage checklists
-- Use superpowers skills at each stage (TDD, verification, code review)
-- Full closure ritual after merge (archive, update roadmap, cleanup)
+### Two-Layer System
 
-**Stages:** planning -> dev -> testing -> docs -> review -> ready
+1. **Design Docs** (`docs/plans/INDEX.md`) - Ideas, architecture, decisions
+   - Status: Vision → Ready → In Progress → Done
+   - "Ready" = acceptance criteria + ADHD check + scope check
 
-**Quick commands:**
+2. **GitOps Branches** - Implementation tracking
+   - Stages: planning → dev → testing → docs → review → ready
+   - Each branch has `BRANCH-STATUS.md` with stage checklists
+
+### Quick Commands
 ```bash
-# Story management
-./scripts/story.sh status              # View story dashboard
-./scripts/story.sh promote US-001      # Move story to next state
+# Check design doc status
+cat docs/plans/INDEX.md
 
-# Start new work
-git worktree add -b US-001/auto-extract-tasks .worktrees/auto-extract-tasks main
+# Start new work (design doc must be "Ready")
+git worktree add -b feature-name .worktrees/feature-name main
+cp templates/BRANCH-STATUS.md .worktrees/feature-name/
 
 # Check active work
 git worktree list
 ```
 
-**See:** `@.claude/GITOPS.md` for complete workflow, `@.claude/STORIES.md` for story management
+**See:** `@.claude/GITOPS.md` for complete workflow, `@docs/plans/INDEX.md` for design doc status
 
 ---
 
@@ -252,15 +253,14 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Obsidian Export - ADHD-optimized export
 - Embeddings - Semantic similarity via nomic-embed-text
 - Associations - Note clustering and relationships
-- SeleneChat - Database integration, Ollama AI, clickable citations
-
-**Current:**
-- TypeScript backend replacement for n8n (this branch)
-
-**Next Up:**
+- Thread System - Detection, reconsolidation, Obsidian export
+- SeleneChat - Database integration, Ollama AI, thread queries
 - Phase 7.2 - SeleneChat Planning Integration
+
+**Next Up (see `docs/plans/INDEX.md` for status):**
 - Phase 7.3 - Cloud AI Integration (sanitization layer)
-- Phase 7.4 - Contextual Surfacing
+- SeleneChat Contextual Evolution - Project-scoped chats
+- LanceDB Transition - Vector database migration
 
 **Details:** `@.claude/PROJECT-STATUS.md`
 
@@ -351,6 +351,7 @@ selene-n8n/
 
 ## Version History
 
+- **2026-01-27**: Simplified to two-layer system (design docs + GitOps). Archived user stories.
 - **2026-01-09**: Replaced n8n with TypeScript backend (Fastify + launchd)
 - **2026-01-06**: Migrated n8n from Docker to local installation (v1.110.1) for easier debugging
 - **2026-01-02**: Documentation consolidation - single entry point, removed redundant files
