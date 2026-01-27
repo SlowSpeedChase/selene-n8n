@@ -1,6 +1,6 @@
 # SeleneChat Vector Search Integration
 
-**Status:** Vision
+**Status:** Done
 **Created:** 2026-01-27
 **Topic:** selenechat
 
@@ -102,7 +102,7 @@ Modify `DatabaseService.retrieveNotesFor()`:
 
 ## Scope Check
 
-- [ ] < 1 week focused work (estimate: 3-4 days)
+- [x] < 1 week focused work (estimate: 3-4 days)
 
 ## Acceptance Criteria
 

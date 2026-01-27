@@ -29,7 +29,6 @@ Ideas captured but not yet ready for implementation.
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| 2026-01-27 | 2026-01-27-selenechat-vector-search-design.md | selenechat | HTTP API integration for semantic search - API ready, needs Swift work |
 | 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
 | 2026-01-26 | today-view-design.md | selenechat | ADHD landing page - needs acceptance criteria |
 | 2026-01-11 | selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop server |
@@ -78,6 +77,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
+| 2026-01-27 | 2026-01-27-selenechat-vector-search-design.md | 2026-01-27 | SeleneChat vector search integration |
 | 2026-01-26 | 2026-01-26-lancedb-transition.md | 2026-01-27 | LanceDB vector DB, typed relationships |
 | 2026-01-11 | selenechat-thread-queries-design.md | 2026-01-11 | Thread queries in SeleneChat |
 | 2026-01-11 | obsidian-thread-export-design.md | 2026-01-11 | Thread export to Obsidian |
