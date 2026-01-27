@@ -4,6 +4,9 @@ import SQLite
 class DatabaseService: ObservableObject {
     static let shared = DatabaseService()
 
+    // API Service for vector search
+    private let apiService = SeleneAPIService.shared
+
     // MARK: - Environment Detection
 
     static func isRunningFromAppBundle() -> Bool {
@@ -825,6 +828,113 @@ class DatabaseService: ObservableObject {
         let uniqueNotes = Array(Set(allNotes)).sorted { $0.createdAt > $1.createdAt }
 
         return Array(uniqueNotes.prefix(limit))
+    }
+
+    // MARK: - Semantic Search (API + Fallback)
+
+    /// Search notes semantically. Tries API first, falls back to SQLite keyword search.
+    func searchNotesSemantically(query: String, limit: Int = 10) async -> [Note] {
+        // Try API first
+        do {
+            let apiResults = try await apiService.searchNotes(query: query, limit: limit)
+
+            // Convert API results to full Note objects by fetching from local DB
+            var notes: [Note] = []
+            for result in apiResults {
+                if let note = try await getNote(byId: result.id) {
+                    notes.append(note)
+                }
+            }
+
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.searchNotesSemantically: API returned \(notes.count) notes")
+            #endif
+
+            return notes
+        } catch {
+            // API unavailable - fall back to keyword search
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.searchNotesSemantically: API failed, falling back to SQLite: \(error.localizedDescription)")
+            #endif
+            return await fallbackKeywordSearch(query: query, limit: limit)
+        }
+    }
+
+    /// Fallback keyword search using SQLite LIKE queries
+    private func fallbackKeywordSearch(query: String, limit: Int) async -> [Note] {
+        let keywords = query.lowercased()
+            .components(separatedBy: .whitespaces)
+            .filter { $0.count > 2 }
+
+        guard !keywords.isEmpty else {
+            return (try? await getRecentProcessedNotes(limit: limit, timeScope: .allTime)) ?? []
+        }
+
+        return (try? await searchNotesByKeywords(keywords: keywords, limit: limit)) ?? []
+    }
+
+    /// Get notes related to a specific note. Tries API first, falls back to associations table.
+    func getRelatedNotes(for noteId: Int, limit: Int = 10) async -> [(note: Note, relationshipType: String, strength: Double?)] {
+        // Try API first
+        do {
+            let apiResults = try await apiService.getRelatedNotes(noteId: noteId, limit: limit)
+
+            var results: [(note: Note, relationshipType: String, strength: Double?)] = []
+            for related in apiResults {
+                if let note = try await getNote(byId: related.id) {
+                    results.append((note: note, relationshipType: related.relationshipType, strength: related.strength))
+                }
+            }
+
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.getRelatedNotes: API returned \(results.count) related notes")
+            #endif
+
+            return results
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.state, "DatabaseService.getRelatedNotes: API failed, falling back to SQLite: \(error.localizedDescription)")
+            #endif
+            return await fallbackRelatedNotes(for: noteId, limit: limit)
+        }
+    }
+
+    /// Fallback related notes using note_associations table
+    private func fallbackRelatedNotes(for noteId: Int, limit: Int) async -> [(note: Note, relationshipType: String, strength: Double?)] {
+        guard let db = db else { return [] }
+
+        do {
+            let query = """
+                SELECT note_id_b as related_id, similarity_score
+                FROM note_associations
+                WHERE note_id_a = ?
+                ORDER BY similarity_score DESC
+                LIMIT ?
+            """
+
+            var results: [(note: Note, relationshipType: String, strength: Double?)] = []
+
+            for row in try db.prepare(query, noteId, limit) {
+                let relatedId = Int(row[0] as! Int64)
+                let score = row[1] as? Double
+
+                if let note = try await getNote(byId: relatedId) {
+                    results.append((note: note, relationshipType: "EMBEDDING", strength: score))
+                }
+            }
+
+            return results
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "DatabaseService.fallbackRelatedNotes: query failed: \(error)")
+            #endif
+            return []
+        }
+    }
+
+    /// Check if the Selene API is available
+    func isAPIAvailable() async -> Bool {
+        return await apiService.isAvailable()
     }
 
     // MARK: - Discussion Threads
