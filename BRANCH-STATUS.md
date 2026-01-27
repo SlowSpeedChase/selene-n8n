@@ -2,7 +2,7 @@
 
 **Created:** 2026-01-27
 **Design Doc:** docs/plans/2026-01-27-selenechat-vector-search-design.md
-**Current Stage:** dev
+**Current Stage:** testing
 **Last Rebased:** 2026-01-27
 
 ## Overview
@@ -28,10 +28,10 @@ Integrate SeleneChat with the new HTTP API vector search endpoints (`/api/search
 
 ### Dev
 - [ ] Tests written first (superpowers:test-driven-development)
-- [ ] Core implementation complete
+- [x] Core implementation complete
 - [ ] All tests passing
-- [ ] No linting/type errors
-- [ ] Code follows project patterns
+- [x] No linting/type errors
+- [x] Code follows project patterns
 
 ### Testing
 - [ ] Unit tests pass
@@ -68,10 +68,10 @@ Integrate SeleneChat with the new HTTP API vector search endpoints (`/api/search
 
 ## Acceptance Criteria
 
-- [ ] SeleneChat can call `/api/search` and display results
-- [ ] SeleneChat can call `/api/related-notes` for current note
-- [ ] Graceful fallback when API unavailable
-- [ ] Related notes visible in UI with relationship type
+- [x] SeleneChat can call `/api/search` and display results
+- [x] SeleneChat can call `/api/related-notes` for current note
+- [x] Graceful fallback when API unavailable
+- [x] Related notes visible in UI with relationship type
 
 ---
 
