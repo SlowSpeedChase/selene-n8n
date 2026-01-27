@@ -68,7 +68,7 @@ class ChatViewModel: ObservableObject {
 
             case .local:
                 // Use Ollama
-                let (ollamaResponse, citedNotes, contextNotes, queryType) = try await handleOllamaQuery(context: context)
+                let (ollamaResponse, citedNotes, contextNotes, queryType) = try await handleOllamaQuery(query: content, context: context)
                 response = ollamaResponse
 
                 // Add assistant message with citation data
@@ -245,19 +245,20 @@ class ChatViewModel: ObservableObject {
         """
     }
 
-    private func handleOllamaQuery(context: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
+    private func handleOllamaQuery(query: String, context: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
         // Check Ollama availability
         let isAvailable = await ollamaService.isAvailable()
 
         guard isAvailable else {
             // Fallback to local query if Ollama not available
-            let notes = try await findRelatedNotes(for: context)
+            let notes = try await findRelatedNotes(for: query)
             let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
             return (fallbackResponse, notes, notes, "fallback")
         }
 
         // Use QueryAnalyzer to determine query type
-        let analysis = queryAnalyzer.analyze(context)
+        // IMPORTANT: Analyze the user's query, NOT the full context (which includes note metadata)
+        let analysis = queryAnalyzer.analyze(query)
 
         // Retrieve notes using hybrid strategy
         let limit = limitFor(queryType: analysis.queryType)
