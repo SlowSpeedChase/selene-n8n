@@ -260,14 +260,25 @@ class ChatViewModel: ObservableObject {
         // IMPORTANT: Analyze the user's query, NOT the full context (which includes note metadata)
         let analysis = queryAnalyzer.analyze(query)
 
-        // Retrieve notes using hybrid strategy
+        // Determine if semantic search should be used
+        let useSemantic = queryAnalyzer.shouldUseSemanticSearch(query)
         let limit = limitFor(queryType: analysis.queryType)
-        let notes = try await databaseService.retrieveNotesFor(
-            queryType: analysis.queryType,
-            keywords: analysis.keywords,
-            timeScope: analysis.timeScope,
-            limit: limit
-        )
+
+        // Retrieve notes - semantic or traditional based on query type
+        let notes: [Note]
+        if useSemantic {
+            notes = await databaseService.searchNotesSemantically(
+                query: query,
+                limit: limit
+            )
+        } else {
+            notes = try await databaseService.retrieveNotesFor(
+                queryType: analysis.queryType,
+                keywords: analysis.keywords,
+                timeScope: analysis.timeScope,
+                limit: limit
+            )
+        }
 
         guard !notes.isEmpty else {
             let emptyResponse = "I don't have any notes matching that query yet. Try asking about something else or capture more notes first."
