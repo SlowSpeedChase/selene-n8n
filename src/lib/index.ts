@@ -10,3 +10,4 @@ export {
 } from './db';
 export type { RawNote } from './db';
 export { generate, embed, isAvailable } from './ollama';
+export { getLanceDb, closeLanceDb, VECTOR_DIMENSIONS } from './lancedb';
