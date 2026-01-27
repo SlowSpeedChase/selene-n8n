@@ -394,6 +394,7 @@ class ChatViewModel: ObservableObject {
         case .knowledge: return 15
         case .general: return 30
         case .thread: return 50  // Thread queries need moderate context
+        case .semantic: return 20  // Semantic queries return focused, conceptually related notes
         }
     }
 
@@ -435,6 +436,8 @@ class ChatViewModel: ObservableObject {
             querySpecific = "\n\nProvide insights based on recent notes. Highlight interesting patterns and cite specific examples."
         case .thread:
             querySpecific = "\n\nThis is a thread-related query. Show emerging threads and patterns in the notes. Group related ideas and cite specific notes."
+        case .semantic:
+            querySpecific = "\n\nThese notes are conceptually related to the query. Explore the connections and themes. Highlight how ideas relate to each other and cite specific notes."
         }
 
         return basePrompt + querySpecific

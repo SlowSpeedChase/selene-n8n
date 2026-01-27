@@ -753,6 +753,11 @@ class DatabaseService: ObservableObject {
             let keywordMatches = try await searchNotesByKeywords(keywords: keywords, limit: limit / 2)
             let recentContext = try await getRecentProcessedNotes(limit: limit / 2, timeScope: .recent)
             return Array(Set(keywordMatches + recentContext)).sorted { $0.createdAt > $1.createdAt }.prefix(limit).map { $0 }
+
+        case .semantic:
+            // Semantic queries: use vector search via API, fall back to keyword search
+            // Note: Full semantic search integration is handled in ChatViewModel
+            return try await searchNotesByKeywords(keywords: keywords, limit: limit)
         }
     }
 

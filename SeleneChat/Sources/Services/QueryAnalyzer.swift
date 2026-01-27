@@ -11,6 +11,7 @@ class QueryAnalyzer {
         case knowledge    // Answer from content: "what did I say...", "remind me..."
         case general      // Open-ended: "how am I doing"
         case thread       // Thread queries: "what's emerging", "show me X thread"
+        case semantic     // Conceptual/meaning-based query
     }
 
     enum TimeScope {
@@ -60,6 +61,19 @@ class QueryAnalyzer {
         "details on", "more about"
     ]
 
+    private let semanticIndicators = [
+        "similar to",
+        "related to",
+        "like my",
+        "conceptually",
+        "meaning",
+        "connects to",
+        "associated with",
+        "reminds me of",
+        "in the spirit of",
+        "along the lines of"
+    ]
+
     private let stopWords = Set([
         "a", "an", "the", "is", "are", "was", "were", "be", "been",
         "have", "has", "had", "do", "does", "did", "will", "would",
@@ -83,6 +97,22 @@ class QueryAnalyzer {
             keywords: keywords,
             timeScope: timeScope
         )
+    }
+
+    /// Determine if a query should use semantic (vector) search
+    func shouldUseSemanticSearch(_ query: String) -> Bool {
+        let queryType = detectQueryType(query.lowercased())
+
+        switch queryType {
+        case .semantic:
+            return true
+        case .knowledge, .general:
+            // Use semantic for conceptual queries without specific keywords
+            let keywords = extractKeywords(from: query.lowercased())
+            return keywords.count <= 2  // Few keywords = more conceptual
+        default:
+            return false
+        }
     }
 
     // MARK: - Private Detection Methods
@@ -112,6 +142,20 @@ class QueryAnalyzer {
             if query.contains(indicator) {
                 return .search
             }
+        }
+
+        // Check for semantic queries
+        for indicator in semanticIndicators {
+            if query.contains(indicator) {
+                return .semantic
+            }
+        }
+
+        // Also treat vague conceptual queries as semantic
+        if query.hasPrefix("what about") ||
+           query.hasPrefix("thoughts on") ||
+           query.hasPrefix("anything about") {
+            return .semantic
         }
 
         // Default to general for open-ended questions
@@ -227,6 +271,7 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
         case .knowledge: return "knowledge"
         case .general: return "general"
         case .thread: return "thread"
+        case .semantic: return "semantic"
         }
     }
 }
