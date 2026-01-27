@@ -13,6 +13,8 @@ Status legend:
 
 | Date | Document | Phase | Notes |
 |------|----------|-------|-------|
+| 2026-01-26 | 2026-01-26-phase-7.3-cloud-ai-integration.md | cloud-ai | Design: Privacy-preserving cloud AI with sanitization layer |
+| 2026-01-26 | 2026-01-26-phase-7.3-implementation-plan.md | cloud-ai | Implementation: 21 tasks over 3 weeks |
 | 2026-01-26 | 2026-01-26-selenechat-contextual-evolution.md | selenechat | Vision: project-scoped chats, connected info, lab notes, task refinement |
 | 2026-01-26 | 2026-01-26-today-view-design.md | selenechat | ADHD landing page with new captures + heating threads |
 | 2026-01-11 | 2026-01-11-obsidian-thread-export-design.md | thread-system | Export threads to Obsidian vault |
