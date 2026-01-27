@@ -45,7 +45,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| 2026-01-26 | lancedb-transition.md | infra | Vector DB migration |
+| - | - | - | No ready designs |
 
 ---
 
@@ -69,7 +69,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
-| - | - | - | No active branches |
+| 2026-01-26 | 2026-01-26-lancedb-transition.md | lancedb-transition | Vector DB migration |
 
 ---
 
