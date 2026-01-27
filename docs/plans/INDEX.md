@@ -69,7 +69,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
-| 2026-01-26 | 2026-01-26-lancedb-transition.md | lancedb-transition | Vector DB migration |
+| - | - | - | No active branches |
 
 ---
 
@@ -77,6 +77,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
+| 2026-01-26 | 2026-01-26-lancedb-transition.md | 2026-01-27 | LanceDB vector DB, typed relationships |
 | 2026-01-11 | selenechat-thread-queries-design.md | 2026-01-11 | Thread queries in SeleneChat |
 | 2026-01-11 | obsidian-thread-export-design.md | 2026-01-11 | Thread export to Obsidian |
 | 2026-01-10 | phase-3-living-system-design.md | 2026-01-11 | Thread reconsolidation |
