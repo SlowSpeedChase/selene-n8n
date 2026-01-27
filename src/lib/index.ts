@@ -10,4 +10,14 @@ export {
 } from './db';
 export type { RawNote } from './db';
 export { generate, embed, isAvailable } from './ollama';
-export { getLanceDb, closeLanceDb, VECTOR_DIMENSIONS } from './lancedb';
+export {
+  getLanceDb,
+  closeLanceDb,
+  VECTOR_DIMENSIONS,
+  getNotesTable,
+  indexNote,
+  indexNotes,
+  deleteNoteVector,
+  getIndexedNoteIds,
+  type NoteVector,
+} from './lancedb';

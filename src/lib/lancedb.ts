@@ -85,3 +85,77 @@ export async function getNotesTable(): Promise<Table> {
 
   return notesTable;
 }
+
+/**
+ * Convert NoteVector to storage format (nulls become empty strings)
+ */
+function toStorageFormat(note: NoteVector): Record<string, unknown> {
+  return {
+    id: note.id,
+    vector: note.vector,
+    title: note.title,
+    primary_theme: note.primary_theme ?? '',
+    note_type: note.note_type ?? '',
+    actionability: note.actionability ?? '',
+    time_horizon: note.time_horizon ?? '',
+    context: note.context ?? '',
+    created_at: note.created_at,
+    indexed_at: note.indexed_at,
+  };
+}
+
+/**
+ * Index a note's vector with metadata (upsert)
+ */
+export async function indexNote(note: NoteVector): Promise<void> {
+  const table = await getNotesTable();
+
+  // Delete existing if present (upsert behavior)
+  try {
+    await table.delete(`id = ${note.id}`);
+  } catch {
+    // Ignore if doesn't exist
+  }
+
+  await table.add([toStorageFormat(note)]);
+  log.debug({ noteId: note.id }, 'Note indexed');
+}
+
+/**
+ * Index multiple notes in batch
+ */
+export async function indexNotes(notes: NoteVector[]): Promise<number> {
+  if (notes.length === 0) return 0;
+
+  const table = await getNotesTable();
+
+  // Delete existing entries for these IDs
+  const ids = notes.map(n => n.id);
+  try {
+    await table.delete(`id IN (${ids.join(',')})`);
+  } catch {
+    // Ignore if none exist
+  }
+
+  await table.add(notes.map(toStorageFormat));
+  log.info({ count: notes.length }, 'Notes batch indexed');
+  return notes.length;
+}
+
+/**
+ * Delete a note from the index
+ */
+export async function deleteNoteVector(noteId: number): Promise<void> {
+  const table = await getNotesTable();
+  await table.delete(`id = ${noteId}`);
+  log.debug({ noteId }, 'Note removed from index');
+}
+
+/**
+ * Get all indexed note IDs (for sync checking)
+ */
+export async function getIndexedNoteIds(): Promise<Set<number>> {
+  const table = await getNotesTable();
+  const results = await table.query().select(['id']).toArray();
+  return new Set(results.map(r => r.id as number));
+}
