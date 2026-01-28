@@ -11,6 +11,7 @@ This directory contains reference documentation. Most content here is historical
 | Directory | Purpose |
 |-----------|---------|
 | `plans/` | Design documents with status tracking. See `plans/INDEX.md` |
+| `research/` | Design philosophy, competitor analysis, exploratory thinking |
 | `completed/` | Archive of completed work with lessons learned |
 | `architecture/` | Technical reference: schema, integrations, metadata |
 | `roadmap/` | Phase planning documents (legacy) |
