@@ -19,7 +19,12 @@ Write a 2-3 paragraph summary that:
 
 Keep it encouraging and actionable.`;
 
-export async function dailySummary(): Promise<{ success: boolean; path?: string }> {
+const DIGEST_PROMPT = `Condense this daily summary into 3-5 short bullet points for a text message.
+Be brief and actionable. No headers or formatting. No bullet characters - just short lines.
+
+{summary}`;
+
+export async function dailySummary(): Promise<{ success: boolean; path?: string; digestPath?: string }> {
   log.info('Starting daily summary generation');
 
   const obsidianPath = process.env.OBSIDIAN_VAULT_PATH || join(config.projectRoot, 'vault');
@@ -107,7 +112,24 @@ ${notes.map((n) => `- [[${n.title}]]`).join('\n')}
   writeFileSync(outputPath, markdown);
   log.info({ outputPath }, 'Daily summary written');
 
-  return { success: true, path: outputPath };
+  // Generate condensed digest for iMessage
+  let digest: string;
+  if (await isAvailable()) {
+    digest = await generate(DIGEST_PROMPT.replace('{summary}', summary));
+  } else {
+    digest = `${notes.length} notes captured. Themes: ${themesText}`;
+  }
+
+  // Write digest file
+  const digestDir = config.digestsPath;
+  if (!existsSync(digestDir)) {
+    mkdirSync(digestDir, { recursive: true });
+  }
+  const digestPath = join(digestDir, `${dateStr}-digest.txt`);
+  writeFileSync(digestPath, digest);
+  log.info({ digestPath }, 'Condensed digest written');
+
+  return { success: true, path: outputPath, digestPath };
 }
 
 // CLI entry point
