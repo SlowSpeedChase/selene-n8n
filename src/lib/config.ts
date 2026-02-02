@@ -19,4 +19,9 @@ export const config = {
 
   // Things bridge - unchanged
   thingsPendingDir: join(projectRoot, 'scripts/things-bridge/pending'),
+
+  // iMessage digest
+  imessageDigestTo: process.env.IMESSAGE_DIGEST_TO || '',
+  imessageDigestEnabled: process.env.IMESSAGE_DIGEST_ENABLED !== 'false',
+  digestsPath: join(projectRoot, 'data', 'digests'),
 };
