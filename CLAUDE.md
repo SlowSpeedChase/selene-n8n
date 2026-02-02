@@ -120,6 +120,7 @@ launchd/
   com.selene.compute-embeddings.plist  # Every 10 minutes
   com.selene.compute-associations.plist # Every 10 minutes
   com.selene.daily-summary.plist    # Daily at midnight
+  com.selene.send-digest.plist      # Daily at 6am
 ```
 
 **Why this architecture?** See `@.claude/DEVELOPMENT.md` (System Architecture section)
@@ -201,6 +202,7 @@ npx ts-node src/workflows/extract-tasks.ts
 npx ts-node src/workflows/compute-embeddings.ts
 npx ts-node src/workflows/compute-associations.ts
 npx ts-node src/workflows/daily-summary.ts
+npx ts-node src/workflows/send-digest.ts
 
 # View workflow logs
 tail -f logs/selene.log | npx pino-pretty
