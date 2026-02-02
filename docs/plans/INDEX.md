@@ -45,7 +45,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| - | - | - | No ready designs |
+| 2026-02-02 | 2026-02-02-imessage-daily-digest-design.md | notifications | iMessage daily digest at 6am via AppleScript |
 
 ---
 
