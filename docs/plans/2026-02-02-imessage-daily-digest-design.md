@@ -1,6 +1,6 @@
 # iMessage Daily Digest
 
-**Status:** Ready
+**Status:** Done
 **Created:** 2026-02-02
 **Topic:** notifications
 
