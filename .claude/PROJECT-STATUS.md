@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-01-27
-**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | Thread Obsidian Export Complete | SeleneChat Thread Queries Complete | Living System Active
+**Last Updated:** 2026-02-02
+**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | iMessage Daily Digest Active | Living System Active
 
 ---
 
@@ -42,6 +42,7 @@ The thread system is now a **living system** - new notes flow through the full p
 | Thread Detection | `src/workflows/detect-threads.ts` | Done |
 | Thread Reconsolidation | `src/workflows/reconsolidate-threads.ts` | Done |
 | Daily Summary | `src/workflows/daily-summary.ts` | Done |
+| iMessage Digest | `src/workflows/send-digest.ts` | Done |
 | Launchd Agents | `launchd/*.plist` | Done |
 | Install Script | `scripts/install-launchd.sh` | Done |
 
@@ -77,6 +78,7 @@ launchd Scheduled Jobs:
   - detect-threads (every 30 min)
   - reconsolidate-threads (hourly)
   - daily-summary (midnight)
+  - send-digest (6am)
     |
     v
 Ollama (localhost:11434)
@@ -101,6 +103,7 @@ src/
     compute-embeddings.ts
     compute-associations.ts
     daily-summary.ts
+    send-digest.ts
   types/
     index.ts          # Shared TypeScript types
 
@@ -111,6 +114,7 @@ launchd/
   com.selene.compute-embeddings.plist
   com.selene.compute-associations.plist
   com.selene.daily-summary.plist
+  com.selene.send-digest.plist
 
 logs/
   selene.log          # Workflow logs (Pino JSON)
@@ -208,6 +212,7 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - ✅ Phase 7.2 complete (SeleneChat Planning Integration)
 - ✅ Thread System Phase 1-2 complete (Embeddings, Associations, Detection)
 - ✅ Thread System Phase 3 complete (Living System with reconsolidation)
+- ✅ iMessage Daily Digest (condensed summary at 6am)
 
 **Up Next (choose one track):**
 
@@ -241,6 +246,13 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ---
 
 ## Recent Achievements
+
+### 2026-02-02
+- **iMessage Daily Digest** - Condensed daily summary sent to phone at 6am via AppleScript
+  - `daily-summary.ts` generates bullet-point digest via Ollama at midnight
+  - `send-digest.ts` sends via iMessage at 6am (new launchd job)
+  - Configured with `IMESSAGE_DIGEST_TO` env var
+  - End-to-end tested and working
 
 ### 2026-01-11
 - **Obsidian Thread Export Complete** - Threads export to `Selene/Threads/` during reconsolidation
