@@ -1,4 +1,4 @@
-import { createWorkflowLogger, db, generate } from '../lib';
+import { createWorkflowLogger, db, generate, embed, searchSimilarNotes, getIndexedNoteIds } from '../lib';
 import type { WorkflowResult } from '../types';
 
 const log = createWorkflowLogger('detect-threads');
@@ -8,6 +8,11 @@ const log = createWorkflowLogger('detect-threads');
 const DEFAULT_SIMILARITY_THRESHOLD = 0.65;
 const MIN_CLUSTER_SIZE = 3;
 const MAX_NOTES_PER_SYNTHESIS = 15;
+
+// Thread assignment configuration
+const MAX_ASSIGNMENT_DISTANCE = 1.0; // L2 distance threshold for thread assignment
+const MIN_THREAD_NEIGHBORS = 2; // Require 2+ neighbors in same thread
+const ASSIGNMENT_SEARCH_LIMIT = 10; // How many neighbors to check per note
 
 // Types
 interface NoteRecord {
@@ -165,6 +170,104 @@ function getThreadedNoteIds(): Set<number> {
 }
 
 /**
+ * Build a map of note ID -> thread ID for all threaded notes
+ */
+function getThreadMembership(): Map<number, number> {
+  const rows = db.prepare('SELECT raw_note_id, thread_id FROM thread_notes').all() as Array<{
+    raw_note_id: number;
+    thread_id: number;
+  }>;
+  const map = new Map<number, number>();
+  for (const row of rows) {
+    map.set(row.raw_note_id, row.thread_id);
+  }
+  return map;
+}
+
+/**
+ * Assign unthreaded notes to existing threads based on vector similarity.
+ * Runs before new thread detection so notes get absorbed into existing threads first.
+ */
+async function assignToExistingThreads(): Promise<number> {
+  const threadedNoteIds = getThreadedNoteIds();
+  const threadMembership = getThreadMembership();
+
+  if (threadMembership.size === 0) {
+    log.info('No existing threads to assign to');
+    return 0;
+  }
+
+  // Get unthreaded notes that have embeddings in LanceDB
+  const indexedIds = await getIndexedNoteIds();
+  const unthreadedIndexed: number[] = [];
+  for (const id of indexedIds) {
+    if (!threadedNoteIds.has(id)) {
+      unthreadedIndexed.push(id);
+    }
+  }
+
+  if (unthreadedIndexed.length === 0) {
+    log.info('No unthreaded indexed notes to assign');
+    return 0;
+  }
+
+  log.info({ count: unthreadedIndexed.length }, 'Checking unthreaded notes for thread assignment');
+
+  let assigned = 0;
+  const now = new Date().toISOString();
+
+  const linkStmt = db.prepare(
+    `INSERT OR IGNORE INTO thread_notes (thread_id, raw_note_id, added_at, relevance_score)
+     VALUES (?, ?, ?, ?)`
+  );
+  const updateThreadStmt = db.prepare(
+    `UPDATE threads SET note_count = note_count + 1, last_activity_at = ?, updated_at = ? WHERE id = ?`
+  );
+
+  for (const noteId of unthreadedIndexed) {
+    try {
+      // Get this note's content for embedding
+      const note = db.prepare('SELECT title, content FROM raw_notes WHERE id = ?').get(noteId) as
+        | { title: string; content: string }
+        | undefined;
+      if (!note) continue;
+
+      const vector = await embed(`${note.title}\n\n${note.content}`);
+      const neighbors = await searchSimilarNotes(vector, {
+        limit: ASSIGNMENT_SEARCH_LIMIT,
+        excludeIds: [noteId],
+      });
+
+      const match = findBestThread(
+        neighbors.map((n) => ({ id: n.id, distance: n.distance })),
+        threadMembership,
+        { maxDistance: MAX_ASSIGNMENT_DISTANCE, minNeighbors: MIN_THREAD_NEIGHBORS }
+      );
+
+      if (match) {
+        linkStmt.run(match.threadId, noteId, now, match.relevanceScore);
+        updateThreadStmt.run(now, now, match.threadId);
+        threadMembership.set(noteId, match.threadId);
+        assigned++;
+
+        const threadName = db.prepare('SELECT name FROM threads WHERE id = ?').get(match.threadId) as
+          | { name: string }
+          | undefined;
+        log.info(
+          { noteId, threadId: match.threadId, threadName: threadName?.name, relevance: match.relevanceScore },
+          'Assigned note to existing thread'
+        );
+      }
+    } catch (err) {
+      log.error({ err, noteId }, 'Error assigning note to thread');
+    }
+  }
+
+  log.info({ assigned, checked: unthreadedIndexed.length }, 'Thread assignment complete');
+  return assigned;
+}
+
+/**
  * Get note content for synthesis
  */
 function getNoteContent(noteIds: number[]): NoteRecord[] {
@@ -293,6 +396,14 @@ export async function detectThreads(threshold = DEFAULT_SIMILARITY_THRESHOLD): P
     errors: 0,
     details: [],
   };
+
+  // Phase 1: Assign unthreaded notes to existing threads
+  try {
+    const assignedCount = await assignToExistingThreads();
+    result.details.push({ id: 0, success: true, error: `Assigned ${assignedCount} notes to existing threads` });
+  } catch (err) {
+    log.error({ err }, 'Error in thread assignment phase');
+  }
 
   // Get all associations
   const associations = db
