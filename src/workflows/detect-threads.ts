@@ -31,6 +31,68 @@ interface ThreadSynthesis {
   emotional_tone: 'neutral' | 'positive' | 'negative' | 'mixed';
 }
 
+// Types for thread assignment
+interface Neighbor {
+  id: number;
+  distance: number;
+}
+
+interface AssignmentOptions {
+  maxDistance: number;
+  minNeighbors: number;
+}
+
+interface ThreadMatch {
+  threadId: number;
+  relevanceScore: number;
+}
+
+/**
+ * Given a note's nearest neighbors and which threads those neighbors belong to,
+ * determine the best thread to assign the note to.
+ * Returns null if no thread has enough close neighbors.
+ */
+export function findBestThread(
+  neighbors: Neighbor[],
+  threadMembership: Map<number, number>,
+  options: AssignmentOptions
+): ThreadMatch | null {
+  // Count neighbors per thread, only considering close enough ones
+  const threadCounts = new Map<number, { count: number; totalDistance: number }>();
+
+  for (const neighbor of neighbors) {
+    if (neighbor.distance > options.maxDistance) continue;
+
+    const threadId = threadMembership.get(neighbor.id);
+    if (threadId === undefined) continue;
+
+    const existing = threadCounts.get(threadId) || { count: 0, totalDistance: 0 };
+    existing.count++;
+    existing.totalDistance += neighbor.distance;
+    threadCounts.set(threadId, existing);
+  }
+
+  // Find the thread with the most neighbors (ties broken by avg distance)
+  let best: { threadId: number; count: number; avgDistance: number } | null = null;
+
+  for (const [threadId, stats] of threadCounts) {
+    if (stats.count < options.minNeighbors) continue;
+
+    const avgDistance = stats.totalDistance / stats.count;
+
+    if (!best || stats.count > best.count || (stats.count === best.count && avgDistance < best.avgDistance)) {
+      best = { threadId, count: stats.count, avgDistance };
+    }
+  }
+
+  if (!best) return null;
+
+  // Convert distance to a 0-1 relevance score (lower distance = higher relevance)
+  const relevanceScore = Math.max(0, Math.min(1, 1 - best.avgDistance / options.maxDistance));
+
+  return { threadId: best.threadId, relevanceScore };
+}
+
 /**
  * Build adjacency list from associations
  */
