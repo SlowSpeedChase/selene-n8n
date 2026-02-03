@@ -1,5 +1,5 @@
 #!/bin/bash
-# Post-commit hook: Archive stale design documents
+# Post-commit hook: Archive stale docs + auto-build SeleneChat
 # Installed by scripts/setup-hooks.sh
 
 # Skip if this is an archive commit (prevent recursion)
@@ -12,6 +12,10 @@ if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
     exit 0
 fi
 
-# Run archival (failures are non-blocking)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run archival (failures are non-blocking)
 "$SCRIPT_DIR/../../scripts/archive-stale-plans.sh" || true
+
+# Auto-build SeleneChat if its files changed
+"$SCRIPT_DIR/selenechat-auto-build.sh" "HEAD~1" "HEAD" || true
