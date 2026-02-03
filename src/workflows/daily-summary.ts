@@ -4,9 +4,9 @@ import { createWorkflowLogger, db, generate, isAvailable, config } from '../lib'
 
 const log = createWorkflowLogger('daily-summary');
 
-const SUMMARY_PROMPT = `Generate a brief daily summary for someone with ADHD.
+const SUMMARY_PROMPT = `Generate a brief weekly summary for someone with ADHD.
 
-Notes captured today ({count} notes):
+Notes captured this past week ({count} notes):
 {notes}
 
 Key themes detected:
@@ -29,12 +29,15 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
 
   const obsidianPath = process.env.OBSIDIAN_VAULT_PATH || join(config.projectRoot, 'vault');
 
-  // Get today's date range
-  const today = new Date();
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+  // Get past week's date range
+  const now = new Date();
+  const endOfDay = new Date(now);
+  endOfDay.setHours(23, 59, 59, 999);
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(startOfWeek.getDate() - 7);
+  startOfWeek.setHours(0, 0, 0, 0);
 
-  // Get notes from today
+  // Get notes from the past week
   const notes = db
     .prepare(
       `SELECT rn.title, rn.content, pn.summary, pn.themes
@@ -43,17 +46,17 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
        WHERE rn.created_at BETWEEN ? AND ?
        ORDER BY rn.created_at`
     )
-    .all(startOfDay, endOfDay) as Array<{
+    .all(startOfWeek.toISOString(), endOfDay.toISOString()) as Array<{
     title: string;
     content: string;
     summary: string | null;
     themes: string | null;
   }>;
 
-  log.info({ noteCount: notes.length }, 'Found notes for today');
+  log.info({ noteCount: notes.length }, 'Found notes for past week');
 
   if (notes.length === 0) {
-    log.info('No notes today, skipping summary');
+    log.info('No notes this week, skipping summary');
     return { success: true };
   }
 

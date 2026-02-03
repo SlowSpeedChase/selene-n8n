@@ -34,7 +34,7 @@ struct ContentView: View {
             case .today:
                 TodayView(
                     onThreadSelected: { thread in
-                        pendingThreadQuery = "What's happening with \(thread.name)?"
+                        pendingThreadQuery = "show me \(thread.name) thread"
                         selectedView = .chat
                     },
                     onNoteThreadTap: { note in
