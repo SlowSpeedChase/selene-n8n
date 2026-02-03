@@ -10,7 +10,8 @@ const MIN_CLUSTER_SIZE = 3;
 const MAX_NOTES_PER_SYNTHESIS = 15;
 
 // Thread assignment configuration
-const MAX_ASSIGNMENT_DISTANCE = 1.0; // L2 distance threshold for thread assignment
+// L2 distance threshold - based on observed data: median ~288, 75th percentile ~346
+const MAX_ASSIGNMENT_DISTANCE = 350; // L2 distance threshold for thread assignment
 const MIN_THREAD_NEIGHBORS = 2; // Require 2+ neighbors in same thread
 const ASSIGNMENT_SEARCH_LIMIT = 10; // How many neighbors to check per note
 
