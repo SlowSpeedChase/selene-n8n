@@ -145,14 +145,27 @@ swift test
 
 ## Build and Run
 
-### Development
+### Auto-Build on Commit (Recommended)
+Commits that touch SeleneChat files automatically trigger a rebuild and install to `/Applications/SeleneChat.app` via the `post-commit` git hook. A macOS notification confirms success/failure.
+
+This is the standard workflow - just commit your changes and the production app updates automatically.
+
+### Manual Build & Install
+```bash
+cd SeleneChat
+./build-app.sh                              # Build .app bundle
+cp -R .build/release/SeleneChat.app /Applications/  # Install
+```
+
+### Development (CLI - uses test database)
 ```bash
 cd SeleneChat
 swift build
 swift run
 ```
+Note: CLI builds use `~/selene-n8n/data-test/selene-test.db`, not production data.
 
-### Release
+### Release (CLI)
 ```bash
 swift build -c release
 .build/release/SeleneChat
@@ -163,6 +176,12 @@ swift build -c release
 swift package generate-xcodeproj
 open SeleneChat.xcodeproj
 ```
+
+### Database Selection
+- **CLI binary** → test database (`~/selene-n8n/data-test/selene-test.db`)
+- **.app bundle** → production database (`~/selene-data/selene.db`)
+
+Detection is automatic via `isRunningFromAppBundle()` in DatabaseService.
 
 ## Related Context
 
