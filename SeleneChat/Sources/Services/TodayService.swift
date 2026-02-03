@@ -28,6 +28,13 @@ class TodayService {
     private let tnThreadId = Expression<Int64>("thread_id")
     private let tnRawNoteId = Expression<Int64>("raw_note_id")
 
+    /// ISO8601 formatter with fractional seconds support for parsing database timestamps
+    private lazy var iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     init(db: Connection) {
         self.db = db
     }
@@ -38,9 +45,7 @@ class TodayService {
         DebugLogger.shared.log(.state, "TodayService: fetching new captures since \(cutoff)")
         #endif
 
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime]
-        let cutoffString = dateFormatter.string(from: cutoff)
+        let cutoffString = iso8601Formatter.string(from: cutoff)
 
         // Query notes with optional thread join
         let query = rawNotes
@@ -55,7 +60,7 @@ class TodayService {
 
         for row in try db.prepare(query) {
             let createdAtString = row[rawNotes[noteCreatedAt]]
-            let createdAt = dateFormatter.date(from: createdAtString) ?? Date()
+            let createdAt = iso8601Formatter.date(from: createdAtString) ?? Date()
             let content = row[rawNotes[noteContent]]
             let preview = String(content.prefix(80))
 

@@ -33,6 +33,13 @@ class InboxService: ObservableObject {
     private let primaryTheme = Expression<String?>("primary_theme")
     private let energyLevel = Expression<String?>("energy_level")
 
+    /// ISO8601 formatter with fractional seconds support for parsing database timestamps
+    private lazy var iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     // projects columns
     private let projectId = Expression<Int64>("id")
     private let projectName = Expression<String>("name")
@@ -69,8 +76,6 @@ class InboxService: ObservableObject {
     }
 
     private func parseInboxNote(from row: Row) throws -> InboxNote {
-        let dateFormatter = ISO8601DateFormatter()
-
         // Parse concepts JSON
         var conceptsArray: [String]? = nil
         if let conceptsStr = try? row.get(processedNotes[concepts]),
@@ -88,7 +93,7 @@ class InboxService: ObservableObject {
             id: Int(try row.get(rawNotes[noteId])),
             title: try row.get(rawNotes[noteTitle]),
             content: try row.get(rawNotes[noteContent]),
-            createdAt: dateFormatter.date(from: try row.get(rawNotes[noteCreatedAt])) ?? Date(),
+            createdAt: iso8601Formatter.date(from: try row.get(rawNotes[noteCreatedAt])) ?? Date(),
             inboxStatus: .pending,
             suggestedType: noteType,
             suggestedProjectId: (try? row.get(rawNotes[suggestedProjectId])).map { Int($0) },

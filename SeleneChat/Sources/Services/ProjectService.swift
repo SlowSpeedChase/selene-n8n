@@ -37,6 +37,13 @@ class ProjectService: ObservableObject {
     // ADHD-optimized limit: prevents overwhelm from too many active projects
     private let maxActiveProjects = 5
 
+    /// ISO8601 formatter with fractional seconds support for parsing database timestamps
+    private lazy var iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     init() {}
 
     func configure(with db: Connection) {
@@ -127,7 +134,7 @@ class ProjectService: ObservableObject {
     }
 
     private func parseProject(from row: Row) throws -> Project {
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
 
         return Project(
             id: Int(try row.get(projectId)),
@@ -149,7 +156,7 @@ class ProjectService: ObservableObject {
             throw DatabaseService.DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let now = dateFormatter.string(from: Date())
 
         let id = try db.run(projects.insert(
@@ -201,7 +208,7 @@ class ProjectService: ObservableObject {
             throw ProjectError.tooManyActive
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let now = dateFormatter.string(from: Date())
 
         let project = projects.filter(projectId == Int64(projectIdValue))
@@ -231,7 +238,7 @@ class ProjectService: ObservableObject {
             throw DatabaseService.DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let now = dateFormatter.string(from: Date())
 
         let project = projects.filter(projectId == Int64(projectIdValue))

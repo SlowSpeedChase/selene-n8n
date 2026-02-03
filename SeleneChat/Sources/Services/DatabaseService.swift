@@ -118,6 +118,15 @@ class DatabaseService: ObservableObject {
     private let threadNotesThreadId = Expression<Int64>("thread_id")
     private let threadNotesRawNoteId = Expression<Int64>("raw_note_id")
 
+    // MARK: - Date Formatter (with fractional seconds support)
+
+    /// Shared ISO8601 formatter that handles fractional seconds (e.g., "2026-02-01T21:21:52.269Z")
+    private lazy var iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     init() {
         // Try to load saved path, otherwise use environment-aware default
         self.databasePath = UserDefaults.standard.string(forKey: "databasePath")
@@ -304,7 +313,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let fromStr = dateFormatter.string(from: from)
         let toStr = dateFormatter.string(from: to)
 
@@ -435,7 +444,7 @@ class DatabaseService: ObservableObject {
     }
 
     private func parseNote(from row: Row) throws -> Note {
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
 
         // Parse tags JSON from raw_notes
         var tagsArray: [String]? = nil
@@ -497,7 +506,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
 
         // Serialize messages to JSON
         let messagesData = try JSONEncoder().encode(session.messages)
@@ -553,7 +562,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         var sessions: [ChatSession] = []
 
         // Query all sessions, ordered by updated_at descending
@@ -630,7 +639,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
         let thirtyDaysAgoStr = dateFormatter.string(from: thirtyDaysAgo)
 
@@ -689,7 +698,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let now = dateFormatter.string(from: Date())
 
         // Update the session to compressed state
@@ -777,21 +786,21 @@ class DatabaseService: ObservableObject {
         switch timeScope {
         case .recent:
             let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
-            let dateFormatter = ISO8601DateFormatter()
+            let dateFormatter = iso8601Formatter
             query = query.filter(rawNotes[createdAt] >= dateFormatter.string(from: sevenDaysAgo))
 
         case .thisWeek:
             let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: Date())!.start
-            let dateFormatter = ISO8601DateFormatter()
+            let dateFormatter = iso8601Formatter
             query = query.filter(rawNotes[createdAt] >= dateFormatter.string(from: startOfWeek))
 
         case .thisMonth:
             let startOfMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
-            let dateFormatter = ISO8601DateFormatter()
+            let dateFormatter = iso8601Formatter
             query = query.filter(rawNotes[createdAt] >= dateFormatter.string(from: startOfMonth))
 
         case .custom(let from, let to):
-            let dateFormatter = ISO8601DateFormatter()
+            let dateFormatter = iso8601Formatter
             query = query.filter(
                 rawNotes[createdAt] >= dateFormatter.string(from: from) &&
                 rawNotes[createdAt] <= dateFormatter.string(from: to)
@@ -1013,7 +1022,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let now = dateFormatter.string(from: Date())
 
         let thread = discussionThreads.filter(threadId == Int64(threadIdValue))
@@ -1077,8 +1086,7 @@ class DatabaseService: ObservableObject {
             return date
         }
 
-        // Fall back to ISO8601
-        let iso8601Formatter = ISO8601DateFormatter()
+        // Fall back to ISO8601 (with fractional seconds support)
         return iso8601Formatter.date(from: dateString)
     }
 
@@ -1104,7 +1112,7 @@ class DatabaseService: ObservableObject {
     func insertTaskLink(thingsTaskId: String, threadId: Int, noteId: Int, heading: String? = nil) async throws {
         guard let db = db else { throw DatabaseError.notConnected }
 
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = iso8601Formatter.string(from: Date())
 
         // Use correct column name: discussion_thread_id (from Migration001)
         let query = """
@@ -1128,8 +1136,8 @@ class DatabaseService: ObservableObject {
     ) async throws {
         guard let db = db else { throw DatabaseError.notConnected }
 
-        let now = ISO8601DateFormatter().string(from: Date())
-        let completedStr: String? = completedAt.map { ISO8601DateFormatter().string(from: $0) }
+        let now = iso8601Formatter.string(from: Date())
+        let completedStr: String? = completedAt.map { iso8601Formatter.string(from: $0) }
 
         let query = """
             UPDATE task_links SET
@@ -1162,7 +1170,7 @@ class DatabaseService: ObservableObject {
     func resurfaceThread(_ threadId: Int, reason: String) async throws {
         guard let db = db else { throw DatabaseError.notConnected }
 
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = iso8601Formatter.string(from: Date())
 
         let query = """
             UPDATE discussion_threads SET
@@ -1267,7 +1275,7 @@ class DatabaseService: ObservableObject {
             .order(threadCreatedAt.desc)
 
         var threads: [DiscussionThread] = []
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
 
         for row in try db.prepare(query) {
             let thread = DiscussionThread(
@@ -1300,7 +1308,7 @@ class DatabaseService: ObservableObject {
             throw DatabaseError.notConnected
         }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let now = dateFormatter.string(from: Date())
 
         var setter: [Setter] = [
@@ -1367,7 +1375,7 @@ class DatabaseService: ObservableObject {
 
         guard let row = try db.pluck(query) else { return nil }
 
-        let dateFormatter = ISO8601DateFormatter()
+        let dateFormatter = iso8601Formatter
         let projectId = Expression<Int64>("id")
         let projectName = Expression<String>("name")
         let projectStatus = Expression<String>("status")
