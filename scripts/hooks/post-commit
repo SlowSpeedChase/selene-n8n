@@ -18,4 +18,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/../../scripts/archive-stale-plans.sh" || true
 
 # Auto-build SeleneChat if its files changed
-"$SCRIPT_DIR/selenechat-auto-build.sh" "HEAD~1" "HEAD" || true
+# Handle symlinked hooks - resolve to actual script location
+HOOK_DIR="$SCRIPT_DIR"
+if [ -L "${BASH_SOURCE[0]}" ]; then
+    HOOK_DIR="$(dirname "$(readlink "${BASH_SOURCE[0]}")")"
+fi
+"$HOOK_DIR/selenechat-auto-build.sh" "HEAD~1" "HEAD" || true
