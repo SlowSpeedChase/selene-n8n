@@ -44,6 +44,21 @@ class ProjectService: ObservableObject {
         return formatter
     }()
 
+    /// Parse date string from SQLite format or ISO8601
+    private func parseDateString(_ dateString: String) -> Date? {
+        // Try SQLite format first: "YYYY-MM-DD HH:MM:SS"
+        let sqliteFormatter = DateFormatter()
+        sqliteFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        sqliteFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        if let date = sqliteFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Fall back to ISO8601 (with fractional seconds support)
+        return iso8601Formatter.date(from: dateString)
+    }
+
     init() {}
 
     func configure(with db: Connection) {
@@ -134,17 +149,15 @@ class ProjectService: ObservableObject {
     }
 
     private func parseProject(from row: Row) throws -> Project {
-        let dateFormatter = iso8601Formatter
-
         return Project(
             id: Int(try row.get(projectId)),
             name: try row.get(projectName),
             status: Project.Status(rawValue: try row.get(projectStatus)) ?? .parked,
             primaryConcept: try? row.get(primaryConcept),
             thingsProjectId: try? row.get(thingsProjectId),
-            createdAt: dateFormatter.date(from: try row.get(createdAt)) ?? Date(),
-            lastActiveAt: (try? row.get(lastActiveAt)).flatMap { dateFormatter.date(from: $0) },
-            completedAt: (try? row.get(completedAt)).flatMap { dateFormatter.date(from: $0) },
+            createdAt: parseDateString(try row.get(createdAt)) ?? Date(),
+            lastActiveAt: (try? row.get(lastActiveAt)).flatMap { parseDateString($0) },
+            completedAt: (try? row.get(completedAt)).flatMap { parseDateString($0) },
             testRun: try? row.get(testRun)
         )
     }

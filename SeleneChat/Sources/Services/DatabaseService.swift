@@ -444,8 +444,6 @@ class DatabaseService: ObservableObject {
     }
 
     private func parseNote(from row: Row) throws -> Note {
-        let dateFormatter = iso8601Formatter
-
         // Parse tags JSON from raw_notes
         var tagsArray: [String]? = nil
         if let tagsStr = try? row.get(rawNotes[tags]), let data = tagsStr.data(using: .utf8) {
@@ -479,10 +477,10 @@ class DatabaseService: ObservableObject {
             wordCount: Int(try row.get(rawNotes[wordCount])),
             characterCount: Int(try row.get(rawNotes[characterCount])),
             tags: tagsArray,
-            createdAt: dateFormatter.date(from: try row.get(rawNotes[createdAt])) ?? Date(),
-            importedAt: dateFormatter.date(from: try row.get(rawNotes[importedAt])) ?? Date(),
-            processedAt: (try? row.get(rawNotes[processedAt])).flatMap { dateFormatter.date(from: $0) },
-            exportedAt: (try? row.get(rawNotes[exportedAt])).flatMap { dateFormatter.date(from: $0) },
+            createdAt: parseDateString(try row.get(rawNotes[createdAt])) ?? Date(),
+            importedAt: parseDateString(try row.get(rawNotes[importedAt])) ?? Date(),
+            processedAt: (try? row.get(rawNotes[processedAt])).flatMap { parseDateString($0) },
+            exportedAt: (try? row.get(rawNotes[exportedAt])).flatMap { parseDateString($0) },
             status: try row.get(rawNotes[status]),
             exportedToObsidian: try row.get(rawNotes[exportedToObsidian]) == 1,
             sourceUUID: try? row.get(rawNotes[sourceUUID]),

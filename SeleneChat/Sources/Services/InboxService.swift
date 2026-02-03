@@ -40,6 +40,21 @@ class InboxService: ObservableObject {
         return formatter
     }()
 
+    /// Parse date string from SQLite format or ISO8601
+    private func parseDateString(_ dateString: String) -> Date? {
+        // Try SQLite format first: "YYYY-MM-DD HH:MM:SS"
+        let sqliteFormatter = DateFormatter()
+        sqliteFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        sqliteFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        if let date = sqliteFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Fall back to ISO8601 (with fractional seconds support)
+        return iso8601Formatter.date(from: dateString)
+    }
+
     // projects columns
     private let projectId = Expression<Int64>("id")
     private let projectName = Expression<String>("name")
@@ -93,7 +108,7 @@ class InboxService: ObservableObject {
             id: Int(try row.get(rawNotes[noteId])),
             title: try row.get(rawNotes[noteTitle]),
             content: try row.get(rawNotes[noteContent]),
-            createdAt: iso8601Formatter.date(from: try row.get(rawNotes[noteCreatedAt])) ?? Date(),
+            createdAt: parseDateString(try row.get(rawNotes[noteCreatedAt])) ?? Date(),
             inboxStatus: .pending,
             suggestedType: noteType,
             suggestedProjectId: (try? row.get(rawNotes[suggestedProjectId])).map { Int($0) },

@@ -35,6 +35,21 @@ class TodayService {
         return formatter
     }()
 
+    /// Parse date string from SQLite format or ISO8601
+    private func parseDateString(_ dateString: String) -> Date? {
+        // Try SQLite format first: "YYYY-MM-DD HH:MM:SS"
+        let sqliteFormatter = DateFormatter()
+        sqliteFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        sqliteFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        if let date = sqliteFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Fall back to ISO8601 (with fractional seconds support)
+        return iso8601Formatter.date(from: dateString)
+    }
+
     init(db: Connection) {
         self.db = db
     }
@@ -60,7 +75,7 @@ class TodayService {
 
         for row in try db.prepare(query) {
             let createdAtString = row[rawNotes[noteCreatedAt]]
-            let createdAt = iso8601Formatter.date(from: createdAtString) ?? Date()
+            let createdAt = parseDateString(createdAtString) ?? Date()
             let content = row[rawNotes[noteContent]]
             let preview = String(content.prefix(80))
 
