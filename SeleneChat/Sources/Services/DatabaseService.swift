@@ -17,11 +17,13 @@ class DatabaseService: ObservableObject {
     private static func defaultDatabasePath() -> String {
         if isRunningFromAppBundle() {
             // Production: user's real notes
-            return "/Users/chaseeasterling/selene-data/selene.db"
-        } else {
-            // Development: Claude's test database
             return FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("selene-n8n/data/selene.db")
+                .appendingPathComponent("selene-data/selene.db")
+                .path
+        } else {
+            // Development: test database (not production data)
+            return FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("selene-n8n/data-test/selene-test.db")
                 .path
         }
     }

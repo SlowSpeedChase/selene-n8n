@@ -1,10 +1,11 @@
 import { join } from 'path';
+import { homedir } from 'os';
 
 const projectRoot = join(__dirname, '../..');
 
 export const config = {
   // Paths - same as current setup
-  dbPath: process.env.SELENE_DB_PATH || join(projectRoot, 'data/selene.db'),
+  dbPath: process.env.SELENE_DB_PATH || join(homedir(), 'selene-data/selene.db'),
   logsPath: process.env.SELENE_LOGS_PATH || join(projectRoot, 'logs'),
   projectRoot,
 
