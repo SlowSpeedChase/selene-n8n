@@ -8,8 +8,8 @@ set -e
 OLD_REF="${1:-ORIG_HEAD}"
 NEW_REF="${2:-HEAD}"
 
-# Check if SeleneChat files changed
-if ! git diff --name-only "$OLD_REF" "$NEW_REF" 2>/dev/null | grep -q "^SeleneChat/"; then
+# Check if SeleneChat source files changed (Swift, plist, shell scripts - not docs)
+if ! git diff --name-only "$OLD_REF" "$NEW_REF" 2>/dev/null | grep -E "^SeleneChat/.*\.(swift|plist|sh)$" | grep -qv "\.md$"; then
     exit 0
 fi
 
