@@ -7,6 +7,9 @@ class ChatViewModel: ObservableObject {
     @Published var isProcessing = false
     @Published var error: String?
 
+    /// Whether to include conversation history in prompts
+    @Published var useConversationHistory = true
+
     private let databaseService = DatabaseService.shared
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
@@ -298,18 +301,22 @@ class ChatViewModel: ObservableObject {
         let systemPrompt = await buildSystemPromptWithMemories(for: analysis.queryType, query: query)
 
         // Build conversation history (excluding current message which is in context)
-        let priorMessages = Array(currentSession.messages.dropLast())  // Remove current user message
-        let sessionContext = SessionContext(messages: priorMessages)
         let historySection: String
-        if priorMessages.isEmpty {
-            historySection = ""
-        } else {
-            historySection = """
+        if useConversationHistory {
+            let priorMessages = Array(currentSession.messages.dropLast())  // Remove current user message
+            let sessionContext = SessionContext(messages: priorMessages)
+            if priorMessages.isEmpty {
+                historySection = ""
+            } else {
+                historySection = """
 
 ## Conversation so far:
 \(sessionContext.historyWithSummary())
 
 """
+            }
+        } else {
+            historySection = ""
         }
 
         // Build full prompt
