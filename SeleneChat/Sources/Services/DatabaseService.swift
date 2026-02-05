@@ -158,6 +158,7 @@ class DatabaseService: ObservableObject {
             try? Migration005_ProjectThreads.run(db: db!)
             try? Migration006_OptionalRawNoteId.run(db: db!)
             try? Migration007_ThingsHeading.run(db: db!)
+            try? Migration008_ConversationMemory.run(db: db!)
 
             // Configure services that need database access
             if let db = db {
