@@ -353,6 +353,45 @@ class DatabaseService: ObservableObject {
         return notes
     }
 
+    /// Get recent notes from the last N days for briefing context
+    /// - Parameters:
+    ///   - days: Number of days to look back from today
+    ///   - limit: Maximum number of notes to return (default 10)
+    /// - Returns: Array of Note objects sorted by created_at descending
+    func getRecentNotes(days: Int, limit: Int = 10) async throws -> [Note] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Calculate start date (N days ago from now)
+        guard let startDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else {
+            throw DatabaseError.queryFailed("Failed to calculate start date")
+        }
+
+        let dateFormatter = iso8601Formatter
+        let startDateStr = dateFormatter.string(from: startDate)
+
+        let query = rawNotes
+            .join(.leftOuter, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .filter(rawNotes[createdAt] >= startDateStr)
+            .filter(rawNotes[testRun] == nil)
+            .order(rawNotes[createdAt].desc)
+            .limit(limit)
+
+        var notes: [Note] = []
+
+        for row in try db.prepare(query) {
+            let note = try parseNote(from: row)
+            notes.append(note)
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getRecentNotes: \(notes.count) notes from last \(days) days")
+        #endif
+
+        return notes
+    }
+
     func getNote(byId noteId: Int) async throws -> Note? {
         guard let db = db else {
             throw DatabaseError.notConnected
