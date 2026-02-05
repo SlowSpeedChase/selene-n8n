@@ -13,6 +13,7 @@ class QueryAnalyzer {
         case thread       // Thread queries: "what's emerging", "show me X thread"
         case semantic     // Conceptual/meaning-based query
         case deepDive     // Thread deep-dive: "dig into X", "explore X thread"
+        case synthesis    // Cross-thread synthesis: "what should I focus on?"
     }
 
     enum TimeScope {
@@ -85,6 +86,20 @@ class QueryAnalyzer {
         "unpack", "dive into", "deep dive"
     ]
 
+    private let synthesisIndicators = [
+        "what should i focus on",
+        "what should i work on",
+        "help me prioritize",
+        "what's most important",
+        "whats most important",
+        "where should i put my energy",
+        "what needs my attention",
+        "what deserves my focus",
+        "prioritize my threads",
+        "what's the priority",
+        "whats the priority"
+    ]
+
     private let stopWords = Set([
         "a", "an", "the", "is", "are", "was", "were", "be", "been",
         "have", "has", "had", "do", "does", "did", "will", "would",
@@ -129,7 +144,12 @@ class QueryAnalyzer {
     // MARK: - Private Detection Methods
 
     private func detectQueryType(_ query: String) -> QueryType {
-        // Check deep-dive queries first (most specific)
+        // Check synthesis before deep-dive (prioritization queries)
+        if detectSynthesisIntent(query) {
+            return .synthesis
+        }
+
+        // Check deep-dive queries (most specific)
         if detectDeepDiveIntent(query) != nil {
             return .deepDive
         }
@@ -286,6 +306,17 @@ class QueryAnalyzer {
         return nil
     }
 
+    /// Detect if query is a synthesis/prioritization request
+    func detectSynthesisIntent(_ query: String) -> Bool {
+        let lowercased = query.lowercased()
+        for indicator in synthesisIndicators {
+            if lowercased.contains(indicator) {
+                return true
+            }
+        }
+        return false
+    }
+
     private func extractThreadName(from query: String) -> String? {
         // Pattern 1: "show me [name] thread"
         let showPattern = #"(?:show me|tell me about|what's the|whats the|details on|more about)\s+(?:the\s+)?(.+?)\s+thread"#
@@ -324,6 +355,7 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
         case .thread: return "thread"
         case .semantic: return "semantic"
         case .deepDive: return "deep-dive"
+        case .synthesis: return "synthesis"
         }
     }
 }
