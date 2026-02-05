@@ -1,5 +1,9 @@
 import { join } from 'path';
 import { homedir } from 'os';
+import { config as loadEnv } from 'dotenv';
+
+// Load environment variables from .env file
+loadEnv();
 
 const projectRoot = join(__dirname, '../..');
 

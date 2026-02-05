@@ -6,23 +6,28 @@ import { createWorkflowLogger, config } from '../lib';
 const log = createWorkflowLogger('send-digest');
 
 function sendIMessage(to: string, message: string): void {
-  // Escape for AppleScript string
-  const escaped = message
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n');
+  // Escape for AppleScript string - use single quotes to avoid escaping
+  const escaped = message.replace(/'/g, "'\"'\"'");
 
-  const script = `
-    tell application "Messages"
-      set targetService to 1st account whose service type = iMessage
-      set targetBuddy to participant "${to}" of targetService
-      send "${escaped}" to targetBuddy
-    end tell
-  `;
+  const script = `osascript -e 'tell application "Messages" to send "${escaped}" to buddy "${to}"'`;
 
-  execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, {
-    timeout: 30000,
-  });
+  try {
+    execSync(script, {
+      timeout: 10000,
+      stdio: 'pipe',
+    });
+  } catch (err: any) {
+    // If direct buddy send fails, try with phone/email format
+    if (err.status !== 0) {
+      const fallbackScript = `osascript -e 'tell application "Messages"' -e 'set targetService to 1st service whose service type = iMessage' -e 'set targetBuddy to buddy "${to}" of targetService' -e 'send "${escaped}" to targetBuddy' -e 'end tell'`;
+      execSync(fallbackScript, {
+        timeout: 10000,
+        stdio: 'pipe',
+      });
+    } else {
+      throw err;
+    }
+  }
 }
 
 export async function sendDigest(): Promise<{ sent: boolean }> {
