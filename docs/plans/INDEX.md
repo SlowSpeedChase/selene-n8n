@@ -29,6 +29,7 @@ Ideas captured but not yet ready for implementation.
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
+| 2026-02-04 | 2026-02-04-conversation-memory-design.md | selenechat | Persistent conversation memory with mem0-inspired patterns |
 | 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
 | 2026-01-26 | today-view-design.md | selenechat | ADHD landing page - needs acceptance criteria |
 | 2026-01-11 | selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop server |
