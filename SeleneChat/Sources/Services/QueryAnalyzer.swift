@@ -12,6 +12,7 @@ class QueryAnalyzer {
         case general      // Open-ended: "how am I doing"
         case thread       // Thread queries: "what's emerging", "show me X thread"
         case semantic     // Conceptual/meaning-based query
+        case deepDive     // Thread deep-dive: "dig into X", "explore X thread"
     }
 
     enum TimeScope {
@@ -25,6 +26,10 @@ class QueryAnalyzer {
     enum ThreadQueryIntent {
         case listActive           // "what's emerging"
         case showSpecific(String) // "show me X thread"
+    }
+
+    struct DeepDiveIntent {
+        let threadName: String
     }
 
     struct AnalysisResult {
@@ -74,6 +79,12 @@ class QueryAnalyzer {
         "along the lines of"
     ]
 
+    private let deepDiveIndicators = [
+        "dig into", "let's dig into", "lets dig into",
+        "explore", "help me think through", "think through",
+        "unpack", "dive into", "deep dive"
+    ]
+
     private let stopWords = Set([
         "a", "an", "the", "is", "are", "was", "were", "be", "been",
         "have", "has", "had", "do", "does", "did", "will", "would",
@@ -118,7 +129,12 @@ class QueryAnalyzer {
     // MARK: - Private Detection Methods
 
     private func detectQueryType(_ query: String) -> QueryType {
-        // Check thread queries first (most specific)
+        // Check deep-dive queries first (most specific)
+        if detectDeepDiveIntent(query) != nil {
+            return .deepDive
+        }
+
+        // Check thread queries next
         if detectThreadIntent(query) != nil {
             return .thread
         }
@@ -235,6 +251,41 @@ class QueryAnalyzer {
         return nil
     }
 
+    /// Detect if query is a deep-dive request and extract the thread name
+    func detectDeepDiveIntent(_ query: String) -> DeepDiveIntent? {
+        let lowercased = query.lowercased()
+
+        // Check if query contains any deep-dive indicators
+        for indicator in deepDiveIndicators {
+            if lowercased.contains(indicator) {
+                // Extract thread name after the indicator
+                if let range = lowercased.range(of: indicator) {
+                    var threadName = String(lowercased[range.upperBound...])
+                        .trimmingCharacters(in: .whitespaces)
+
+                    // Remove trailing "thread" if present
+                    if threadName.hasSuffix(" thread") {
+                        threadName = String(threadName.dropLast(7))
+                            .trimmingCharacters(in: .whitespaces)
+                    }
+
+                    // Remove leading "the" if present
+                    if threadName.hasPrefix("the ") {
+                        threadName = String(threadName.dropFirst(4))
+                            .trimmingCharacters(in: .whitespaces)
+                    }
+
+                    // Only return if we extracted a non-empty thread name
+                    if !threadName.isEmpty {
+                        return DeepDiveIntent(threadName: threadName)
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
     private func extractThreadName(from query: String) -> String? {
         // Pattern 1: "show me [name] thread"
         let showPattern = #"(?:show me|tell me about|what's the|whats the|details on|more about)\s+(?:the\s+)?(.+?)\s+thread"#
@@ -272,6 +323,7 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
         case .general: return "general"
         case .thread: return "thread"
         case .semantic: return "semantic"
+        case .deepDive: return "deep-dive"
         }
     }
 }
