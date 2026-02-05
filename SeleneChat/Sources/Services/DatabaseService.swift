@@ -827,6 +827,15 @@ class DatabaseService: ObservableObject {
             // Semantic queries: use vector search via API, fall back to keyword search
             // Note: Full semantic search integration is handled in ChatViewModel
             return try await searchNotesByKeywords(keywords: keywords, limit: limit)
+
+        case .deepDive:
+            // Deep-dive queries: handled separately via thread notes
+            // Note: Full deep-dive integration uses specific thread notes, not general retrieval
+            return try await searchNotesByKeywords(keywords: keywords, limit: limit)
+
+        case .synthesis:
+            // Synthesis queries: get recent notes across all threads for prioritization
+            return try await getRecentProcessedNotes(limit: limit, timeScope: .recent)
         }
     }
 
