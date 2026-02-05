@@ -13,6 +13,7 @@ class ChatViewModel: ObservableObject {
     private let ollamaService = OllamaService.shared
     private let queryAnalyzer = QueryAnalyzer()
     private let contextBuilder = ContextBuilder()
+    private let memoryService = MemoryService.shared
 
     init() {
         self.currentSession = ChatSession()
@@ -85,6 +86,11 @@ class ChatViewModel: ObservableObject {
 
                 // Save session
                 await saveSession()
+
+                // Save conversation and extract memories
+                saveConversationMessages(userMessage: content, assistantResponse: response)
+                extractMemoriesFromExchange(userMessage: content, assistantResponse: response)
+
                 return // Early return for local tier
             }
 
@@ -288,8 +294,8 @@ class ChatViewModel: ObservableObject {
         // Build adaptive context
         let noteContext = contextBuilder.buildContext(notes: notes, queryType: analysis.queryType)
 
-        // Build system prompt with citation instructions
-        let systemPrompt = buildSystemPrompt(for: analysis.queryType)
+        // Build system prompt with citation instructions and memories
+        let systemPrompt = await buildSystemPromptWithMemories(for: analysis.queryType, query: query)
 
         // Build full prompt
         let fullPrompt = """
@@ -410,7 +416,7 @@ class ChatViewModel: ObservableObject {
     }
 
     private func buildSystemPrompt(for queryType: QueryAnalyzer.QueryType) -> String {
-        let basePrompt = """
+        var basePrompt = """
         You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
 
         Your role:
@@ -419,6 +425,11 @@ class ChatViewModel: ObservableObject {
         - Be conversational and supportive
         - Focus on insights that lead to action
 
+        """
+
+        // Memories will be injected here asynchronously in the caller
+
+        basePrompt += """
         IMPORTANT - Citations:
         - When referencing specific notes, ALWAYS cite them as: [Note: 'Title' - Date]
         - Example: "You mentioned feeling productive in the morning [Note: 'Morning Routine' - Nov 14]"
@@ -452,6 +463,34 @@ class ChatViewModel: ObservableObject {
         }
 
         return basePrompt + querySpecific
+    }
+
+    /// Build system prompt with relevant memories injected
+    private func buildSystemPromptWithMemories(for queryType: QueryAnalyzer.QueryType, query: String) async -> String {
+        var prompt = buildSystemPrompt(for: queryType)
+
+        // Get relevant memories
+        do {
+            let memories = try await memoryService.getRelevantMemories(for: query, limit: 5)
+            if !memories.isEmpty {
+                var memorySection = "\n## What you remember about this user:\n"
+                for memory in memories {
+                    memorySection += "- \(memory.content)\n"
+                }
+                memorySection += "\n"
+                // Insert after the base prompt intro
+                prompt = prompt.replacingOccurrences(
+                    of: "IMPORTANT - Citations:",
+                    with: memorySection + "IMPORTANT - Citations:"
+                )
+            }
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "ChatViewModel.buildSystemPromptWithMemories: memory retrieval failed - \(error)")
+            #endif
+        }
+
+        return prompt
     }
 
     func newSession() {
@@ -527,6 +566,68 @@ class ChatViewModel: ObservableObject {
             print("⚠️ Failed to load sessions: \(error.localizedDescription)")
             // Fall back to empty list - graceful degradation
             sessions = []
+        }
+    }
+
+    // MARK: - Conversation Memory
+
+    /// Save conversation messages to database
+    private func saveConversationMessages(userMessage: String, assistantResponse: String) {
+        Task {
+            do {
+                try await databaseService.saveConversationMessage(
+                    sessionId: currentSession.id,
+                    role: "user",
+                    content: userMessage
+                )
+                try await databaseService.saveConversationMessage(
+                    sessionId: currentSession.id,
+                    role: "assistant",
+                    content: assistantResponse
+                )
+            } catch {
+                #if DEBUG
+                DebugLogger.shared.log(.error, "ChatViewModel.saveConversation: failed - \(error)")
+                #endif
+            }
+        }
+    }
+
+    /// Extract memories from the exchange (runs in background)
+    private func extractMemoriesFromExchange(userMessage: String, assistantResponse: String) {
+        Task {
+            do {
+                // Get recent messages for context
+                let recentMessages = try await databaseService.getRecentMessages(
+                    sessionId: currentSession.id,
+                    limit: 10
+                )
+
+                // Extract candidate facts
+                let facts = try await memoryService.extractMemories(
+                    userMessage: userMessage,
+                    assistantResponse: assistantResponse,
+                    recentMessages: recentMessages
+                )
+
+                // Consolidate each fact
+                for fact in facts {
+                    let allMemories = try await databaseService.getAllMemories(limit: 20)
+                    try await memoryService.consolidateMemory(
+                        candidateFact: fact,
+                        similarMemories: allMemories,
+                        sessionId: currentSession.id
+                    )
+                }
+
+                #if DEBUG
+                DebugLogger.shared.log(.state, "ChatViewModel.extractMemories: processed \(facts.count) facts")
+                #endif
+            } catch {
+                #if DEBUG
+                DebugLogger.shared.log(.error, "ChatViewModel.extractMemories: failed - \(error)")
+                #endif
+            }
         }
     }
 }
