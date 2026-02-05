@@ -350,6 +350,16 @@ struct NoteDetailView: View {
 
                             Text(note.energyEmoji)
                             Text(note.moodEmoji)
+
+                            // Close button
+                            Button {
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
                         .font(.title3)
                     }

@@ -205,6 +205,40 @@ struct MessageBubble: View {
                 .cornerRadius(12)
                 .textSelection(.enabled)
 
+                // Clickable context notes
+                if let contextNotes = message.contextNotes, !contextNotes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Referenced Notes")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 4)
+
+                        ForEach(contextNotes) { note in
+                            Button {
+                                selectedNote = note
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "doc.text")
+                                        .font(.caption)
+                                    Text(note.title)
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2)
+                                }
+                                .foregroundColor(.accentColor)
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 8)
+                                .background(Color.accentColor.opacity(0.1))
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+
                 // Metadata
                 HStack(spacing: 8) {
                     if message.role == .assistant {

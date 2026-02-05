@@ -6,8 +6,9 @@ import AppKit
 class ObsidianService {
     static let shared = ObsidianService()
 
-    private let vaultPath = "/Users/chaseeasterling/selene-n8n/vault/Selene"
-    private let vaultName = "Selene"
+    private let vaultPath = "/Users/chaseeasterling/selene-n8n/vault"  // Obsidian vault root
+    private let seleneFolder = "Selene"  // Subfolder for Selene notes
+    private let vaultName = "vault"  // Obsidian vault name
 
     private init() {}
 
@@ -17,7 +18,10 @@ class ObsidianService {
         // Format note date as YYYY-MM-DD
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC") // Match database UTC storage
         let datePrefix = dateFormatter.string(from: note.createdAt)
+
+        print("ObsidianService: Looking for note '\(note.title)' with date prefix '\(datePrefix)'")
 
         // Collect matching file URLs - must be done synchronously
         // FileManager.DirectoryEnumerator is not Sendable and can't cross async boundaries
@@ -137,7 +141,20 @@ class ObsidianService {
                     .trimmingCharacters(in: .whitespaces)
                     .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
 
-                let matches = titleValue == expectedTitle
+                // Normalize both titles for comparison (case-insensitive, ignore quote style differences)
+                // Use Unicode escapes: \u{2018}=' \u{2019}=' \u{201C}=" \u{201D}="
+                let normalizedExpected = expectedTitle.lowercased()
+                    .replacingOccurrences(of: "\u{2018}", with: "'")
+                    .replacingOccurrences(of: "\u{2019}", with: "'")
+                    .replacingOccurrences(of: "\u{201C}", with: "\"")
+                    .replacingOccurrences(of: "\u{201D}", with: "\"")
+                let normalizedActual = titleValue.lowercased()
+                    .replacingOccurrences(of: "\u{2018}", with: "'")
+                    .replacingOccurrences(of: "\u{2019}", with: "'")
+                    .replacingOccurrences(of: "\u{201C}", with: "\"")
+                    .replacingOccurrences(of: "\u{201D}", with: "\"")
+
+                let matches = normalizedExpected == normalizedActual
 
                 if matches {
                     print("ObsidianService: Title verified: \(expectedTitle)")
