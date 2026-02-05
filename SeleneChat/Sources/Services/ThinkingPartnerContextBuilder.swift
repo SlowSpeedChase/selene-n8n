@@ -83,6 +83,51 @@ class ThinkingPartnerContextBuilder {
         return context
     }
 
+    // MARK: - Synthesis Context
+
+    /// Build context for cross-thread synthesis ("what should I focus on?")
+    /// Includes: all active threads with summaries and recent note titles
+    func buildSynthesisContext(threads: [Thread], notesPerThread: [Int64: [Note]]) -> String {
+        let tokenBudget = ThinkingPartnerQueryType.synthesis.tokenBudget
+        let truncationMessage = "[Additional threads omitted for token limit]\n"
+        let truncationTokens = estimateTokens(truncationMessage)
+
+        var context = "## Threads for Prioritization\n\n"
+        var currentTokens = estimateTokens(context)
+
+        // Sort by momentum (highest first)
+        let sortedThreads = threads.sorted { ($0.momentumScore ?? 0) > ($1.momentumScore ?? 0) }
+
+        for thread in sortedThreads {
+            var threadSection = formatThread(thread)
+
+            // Add note titles for this thread
+            if let notes = notesPerThread[thread.id], !notes.isEmpty {
+                threadSection += "  Notes:\n"
+                for note in notes.prefix(3) {
+                    threadSection += "    - \(note.title)\n"
+                }
+                if notes.count > 3 {
+                    threadSection += "    - ...and \(notes.count - 3) more\n"
+                }
+            }
+
+            threadSection += "\n"
+            let sectionTokens = estimateTokens(threadSection)
+
+            // Reserve space for truncation message if we might need it
+            if currentTokens + sectionTokens + truncationTokens > tokenBudget {
+                context += truncationMessage
+                break
+            }
+
+            context += threadSection
+            currentTokens += sectionTokens
+        }
+
+        return context
+    }
+
     // MARK: - Helpers
 
     private func formatDate(_ date: Date) -> String {

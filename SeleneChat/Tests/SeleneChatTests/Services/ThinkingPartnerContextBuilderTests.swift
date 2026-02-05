@@ -198,4 +198,217 @@ final class ThinkingPartnerContextBuilderTests: XCTestCase {
         XCTAssertFalse(context.contains("Note 5"))
         XCTAssertFalse(context.contains("Note 9"))
     }
+
+    // MARK: - Synthesis Context Tests
+
+    func testBuildSynthesisContext() {
+        let threads = [
+            Thread(
+                id: 1,
+                name: "Event-Driven Architecture",
+                why: "Testing strategies",
+                summary: "Exploring event testing approaches",
+                status: "active",
+                noteCount: 5,
+                momentumScore: 0.8,
+                lastActivityAt: Date(),
+                createdAt: Date()
+            ),
+            Thread(
+                id: 2,
+                name: "Project Journey",
+                why: "Document decisions",
+                summary: "Early exploration of documentation",
+                status: "active",
+                noteCount: 3,
+                momentumScore: 0.4,
+                lastActivityAt: Date().addingTimeInterval(-86400 * 3),
+                createdAt: Date()
+            )
+        ]
+
+        let notesPerThread: [Int64: [Note]] = [
+            1: [
+                Note(
+                    id: 1,
+                    title: "Testing approach",
+                    content: "Unit vs integration",
+                    contentHash: "hash1",
+                    sourceType: "drafts",
+                    wordCount: 3,
+                    characterCount: 18,
+                    tags: nil,
+                    createdAt: Date(),
+                    importedAt: Date(),
+                    processedAt: nil,
+                    exportedAt: nil,
+                    status: "processed",
+                    exportedToObsidian: false,
+                    sourceUUID: nil,
+                    testRun: nil
+                ),
+                Note(
+                    id: 2,
+                    title: "Event schemas",
+                    content: "Schema validation",
+                    contentHash: "hash2",
+                    sourceType: "drafts",
+                    wordCount: 2,
+                    characterCount: 17,
+                    tags: nil,
+                    createdAt: Date(),
+                    importedAt: Date(),
+                    processedAt: nil,
+                    exportedAt: nil,
+                    status: "processed",
+                    exportedToObsidian: false,
+                    sourceUUID: nil,
+                    testRun: nil
+                )
+            ],
+            2: [
+                Note(
+                    id: 3,
+                    title: "Why document",
+                    content: "Future reference",
+                    contentHash: "hash3",
+                    sourceType: "drafts",
+                    wordCount: 2,
+                    characterCount: 16,
+                    tags: nil,
+                    createdAt: Date(),
+                    importedAt: Date(),
+                    processedAt: nil,
+                    exportedAt: nil,
+                    status: "processed",
+                    exportedToObsidian: false,
+                    sourceUUID: nil,
+                    testRun: nil
+                )
+            ]
+        ]
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildSynthesisContext(threads: threads, notesPerThread: notesPerThread)
+
+        // Should include all threads
+        XCTAssertTrue(context.contains("Event-Driven Architecture"))
+        XCTAssertTrue(context.contains("Project Journey"))
+
+        // Should include note titles
+        XCTAssertTrue(context.contains("Testing approach"))
+        XCTAssertTrue(context.contains("Why document"))
+
+        // Should have cross-thread section header
+        XCTAssertTrue(context.contains("Threads for Prioritization"))
+    }
+
+    func testSynthesisContextLimitsNotesPerThread() {
+        let thread = Thread(
+            id: 1,
+            name: "Test Thread",
+            why: nil,
+            summary: nil,
+            status: "active",
+            noteCount: 10,
+            momentumScore: 0.5,
+            lastActivityAt: Date(),
+            createdAt: Date()
+        )
+
+        // Create 10 notes
+        var notes: [Note] = []
+        for i in 0..<10 {
+            notes.append(Note(
+                id: i,
+                title: "Note \(i)",
+                content: "Content",
+                contentHash: "hash\(i)",
+                sourceType: "drafts",
+                wordCount: 1,
+                characterCount: 7,
+                tags: nil,
+                createdAt: Date(),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            ))
+        }
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildSynthesisContext(threads: [thread], notesPerThread: [1: notes])
+
+        // Should only show 3 notes + "...and N more"
+        XCTAssertTrue(context.contains("Note 0"))
+        XCTAssertTrue(context.contains("Note 1"))
+        XCTAssertTrue(context.contains("Note 2"))
+        XCTAssertTrue(context.contains("...and 7 more"))
+        XCTAssertFalse(context.contains("Note 9"))
+    }
+
+    func testSynthesisContextSortsThreadsByMomentum() {
+        let threads = [
+            Thread(
+                id: 1,
+                name: "Low Momentum Thread",
+                why: nil,
+                summary: nil,
+                status: "active",
+                noteCount: 2,
+                momentumScore: 0.2,
+                lastActivityAt: Date(),
+                createdAt: Date()
+            ),
+            Thread(
+                id: 2,
+                name: "High Momentum Thread",
+                why: nil,
+                summary: nil,
+                status: "active",
+                noteCount: 10,
+                momentumScore: 0.9,
+                lastActivityAt: Date(),
+                createdAt: Date()
+            )
+        ]
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildSynthesisContext(threads: threads, notesPerThread: [:])
+
+        // High momentum should appear before low momentum
+        let highIndex = context.range(of: "High Momentum Thread")!.lowerBound
+        let lowIndex = context.range(of: "Low Momentum Thread")!.lowerBound
+        XCTAssertLessThan(highIndex, lowIndex)
+    }
+
+    func testSynthesisContextRespectsTokenBudget() {
+        // Create many threads to exceed budget
+        var threads: [SeleneChat.Thread] = []
+        for i in 0..<50 {
+            threads.append(SeleneChat.Thread(
+                id: Int64(i),
+                name: "Thread \(i) with a longer name to use more tokens",
+                why: "Reason \(i) that is quite detailed and verbose",
+                summary: "Summary \(i) with substantial content to fill up the token budget quickly",
+                status: "active",
+                noteCount: i + 1,
+                momentumScore: Double(i) / 50.0,
+                lastActivityAt: Date(),
+                createdAt: Date()
+            ))
+        }
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildSynthesisContext(threads: threads, notesPerThread: [:])
+
+        let tokens = builder.estimateTokens(context)
+        XCTAssertLessThanOrEqual(tokens, ThinkingPartnerQueryType.synthesis.tokenBudget)
+
+        // Should include truncation message
+        XCTAssertTrue(context.contains("[Additional threads omitted"))
+    }
 }
