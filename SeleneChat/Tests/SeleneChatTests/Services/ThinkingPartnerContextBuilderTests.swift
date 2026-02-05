@@ -411,4 +411,220 @@ final class ThinkingPartnerContextBuilderTests: XCTestCase {
         // Should include truncation message
         XCTAssertTrue(context.contains("[Additional threads omitted"))
     }
+
+    // MARK: - Deep-Dive Context Tests
+
+    func testBuildDeepDiveContext() {
+        let thread = Thread(
+            id: 1,
+            name: "Event-Driven Architecture",
+            why: "Exploring testing strategies for event-driven systems",
+            summary: "Notes about different testing approaches",
+            status: "active",
+            noteCount: 3,
+            momentumScore: 0.8,
+            lastActivityAt: Date(),
+            createdAt: Date()
+        )
+
+        let notes = [
+            Note(
+                id: 1,
+                title: "Unit tests insufficient",
+                content: "Unit tests don't catch event flow issues.",
+                contentHash: "hash1",
+                sourceType: "drafts",
+                wordCount: 6,
+                characterCount: 43,
+                tags: nil,
+                createdAt: Date().addingTimeInterval(-86400 * 2),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            ),
+            Note(
+                id: 2,
+                title: "Integration tests slow",
+                content: "Integration tests are slow but catch real bugs.",
+                contentHash: "hash2",
+                sourceType: "drafts",
+                wordCount: 8,
+                characterCount: 47,
+                tags: nil,
+                createdAt: Date().addingTimeInterval(-86400),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            ),
+            Note(
+                id: 3,
+                title: "Contract testing idea",
+                content: "Maybe contract tests are the middle ground?",
+                contentHash: "hash3",
+                sourceType: "drafts",
+                wordCount: 7,
+                characterCount: 43,
+                tags: nil,
+                createdAt: Date(),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            )
+        ]
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildDeepDiveContext(thread: thread, notes: notes)
+
+        // Should include thread details
+        XCTAssertTrue(context.contains("Event-Driven Architecture"))
+        XCTAssertTrue(context.contains("Exploring testing strategies"))
+
+        // Should include full note content
+        XCTAssertTrue(context.contains("Unit tests don't catch"))
+        XCTAssertTrue(context.contains("Integration tests are slow"))
+        XCTAssertTrue(context.contains("contract tests are the middle ground"))
+
+        // Should have notes section header
+        XCTAssertTrue(context.contains("Thread Notes"))
+    }
+
+    func testDeepDiveContextRespectsTokenBudget() {
+        let thread = Thread(
+            id: 1,
+            name: "Test Thread",
+            why: nil,
+            summary: nil,
+            status: "active",
+            noteCount: 50,
+            momentumScore: 0.5,
+            lastActivityAt: Date(),
+            createdAt: Date()
+        )
+
+        // Create many notes with substantial content
+        var notes: [Note] = []
+        for i in 0..<50 {
+            notes.append(Note(
+                id: i,
+                title: "Note \(i)",
+                content: String(repeating: "This is substantial content for note \(i). ", count: 20),
+                contentHash: "hash\(i)",
+                sourceType: "drafts",
+                wordCount: 140,
+                characterCount: 880,
+                tags: nil,
+                createdAt: Date().addingTimeInterval(Double(-i * 86400)),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            ))
+        }
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildDeepDiveContext(thread: thread, notes: notes)
+
+        let tokens = builder.estimateTokens(context)
+        XCTAssertLessThanOrEqual(tokens, ThinkingPartnerQueryType.deepDive.tokenBudget)
+    }
+
+    func testDeepDiveContextChronologicalOrder() {
+        let thread = Thread(
+            id: 1,
+            name: "Test Thread",
+            why: nil,
+            summary: nil,
+            status: "active",
+            noteCount: 3,
+            momentumScore: 0.5,
+            lastActivityAt: Date(),
+            createdAt: Date()
+        )
+
+        let notes = [
+            Note(
+                id: 3,
+                title: "Third",
+                content: "Content 3",
+                contentHash: "hash3",
+                sourceType: "drafts",
+                wordCount: 2,
+                characterCount: 9,
+                tags: nil,
+                createdAt: Date(),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            ),
+            Note(
+                id: 1,
+                title: "First",
+                content: "Content 1",
+                contentHash: "hash1",
+                sourceType: "drafts",
+                wordCount: 2,
+                characterCount: 9,
+                tags: nil,
+                createdAt: Date().addingTimeInterval(-86400 * 2),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            ),
+            Note(
+                id: 2,
+                title: "Second",
+                content: "Content 2",
+                contentHash: "hash2",
+                sourceType: "drafts",
+                wordCount: 2,
+                characterCount: 9,
+                tags: nil,
+                createdAt: Date().addingTimeInterval(-86400),
+                importedAt: Date(),
+                processedAt: nil,
+                exportedAt: nil,
+                status: "processed",
+                exportedToObsidian: false,
+                sourceUUID: nil,
+                testRun: nil
+            )
+        ]
+
+        let builder = ThinkingPartnerContextBuilder()
+        let context = builder.buildDeepDiveContext(thread: thread, notes: notes)
+
+        // First should appear before Second, Second before Third
+        let firstIndex = context.range(of: "First")?.lowerBound
+        let secondIndex = context.range(of: "Second")?.lowerBound
+        let thirdIndex = context.range(of: "Third")?.lowerBound
+
+        XCTAssertNotNil(firstIndex)
+        XCTAssertNotNil(secondIndex)
+        XCTAssertNotNil(thirdIndex)
+        XCTAssertTrue(firstIndex! < secondIndex!)
+        XCTAssertTrue(secondIndex! < thirdIndex!)
+    }
 }

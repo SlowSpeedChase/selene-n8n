@@ -128,6 +128,55 @@ class ThinkingPartnerContextBuilder {
         return context
     }
 
+    // MARK: - Deep-Dive Context
+
+    /// Build context for thread deep-dive exploration
+    /// Includes: full thread details + all notes with content (chronological)
+    func buildDeepDiveContext(thread: Thread, notes: [Note]) -> String {
+        let tokenBudget = ThinkingPartnerQueryType.deepDive.tokenBudget
+        let truncationMessage = "[Older notes omitted for token limit]\n"
+        let truncationTokens = estimateTokens(truncationMessage)
+
+        var context = "## Thread: \(thread.name)\n\n"
+
+        // Thread metadata
+        context += "Status: \(thread.status) \(thread.statusEmoji)\n"
+        context += "Notes: \(thread.noteCount) | Momentum: \(thread.momentumDisplay)\n"
+
+        if let why = thread.why, !why.isEmpty {
+            context += "Why this emerged: \(why)\n"
+        }
+
+        if let summary = thread.summary, !summary.isEmpty {
+            context += "Summary: \(summary)\n"
+        }
+
+        context += "\n## Thread Notes (chronological)\n\n"
+
+        var currentTokens = estimateTokens(context)
+
+        // Sort notes chronologically (oldest first for narrative flow)
+        let sortedNotes = notes.sorted { $0.createdAt < $1.createdAt }
+
+        for note in sortedNotes {
+            var noteSection = "### \(note.title) (\(formatDate(note.createdAt)))\n"
+            noteSection += "\(note.content)\n\n"
+
+            let noteTokens = estimateTokens(noteSection)
+
+            // Reserve space for truncation message if we might need it
+            if currentTokens + noteTokens + truncationTokens > tokenBudget {
+                context += truncationMessage
+                break
+            }
+
+            context += noteSection
+            currentTokens += noteTokens
+        }
+
+        return context
+    }
+
     // MARK: - Helpers
 
     private func formatDate(_ date: Date) -> String {
