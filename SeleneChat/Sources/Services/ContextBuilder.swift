@@ -20,6 +20,8 @@ class ContextBuilder {
             return buildSummaryContext(notes)  // Thread queries use summary context
         case .semantic:
             return buildFullContext(notes)  // Semantic queries need full content for conceptual understanding
+        case .deepDive:
+            return buildFullContext(notes)  // Deep-dive needs full content for analysis
         }
     }
 
