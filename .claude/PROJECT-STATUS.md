@@ -248,6 +248,15 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Recent Achievements
 
 ### 2026-02-05
+- **Thinking Partner Phase 2 Complete** - Context Builder
+  - `ThinkingPartnerQueryType` enum with token budgets (1500/2000/3000)
+  - `ThinkingPartnerContextBuilder` service
+  - `buildBriefingContext()` - threads by momentum + recent notes
+  - `buildSynthesisContext()` - cross-thread with note titles
+  - `buildDeepDiveContext()` - full thread + chronological notes
+  - Token budget enforcement for all context types
+  - 26 tests (14 unit + 12 integration)
+
 - **Thinking Partner Phase 1 Complete** - Conversation Memory
   - `SessionContext` model for formatting conversation history
   - Token-aware truncation preserves recent messages

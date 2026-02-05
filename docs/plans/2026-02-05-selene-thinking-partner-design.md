@@ -271,21 +271,20 @@ what they say. Build toward action incrementally.
 
 ---
 
-### Phase 2: Context Builder
-
-Smart assembly of relevant data for each query type.
+### Phase 2: Context Builder ✅ COMPLETE
 
 **Components:**
-- `ContextBuilder` service - pulls threads, notes, associations
-- Query-type detection - briefing vs. synthesis vs. deep-dive
-- Context formatting - structured prompts with right data
-- Token budget management - prioritize recent/relevant
+- `ThinkingPartnerQueryType` enum - briefing, synthesis, deepDive with token budgets
+- `ThinkingPartnerContextBuilder` service - assembles thread-focused context
+- `buildBriefingContext()` - threads + momentum + recent notes
+- `buildSynthesisContext()` - cross-thread comparison with note titles
+- `buildDeepDiveContext()` - full thread with chronological notes
 
 **Acceptance Criteria:**
-- [ ] Briefing context includes threads + momentum + recent notes
-- [ ] Synthesis context includes cross-thread data
-- [ ] Deep-dive context includes full thread history
-- [ ] Never exceeds context window
+- [x] Briefing context includes threads + momentum + recent notes
+- [x] Synthesis context includes cross-thread data
+- [x] Deep-dive context includes full thread history
+- [x] Never exceeds context window (token budget enforcement)
 
 ---
 
