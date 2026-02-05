@@ -255,20 +255,19 @@ what they say. Build toward action incrementally.
 
 ## Implementation Phases
 
-### Phase 1: Conversation Memory (Foundation)
-
-Build the memory system first - everything else depends on it.
+### Phase 1: Conversation Memory (Foundation) ✅ COMPLETE
 
 **Components:**
-- `ConversationMemory` class - stores turns, provides context
-- `ConversationTurn` model - role, content, timestamp
-- Context window management - summarize older turns
-- Integration with existing `ChatViewModel`
+- `SessionContext` model - stores turns, provides formatted history
+- Token-aware truncation - keeps recent turns verbatim
+- Summary generation for older turns (simple heuristic)
+- Integration with `ChatViewModel`
+- Toggle for enabling/disabling history
 
 **Acceptance Criteria:**
-- [ ] Can have multi-turn conversation where Selene remembers prior messages
-- [ ] Context stays within token limits (compress after ~10 turns)
-- [ ] Memory clears on app restart
+- [x] Can have multi-turn conversation where Selene remembers prior messages
+- [x] Context stays within token limits (compress after ~10 turns)
+- [x] Memory clears on new session (not app restart)
 
 ---
 
