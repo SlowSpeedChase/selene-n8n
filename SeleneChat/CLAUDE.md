@@ -23,6 +23,9 @@ Native macOS app for querying and exploring notes stored in Selene SQLite databa
 - Sources/Services/BriefingGenerator.swift - Morning briefing generation
 - Sources/ViewModels/BriefingViewModel.swift - Briefing state management
 - Sources/Views/BriefingView.swift - Morning briefing UI
+- Sources/Services/DeepDivePromptBuilder.swift - Thread deep-dive prompts
+- Sources/Services/ActionExtractor.swift - Parse actions from LLM responses
+- Sources/Services/ActionService.swift - Capture and manage actions
 - Tests/ - Unit and integration tests
 - Sources/Debug/ - Debug logging and snapshot system (DEBUG builds only)
 
@@ -156,6 +159,11 @@ swift test --filter ConversationMemory        # Pattern match
 - BriefingGenerator - Prompt building and response parsing
 - BriefingViewModel - State management and actions
 - BriefingIntegration - End-to-end briefing flow
+- QueryAnalyzerDeepDive - Deep-dive intent detection
+- DeepDivePromptBuilder - Prompt construction
+- ActionExtractor - Action parsing
+- ActionService - Action capture
+- DeepDiveIntegration - End-to-end flow
 
 ## ADHD-Optimized Features
 

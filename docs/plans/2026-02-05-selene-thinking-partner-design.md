@@ -306,7 +306,7 @@ Proactive surfacing on app open.
 
 ---
 
-### Phase 4: Thread Deep-Dive
+### Phase 4: Thread Deep-Dive ✅ COMPLETE
 
 Dialogue flow for exploring a specific thread.
 
@@ -317,10 +317,10 @@ Dialogue flow for exploring a specific thread.
 - Conversation flow - Selene asks questions, builds to action
 
 **Acceptance Criteria:**
-- [ ] Can have back-and-forth about a thread
-- [ ] Selene identifies tensions from notes
-- [ ] Selene proposes concrete actions
-- [ ] Actions can be captured (even if just displayed)
+- [x] Can have back-and-forth about a thread
+- [x] Selene identifies tensions from notes
+- [x] Selene proposes concrete actions
+- [x] Actions can be captured (even if just displayed)
 
 ---
 
