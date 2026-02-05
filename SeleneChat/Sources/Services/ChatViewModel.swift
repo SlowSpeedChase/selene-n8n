@@ -18,6 +18,7 @@ class ChatViewModel: ObservableObject {
     private let contextBuilder = ContextBuilder()
     private let memoryService = MemoryService.shared
     private let deepDivePromptBuilder = DeepDivePromptBuilder()
+    private let synthesisPromptBuilder = SynthesisPromptBuilder()
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
 
@@ -52,6 +53,22 @@ class ChatViewModel: ObservableObject {
                     content: response,
                     llmTier: .onDevice,
                     queryType: "thread"
+                )
+                currentSession.addMessage(assistantMessage)
+                await saveSession()
+                return
+            }
+
+            // Check for synthesis queries (cross-thread prioritization)
+            if queryAnalyzer.detectSynthesisIntent(content) {
+                let (response, citedNotes, contextNotes, queryType) = try await handleSynthesisQuery(query: content)
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .local,
+                    citedNotes: citedNotes,
+                    contextNotes: contextNotes,
+                    queryType: queryType
                 )
                 currentSession.addMessage(assistantMessage)
                 await saveSession()
@@ -497,6 +514,55 @@ class ChatViewModel: ObservableObject {
         let cleanResponse = actionExtractor.removeActionMarkers(from: response)
 
         return (cleanResponse, notes, notes, "deep-dive")
+    }
+
+    // MARK: - Synthesis Query Handling
+
+    /// Handle synthesis queries (cross-thread prioritization)
+    private func handleSynthesisQuery(query: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
+        // 1. Get all active threads
+        let threads = try await databaseService.getActiveThreads(limit: 10)
+
+        guard !threads.isEmpty else {
+            let noThreads = "You don't have any active threads yet. Keep capturing notes and threads will emerge as related ideas cluster together."
+            return (noThreads, [], [], "synthesis-empty")
+        }
+
+        // 2. Get recent notes for each thread (3 notes each)
+        var notesPerThread: [Int64: [Note]] = [:]
+        for thread in threads {
+            if let (_, notes) = try await databaseService.getThreadByName(thread.name) {
+                notesPerThread[thread.id] = Array(notes.prefix(3))
+            }
+        }
+
+        // 3. Build prompt (with or without history)
+        let prompt: String
+        if useConversationHistory {
+            let priorMessages = Array(currentSession.messages.dropLast())
+            let sessionContext = SessionContext(messages: priorMessages)
+
+            if priorMessages.isEmpty {
+                prompt = synthesisPromptBuilder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
+            } else {
+                prompt = synthesisPromptBuilder.buildSynthesisPromptWithHistory(
+                    threads: threads,
+                    notesPerThread: notesPerThread,
+                    conversationHistory: sessionContext.historyWithSummary(),
+                    currentQuery: query
+                )
+            }
+        } else {
+            prompt = synthesisPromptBuilder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
+        }
+
+        // 4. Generate response
+        let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+
+        // 5. Collect all notes for citation
+        let allNotes = notesPerThread.values.flatMap { $0 }
+
+        return (response, allNotes, allNotes, "synthesis")
     }
 
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
