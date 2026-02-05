@@ -104,11 +104,43 @@ let results = try db.prepare(
 
 ## Testing
 
+### Standard Practice: CLI Tests Over Manual Testing
+
+**Always prefer automated CLI tests over manual app testing.** This enables:
+- Verification without launching the app
+- Tests run against test database (no production data risk)
+- Reproducible, documented test cases
+- CI/CD compatibility
+
+When implementing a feature, write integration tests that simulate the app flow:
+```swift
+// Example: Test conversation memory without needing Ollama
+func testPromptIncludesConversationHistory() {
+    var session = ChatSession()
+    session.addMessage(Message(role: .user, content: "Question 1", llmTier: .local))
+    session.addMessage(Message(role: .assistant, content: "Answer 1", llmTier: .local))
+    session.addMessage(Message(role: .user, content: "Follow-up", llmTier: .local))
+
+    // Simulate ChatViewModel flow
+    let priorMessages = Array(session.messages.dropLast())
+    let context = SessionContext(messages: priorMessages)
+
+    XCTAssertTrue(context.formattedHistory.contains("Question 1"))
+}
+```
+
 ### Run Tests
 ```bash
 cd SeleneChat
-swift test
+swift test                                    # All tests
+swift test --filter SessionContextTests       # Specific test class
+swift test --filter ConversationMemory        # Pattern match
 ```
+
+### Test Organization
+- `Tests/SeleneChatTests/Models/` - Unit tests for data models
+- `Tests/SeleneChatTests/Services/` - Unit tests for services
+- `Tests/SeleneChatTests/Integration/` - Integration tests (cross-component)
 
 ### Test Coverage Areas
 - DatabaseService - CRUD operations
@@ -116,6 +148,7 @@ swift test
 - OllamaService - LLM integration
 - Citation parsing - Extract [1], [2] markers
 - View models - State management
+- SessionContext - Conversation memory (Integration/)
 
 ## ADHD-Optimized Features
 
