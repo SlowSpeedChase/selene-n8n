@@ -118,6 +118,14 @@ class DatabaseService: ObservableObject {
     private let threadNotesThreadId = Expression<Int64>("thread_id")
     private let threadNotesRawNoteId = Expression<Int64>("raw_note_id")
 
+    // conversations table
+    private let conversationsTable = Table("conversations")
+    private let convId = Expression<Int64>("id")
+    private let convSessionId = Expression<String>("session_id")
+    private let convRole = Expression<String>("role")
+    private let convContent = Expression<String>("content")
+    private let convCreatedAt = Expression<String>("created_at")
+
     // MARK: - Date Formatter (with fractional seconds support)
 
     /// Shared ISO8601 formatter that handles fractional seconds (e.g., "2026-02-01T21:21:52.269Z")
@@ -1400,6 +1408,75 @@ class DatabaseService: ObservableObject {
                 .count
         )
         return count > 0
+    }
+
+    // MARK: - Conversation Storage
+
+    /// Save a conversation message
+    func saveConversationMessage(sessionId: UUID, role: String, content: String) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let now = iso8601Formatter.string(from: Date())
+
+        try db.run(conversationsTable.insert(
+            convSessionId <- sessionId.uuidString,
+            convRole <- role,
+            convContent <- content,
+            convCreatedAt <- now
+        ))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.conversationSaved: \(role) in \(sessionId)")
+        #endif
+    }
+
+    /// Get recent messages for a session
+    func getRecentMessages(sessionId: UUID, limit: Int = 10) async throws -> [(role: String, content: String, createdAt: Date)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = conversationsTable
+            .filter(convSessionId == sessionId.uuidString)
+            .order(convCreatedAt.desc)
+            .limit(limit)
+
+        var messages: [(role: String, content: String, createdAt: Date)] = []
+
+        for row in try db.prepare(query) {
+            let role = row[convRole]
+            let content = row[convContent]
+            let createdAt = parseDateString(row[convCreatedAt]) ?? Date()
+            messages.append((role: role, content: content, createdAt: createdAt))
+        }
+
+        // Return in chronological order
+        return messages.reversed()
+    }
+
+    /// Get all recent messages across sessions (for context window)
+    func getAllRecentMessages(limit: Int = 10) async throws -> [(sessionId: String, role: String, content: String, createdAt: Date)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = conversationsTable
+            .order(convCreatedAt.desc)
+            .limit(limit)
+
+        var messages: [(sessionId: String, role: String, content: String, createdAt: Date)] = []
+
+        for row in try db.prepare(query) {
+            let sessionId = row[convSessionId]
+            let role = row[convRole]
+            let content = row[convContent]
+            let createdAt = parseDateString(row[convCreatedAt]) ?? Date()
+            messages.append((sessionId: sessionId, role: role, content: content, createdAt: createdAt))
+        }
+
+        return messages.reversed()
     }
 
     // MARK: - Error Types
