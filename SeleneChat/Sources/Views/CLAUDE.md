@@ -18,6 +18,7 @@ SwiftUI views for SeleneChat macOS app. ADHD-optimized UI for conversational not
 - CitationView.swift - Inline citation displays
 - NoteDetailView.swift - Full note viewer
 - SettingsView.swift - App configuration
+- BriefingView.swift - Morning briefing display with action buttons
 - Components/ - Reusable UI components
 
 ## Architecture
@@ -114,6 +115,20 @@ struct ChatView: View {
     }
 }
 ```
+
+## BriefingView
+
+### Responsibilities
+- Display LLM-generated morning briefing on app open
+- Show loading, content, and error states
+- Provide "dig in", "show something else", and "skip" actions
+- Transition to ChatView with context preserved
+
+### States
+- notLoaded: Triggers loadBriefing() on appear
+- loading: Shows ProgressView
+- loaded: Shows briefing card with action buttons
+- failed: Shows error with retry option
 
 ## CitationView
 

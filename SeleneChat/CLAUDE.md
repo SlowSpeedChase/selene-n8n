@@ -20,6 +20,9 @@ Native macOS app for querying and exploring notes stored in Selene SQLite databa
 - Sources/Models/ - Data models (Note, ChatMessage, Citation)
 - Sources/Services/ - Business logic (DatabaseService, SearchService, OllamaService)
 - Sources/Views/ - UI components (ChatView, CitationView, etc.)
+- Sources/Services/BriefingGenerator.swift - Morning briefing generation
+- Sources/ViewModels/BriefingViewModel.swift - Briefing state management
+- Sources/Views/BriefingView.swift - Morning briefing UI
 - Tests/ - Unit and integration tests
 - Sources/Debug/ - Debug logging and snapshot system (DEBUG builds only)
 
@@ -149,6 +152,10 @@ swift test --filter ConversationMemory        # Pattern match
 - Citation parsing - Extract [1], [2] markers
 - View models - State management
 - SessionContext - Conversation memory (Integration/)
+- BriefingState - Briefing status state machine
+- BriefingGenerator - Prompt building and response parsing
+- BriefingViewModel - State management and actions
+- BriefingIntegration - End-to-end briefing flow
 
 ## ADHD-Optimized Features
 

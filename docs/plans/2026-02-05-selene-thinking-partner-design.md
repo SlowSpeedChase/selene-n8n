@@ -288,7 +288,7 @@ what they say. Build toward action incrementally.
 
 ---
 
-### Phase 3: Morning Briefing
+### Phase 3: Morning Briefing ✅ COMPLETE
 
 Proactive surfacing on app open.
 
@@ -299,10 +299,10 @@ Proactive surfacing on app open.
 - Transition to chat with context preserved
 
 **Acceptance Criteria:**
-- [ ] Opening app shows briefing (not empty chat)
-- [ ] Briefing loads in <5 seconds
-- [ ] Tapping "dig in" starts conversation with thread context
-- [ ] Can dismiss briefing and go to regular chat
+- [x] Opening app shows briefing (not empty chat)
+- [x] Briefing loads in <5 seconds (depends on Ollama)
+- [x] Tapping "dig in" starts conversation with thread context
+- [x] Can dismiss briefing and go to regular chat
 
 ---
 
