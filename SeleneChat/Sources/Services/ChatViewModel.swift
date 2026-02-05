@@ -17,6 +17,12 @@ class ChatViewModel: ObservableObject {
     private let queryAnalyzer = QueryAnalyzer()
     private let contextBuilder = ContextBuilder()
     private let memoryService = MemoryService.shared
+    private let deepDivePromptBuilder = DeepDivePromptBuilder()
+    private let actionExtractor = ActionExtractor()
+    private let actionService = ActionService()
+
+    /// Currently active deep-dive thread (if in deep-dive mode)
+    @Published var activeDeepDiveThread: Thread?
 
     init() {
         self.currentSession = ChatSession()
@@ -46,6 +52,25 @@ class ChatViewModel: ObservableObject {
                     content: response,
                     llmTier: .onDevice,
                     queryType: "thread"
+                )
+                currentSession.addMessage(assistantMessage)
+                await saveSession()
+                return
+            }
+
+            // Check for deep-dive queries
+            if let deepDiveIntent = queryAnalyzer.detectDeepDiveIntent(content) {
+                let (response, citedNotes, contextNotes, queryType) = try await handleDeepDiveQuery(
+                    threadName: deepDiveIntent.threadName,
+                    query: content
+                )
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .local,
+                    citedNotes: citedNotes,
+                    contextNotes: contextNotes,
+                    queryType: queryType
                 )
                 currentSession.addMessage(assistantMessage)
                 await saveSession()
@@ -424,6 +449,54 @@ class ChatViewModel: ObservableObject {
         }
 
         return response
+    }
+
+    // MARK: - Deep-Dive Query Handling
+
+    /// Handle deep-dive queries into specific threads
+    private func handleDeepDiveQuery(threadName: String, query: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
+        // 1. Find thread by name
+        guard let (thread, notes) = try await databaseService.getThreadByName(threadName) else {
+            let notFound = "I couldn't find a thread matching \"\(threadName)\". Try \"what's emerging\" to see your active threads."
+            return (notFound, [], [], "deep-dive-not-found")
+        }
+
+        // 2. Set active thread
+        activeDeepDiveThread = thread
+
+        // 3. Build prompt (initial or follow-up based on history)
+        let prompt: String
+        if useConversationHistory {
+            let priorMessages = Array(currentSession.messages.dropLast())
+            let sessionContext = SessionContext(messages: priorMessages)
+
+            if priorMessages.isEmpty {
+                prompt = deepDivePromptBuilder.buildInitialPrompt(thread: thread, notes: notes)
+            } else {
+                prompt = deepDivePromptBuilder.buildFollowUpPrompt(
+                    thread: thread,
+                    notes: notes,
+                    conversationHistory: sessionContext.historyWithSummary(),
+                    currentQuery: query
+                )
+            }
+        } else {
+            prompt = deepDivePromptBuilder.buildInitialPrompt(thread: thread, notes: notes)
+        }
+
+        // 4. Generate response
+        let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+
+        // 5. Extract and capture actions
+        let actions = actionExtractor.extractActions(from: response)
+        for action in actions {
+            await actionService.capture(action, threadName: thread.name)
+        }
+
+        // 6. Clean response for display
+        let cleanResponse = actionExtractor.removeActionMarkers(from: response)
+
+        return (cleanResponse, notes, notes, "deep-dive")
     }
 
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
