@@ -297,10 +297,25 @@ class ChatViewModel: ObservableObject {
         // Build system prompt with citation instructions and memories
         let systemPrompt = await buildSystemPromptWithMemories(for: analysis.queryType, query: query)
 
+        // Build conversation history (excluding current message which is in context)
+        let priorMessages = Array(currentSession.messages.dropLast())  // Remove current user message
+        let sessionContext = SessionContext(messages: priorMessages)
+        let historySection: String
+        if priorMessages.isEmpty {
+            historySection = ""
+        } else {
+            historySection = """
+
+## Conversation so far:
+\(sessionContext.historyWithSummary())
+
+"""
+        }
+
         // Build full prompt
         let fullPrompt = """
         \(systemPrompt)
-
+        \(historySection)
         Notes:
         \(noteContext)
 
