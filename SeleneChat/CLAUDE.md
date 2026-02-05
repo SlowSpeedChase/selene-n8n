@@ -26,6 +26,7 @@ Native macOS app for querying and exploring notes stored in Selene SQLite databa
 - Sources/Services/DeepDivePromptBuilder.swift - Thread deep-dive prompts
 - Sources/Services/ActionExtractor.swift - Parse actions from LLM responses
 - Sources/Services/ActionService.swift - Capture and manage actions
+- Sources/Services/SynthesisPromptBuilder.swift - Cross-thread synthesis prompts
 - Tests/ - Unit and integration tests
 - Sources/Debug/ - Debug logging and snapshot system (DEBUG builds only)
 
@@ -164,6 +165,9 @@ swift test --filter ConversationMemory        # Pattern match
 - ActionExtractor - Action parsing
 - ActionService - Action capture
 - DeepDiveIntegration - End-to-end flow
+- QueryAnalyzerSynthesis - Synthesis intent detection
+- SynthesisPromptBuilder - Prompt construction
+- SynthesisIntegration - End-to-end flow
 
 ## ADHD-Optimized Features
 
