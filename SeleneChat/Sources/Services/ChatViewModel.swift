@@ -449,6 +449,15 @@ class ChatViewModel: ObservableObject {
         // Memories will be injected here asynchronously in the caller
 
         basePrompt += """
+        CONVERSATION MEMORY:
+        You have access to the conversation history above. Use it to:
+        - Remember what the user said earlier
+        - Refer back to previous topics naturally
+        - Build on prior discussion
+        - Maintain continuity in your responses
+
+        If the user references something from earlier, acknowledge it. Don't ask them to repeat themselves.
+
         IMPORTANT - Citations:
         - When referencing specific notes, ALWAYS cite them as: [Note: 'Title' - Date]
         - Example: "You mentioned feeling productive in the morning [Note: 'Morning Routine' - Nov 14]"
