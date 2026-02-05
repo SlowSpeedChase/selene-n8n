@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var selectedView: NavigationItem = .today
     @State private var pendingThreadQuery: String?
+    @State private var showBriefing = true  // Show briefing on app open
     @EnvironmentObject var databaseService: DatabaseService
 
     enum NavigationItem: String, CaseIterable {
@@ -30,27 +31,40 @@ struct ContentView: View {
             .navigationTitle("Selene")
             .frame(minWidth: 200)
         } detail: {
-            switch selectedView {
-            case .today:
-                TodayView(
-                    onThreadSelected: { thread in
-                        pendingThreadQuery = "show me \(thread.name) thread"
-                        selectedView = .chat
+            if showBriefing {
+                BriefingView(
+                    onDismiss: {
+                        showBriefing = false
                     },
-                    onNoteThreadTap: { note in
-                        if let threadName = note.threadName {
-                            pendingThreadQuery = "What's happening with \(threadName)?"
-                            selectedView = .chat
-                        }
+                    onDigIn: { query in
+                        showBriefing = false
+                        pendingThreadQuery = query
+                        selectedView = .chat
                     }
                 )
-            case .chat:
-                ChatView(initialQuery: pendingThreadQuery)
-                    .onAppear { pendingThreadQuery = nil }
-            case .search:
-                SearchView()
-            case .planning:
-                PlanningView()
+            } else {
+                switch selectedView {
+                case .today:
+                    TodayView(
+                        onThreadSelected: { thread in
+                            pendingThreadQuery = "show me \(thread.name) thread"
+                            selectedView = .chat
+                        },
+                        onNoteThreadTap: { note in
+                            if let threadName = note.threadName {
+                                pendingThreadQuery = "What's happening with \(threadName)?"
+                                selectedView = .chat
+                            }
+                        }
+                    )
+                case .chat:
+                    ChatView(initialQuery: pendingThreadQuery)
+                        .onAppear { pendingThreadQuery = nil }
+                case .search:
+                    SearchView()
+                case .planning:
+                    PlanningView()
+                }
             }
         }
         .onAppear {
