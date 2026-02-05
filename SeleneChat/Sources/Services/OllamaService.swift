@@ -14,6 +14,15 @@ private struct GenerateResponse: Codable {
     let done: Bool
 }
 
+private struct EmbedRequest: Codable {
+    let model: String
+    let prompt: String
+}
+
+private struct EmbedResponse: Codable {
+    let embedding: [Float]
+}
+
 actor OllamaService {
     static let shared = OllamaService()
 
@@ -143,6 +152,64 @@ actor OllamaService {
             DebugLogger.shared.log(.error, "OllamaService.generate|network error: \(error.localizedDescription)")
             #endif
             print("⚠️ Ollama generate error: \(error.localizedDescription)")
+            throw OllamaError.networkError(error)
+        }
+    }
+
+    /// Generate embedding vector for text
+    /// - Parameters:
+    ///   - text: The text to embed
+    ///   - model: The embedding model to use (default: nomic-embed-text)
+    /// - Returns: Embedding vector as array of floats
+    func embed(text: String, model: String = "nomic-embed-text") async throws -> [Float] {
+        guard let url = URL(string: "\(baseURL)/api/embeddings") else {
+            throw OllamaError.invalidResponse
+        }
+
+        // Build request body
+        let requestBody = EmbedRequest(
+            model: model,
+            prompt: text
+        )
+
+        // Create URLRequest
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        request.timeoutInterval = 30.0  // 30 second timeout
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw OllamaError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                print("⚠️ Ollama returned status \(httpResponse.statusCode)")
+                throw OllamaError.serviceUnavailable
+            }
+
+            // Decode response
+            let embedResponse = try JSONDecoder().decode(EmbedResponse.self, from: data)
+
+            #if DEBUG
+            DebugLogger.shared.log(.state, "OllamaService.embed: success, embedding dimensions=\(embedResponse.embedding.count)")
+            #endif
+
+            return embedResponse.embedding
+
+        } catch let error as OllamaError {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "OllamaService.embed|\(error.localizedDescription)")
+            #endif
+            throw error
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "OllamaService.embed|network error: \(error.localizedDescription)")
+            #endif
+            print("⚠️ Ollama embed error: \(error.localizedDescription)")
             throw OllamaError.networkError(error)
         }
     }

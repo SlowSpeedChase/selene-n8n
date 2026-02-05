@@ -118,6 +118,26 @@ class DatabaseService: ObservableObject {
     private let threadNotesThreadId = Expression<Int64>("thread_id")
     private let threadNotesRawNoteId = Expression<Int64>("raw_note_id")
 
+    // conversations table
+    private let conversationsTable = Table("conversations")
+    private let convId = Expression<Int64>("id")
+    private let convSessionId = Expression<String>("session_id")
+    private let convRole = Expression<String>("role")
+    private let convContent = Expression<String>("content")
+    private let convCreatedAt = Expression<String>("created_at")
+
+    // conversation_memories table
+    private let memoriesTable = Table("conversation_memories")
+    private let memId = Expression<Int64>("id")
+    private let memContent = Expression<String>("content")
+    private let memSourceSessionId = Expression<String?>("source_session_id")
+    private let memEmbedding = Expression<SQLite.Blob?>("embedding")
+    private let memType = Expression<String?>("memory_type")
+    private let memConfidence = Expression<Double>("confidence")
+    private let memLastAccessed = Expression<String?>("last_accessed")
+    private let memCreatedAt = Expression<String>("created_at")
+    private let memUpdatedAt = Expression<String>("updated_at")
+
     // MARK: - Date Formatter (with fractional seconds support)
 
     /// Shared ISO8601 formatter that handles fractional seconds (e.g., "2026-02-01T21:21:52.269Z")
@@ -158,6 +178,7 @@ class DatabaseService: ObservableObject {
             try? Migration005_ProjectThreads.run(db: db!)
             try? Migration006_OptionalRawNoteId.run(db: db!)
             try? Migration007_ThingsHeading.run(db: db!)
+            try? Migration008_ConversationMemory.run(db: db!)
 
             // Configure services that need database access
             if let db = db {
@@ -1399,6 +1420,193 @@ class DatabaseService: ObservableObject {
                 .count
         )
         return count > 0
+    }
+
+    // MARK: - Conversation Storage
+
+    /// Save a conversation message
+    func saveConversationMessage(sessionId: UUID, role: String, content: String) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let now = iso8601Formatter.string(from: Date())
+
+        try db.run(conversationsTable.insert(
+            convSessionId <- sessionId.uuidString,
+            convRole <- role,
+            convContent <- content,
+            convCreatedAt <- now
+        ))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.conversationSaved: \(role) in \(sessionId)")
+        #endif
+    }
+
+    /// Get recent messages for a session
+    func getRecentMessages(sessionId: UUID, limit: Int = 10) async throws -> [(role: String, content: String, createdAt: Date)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = conversationsTable
+            .filter(convSessionId == sessionId.uuidString)
+            .order(convCreatedAt.desc)
+            .limit(limit)
+
+        var messages: [(role: String, content: String, createdAt: Date)] = []
+
+        for row in try db.prepare(query) {
+            let role = row[convRole]
+            let content = row[convContent]
+            let createdAt = parseDateString(row[convCreatedAt]) ?? Date()
+            messages.append((role: role, content: content, createdAt: createdAt))
+        }
+
+        // Return in chronological order
+        return messages.reversed()
+    }
+
+    /// Get all recent messages across sessions (for context window)
+    func getAllRecentMessages(limit: Int = 10) async throws -> [(sessionId: String, role: String, content: String, createdAt: Date)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = conversationsTable
+            .order(convCreatedAt.desc)
+            .limit(limit)
+
+        var messages: [(sessionId: String, role: String, content: String, createdAt: Date)] = []
+
+        for row in try db.prepare(query) {
+            let sessionId = row[convSessionId]
+            let role = row[convRole]
+            let content = row[convContent]
+            let createdAt = parseDateString(row[convCreatedAt]) ?? Date()
+            messages.append((sessionId: sessionId, role: role, content: content, createdAt: createdAt))
+        }
+
+        return messages.reversed()
+    }
+
+    // MARK: - Memory Storage
+
+    /// Insert a new memory
+    func insertMemory(content: String, type: ConversationMemory.MemoryType, confidence: Double, sourceSessionId: UUID?, embedding: [Float]? = nil) async throws -> Int64 {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let now = iso8601Formatter.string(from: Date())
+
+        var setter: [Setter] = [
+            memContent <- content,
+            memType <- type.rawValue,
+            memConfidence <- confidence,
+            memCreatedAt <- now,
+            memUpdatedAt <- now,
+            memLastAccessed <- now
+        ]
+
+        if let sessionId = sourceSessionId {
+            setter.append(memSourceSessionId <- sessionId.uuidString)
+        }
+
+        if let emb = embedding {
+            let embeddingData = Data(bytes: emb, count: emb.count * MemoryLayout<Float>.size)
+            setter.append(memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)))
+        }
+
+        let rowId = try db.run(memoriesTable.insert(setter))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.memoryInserted: \(content.prefix(50))...")
+        #endif
+
+        return rowId
+    }
+
+    /// Update an existing memory
+    func updateMemory(id: Int64, content: String, confidence: Double? = nil) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let now = iso8601Formatter.string(from: Date())
+        let memory = memoriesTable.filter(memId == id)
+
+        var setter: [Setter] = [
+            memContent <- content,
+            memUpdatedAt <- now
+        ]
+
+        if let conf = confidence {
+            setter.append(memConfidence <- conf)
+        }
+
+        try db.run(memory.update(setter))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.memoryUpdated: \(id)")
+        #endif
+    }
+
+    /// Delete a memory
+    func deleteMemory(id: Int64) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let memory = memoriesTable.filter(memId == id)
+        try db.run(memory.delete())
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.memoryDeleted: \(id)")
+        #endif
+    }
+
+    /// Update last_accessed for memories (reinforcement)
+    func touchMemories(ids: [Int64]) async throws {
+        guard let db = db, !ids.isEmpty else { return }
+
+        let now = iso8601Formatter.string(from: Date())
+        let memories = memoriesTable.filter(ids.contains(memId))
+        try db.run(memories.update(memLastAccessed <- now))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.memoriesAccessed: \(ids.count) memories")
+        #endif
+    }
+
+    /// Get all memories (for simple retrieval)
+    func getAllMemories(limit: Int = 50) async throws -> [ConversationMemory] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = memoriesTable
+            .order(memConfidence.desc, memLastAccessed.desc)
+            .limit(limit)
+
+        var memories: [ConversationMemory] = []
+
+        for row in try db.prepare(query) {
+            let memory = ConversationMemory(
+                id: row[memId],
+                content: row[memContent],
+                sourceSessionId: row[memSourceSessionId],
+                memoryType: ConversationMemory.MemoryType(rawValue: row[memType] ?? "fact") ?? .fact,
+                confidence: row[memConfidence],
+                lastAccessed: row[memLastAccessed].flatMap { parseDateString($0) },
+                createdAt: parseDateString(row[memCreatedAt]) ?? Date(),
+                updatedAt: parseDateString(row[memUpdatedAt]) ?? Date()
+            )
+            memories.append(memory)
+        }
+
+        return memories
     }
 
     // MARK: - Error Types
