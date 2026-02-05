@@ -14,6 +14,7 @@ class ChatViewModel: ObservableObject {
     private let queryAnalyzer = QueryAnalyzer()
     private let contextBuilder = ContextBuilder()
     private let memoryService = MemoryService.shared
+    private let sessionContextService = SessionContextService()
 
     init() {
         self.currentSession = ChatSession()
@@ -297,15 +298,33 @@ class ChatViewModel: ObservableObject {
         // Build system prompt with citation instructions and memories
         let systemPrompt = await buildSystemPromptWithMemories(for: analysis.queryType, query: query)
 
+        // Build conversation context from prior turns
+        let conversationContext = sessionContextService.buildConversationContext(from: currentSession)
+
         // Build full prompt
-        let fullPrompt = """
-        \(systemPrompt)
+        let fullPrompt: String
+        if conversationContext.isEmpty {
+            fullPrompt = """
+            \(systemPrompt)
 
-        Notes:
-        \(noteContext)
+            Notes:
+            \(noteContext)
 
-        Question: \(context)
-        """
+            Question: \(query)
+            """
+        } else {
+            fullPrompt = """
+            \(systemPrompt)
+
+            Conversation so far:
+            \(conversationContext)
+
+            Notes:
+            \(noteContext)
+
+            Question: \(query)
+            """
+        }
 
         do {
             let response = try await ollamaService.generate(
