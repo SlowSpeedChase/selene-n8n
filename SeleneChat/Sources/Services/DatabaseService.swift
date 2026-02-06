@@ -1563,7 +1563,7 @@ class DatabaseService: ObservableObject {
         }
 
         if let emb = embedding {
-            let embeddingData = Data(bytes: emb, count: emb.count * MemoryLayout<Float>.size)
+            let embeddingData = serializeEmbedding(emb)
             setter.append(memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)))
         }
 

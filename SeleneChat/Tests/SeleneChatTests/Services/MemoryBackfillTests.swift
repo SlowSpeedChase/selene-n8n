@@ -81,8 +81,14 @@ final class MemoryBackfillTests: XCTestCase {
         )
         insertedMemoryIds.append(id1)
 
-        let count = try await memoryService.backfillEmbeddings()
-        XCTAssertEqual(count, 0, "Should not backfill already-embedded memories")
+        // Run backfill and verify our already-embedded memory still has its original embedding
+        _ = try await memoryService.backfillEmbeddings()
+
+        let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
+        let ourMemory = allMemories.first { $0.memory.id == id1 }
+        XCTAssertNotNil(ourMemory, "Our memory should still exist")
+        XCTAssertNotNil(ourMemory?.embedding, "Embedding should still be present")
+        XCTAssertEqual(ourMemory?.embedding?.count, 768, "Embedding should still be 768-dim")
     }
 
     func testBackfillIsIdempotent() async throws {

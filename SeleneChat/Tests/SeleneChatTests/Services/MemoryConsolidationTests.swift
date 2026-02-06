@@ -3,6 +3,21 @@ import XCTest
 
 final class MemoryConsolidationTests: XCTestCase {
 
+    /// Track content patterns inserted so we can clean up after each test
+    private var testContentPatterns: [String] = []
+
+    override func tearDown() async throws {
+        let databaseService = DatabaseService.shared
+        let allMemories = try await databaseService.getAllMemories(limit: 500)
+        for pattern in testContentPatterns {
+            for memory in allMemories where memory.content.contains(pattern) {
+                try? await databaseService.deleteMemory(id: memory.id)
+            }
+        }
+        testContentPatterns = []
+        try await super.tearDown()
+    }
+
     func testConsolidateStoresEmbeddingOnAdd() async throws {
         let ollamaService = OllamaService.shared
         let isAvailable = await ollamaService.isAvailable()
@@ -11,6 +26,8 @@ final class MemoryConsolidationTests: XCTestCase {
         let databaseService = DatabaseService.shared
         let memoryService = MemoryService.shared
         let sessionId = UUID()
+
+        testContentPatterns.append("dark mode interfaces")
 
         let fact = MemoryService.CandidateFact(
             fact: "User prefers dark mode interfaces",
@@ -45,6 +62,9 @@ final class MemoryConsolidationTests: XCTestCase {
         let databaseService = DatabaseService.shared
         let memoryService = MemoryService.shared
         let sessionId = UUID()
+
+        testContentPatterns.append("User likes dark mode")
+        testContentPatterns.append("dark themes in all apps")
 
         let emb1 = try await ollamaService.embed(text: "User likes dark mode")
         _ = try await databaseService.insertMemory(
