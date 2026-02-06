@@ -28,11 +28,6 @@ struct VoiceMicButton: View {
         .buttonStyle(.plain)
         .disabled(isDisabled || isUnavailable)
         .help(helpText)
-        .onAppear {
-            if speechService.state == .listening {
-                pulseScale = 1.3
-            }
-        }
         .onChange(of: speechService.state) { _, newState in
             if newState == .listening {
                 pulseScale = 1.3
