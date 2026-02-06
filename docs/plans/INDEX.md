@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-02-05
+**Last Updated:** 2026-02-06
 
 Design docs are the planning unit for Selene development. Each doc captures an idea, architecture, and implementation plan.
 
@@ -46,7 +46,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| - | - | - | No docs ready |
+| 2026-02-06 | 2026-02-06-memory-embedding-retrieval-design.md | selenechat | Embedding-based memory retrieval and consolidation |
 
 ---
 
