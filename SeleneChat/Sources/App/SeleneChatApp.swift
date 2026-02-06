@@ -60,13 +60,23 @@ struct SeleneChatApp: App {
                 .task {
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
-                    
+
                     #if DEBUG
                     // Register chatViewModel provider on main actor
                     await MainActor.run {
                         DebugSnapshotService.shared.registerProvider(named: "chatViewModel", provider: chatViewModel)
                     }
                     #endif
+                }
+                .onOpenURL { url in
+                    let action = VoiceInputManager.parseURL(url)
+                    if action == .activateVoice {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(200))
+                            await speechService.startListening()
+                        }
+                    }
                 }
         }
         .commands {
