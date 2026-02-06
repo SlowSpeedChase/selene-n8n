@@ -3,6 +3,7 @@ import SwiftUI
 struct ChatView: View {
     @EnvironmentObject var chatViewModel: ChatViewModel
     @EnvironmentObject var databaseService: DatabaseService
+    @EnvironmentObject var speechService: SpeechRecognitionService
     @State private var messageText = ""
     @State private var showingSessionHistory = false
     @State private var isAPIAvailable = false
@@ -138,7 +139,7 @@ struct ChatView: View {
 
     private var chatInput: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            TextField("Ask about your notes...", text: $messageText, axis: .vertical)
+            TextField("Ask about your notes...", text: speechService.state == .listening ? $speechService.liveText : $messageText, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .focused($isInputFocused)
                 .prefersDefaultFocus(in: focusNamespace)
@@ -147,6 +148,27 @@ struct ChatView: View {
                 .onSubmit {
                     sendMessage()
                 }
+                .onChange(of: speechService.state) { _, newState in
+                    // When listening stops, transfer liveText to messageText for editing
+                    if newState == .idle && !speechService.liveText.isEmpty {
+                        messageText = speechService.liveText
+                        speechService.liveText = ""
+                        isInputFocused = true
+                    }
+                }
+                .onKeyPress(.escape) {
+                    if speechService.state == .listening {
+                        speechService.cancel()
+                        messageText = ""
+                        return .handled
+                    }
+                    return .ignored
+                }
+
+            VoiceMicButton(
+                speechService: speechService,
+                isDisabled: chatViewModel.isProcessing
+            )
 
             Button(action: sendMessage) {
                 Image(systemName: "arrow.up.circle.fill")

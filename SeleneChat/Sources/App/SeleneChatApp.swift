@@ -6,6 +6,7 @@ struct SeleneChatApp: App {
     @StateObject private var databaseService = DatabaseService.shared
     @StateObject private var chatViewModel = ChatViewModel()
     @StateObject private var compressionService = CompressionService(databaseService: DatabaseService.shared)
+    @StateObject private var speechService = SpeechRecognitionService()
 
     init() {
         // Activate the app so it appears in the foreground
@@ -54,6 +55,7 @@ struct SeleneChatApp: App {
             ContentView()
                 .environmentObject(databaseService)
                 .environmentObject(chatViewModel)
+                .environmentObject(speechService)
                 .frame(minWidth: 800, minHeight: 600)
                 .task {
                     // Run compression check asynchronously on launch
