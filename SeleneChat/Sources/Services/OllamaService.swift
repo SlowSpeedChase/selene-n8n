@@ -119,7 +119,7 @@ actor OllamaService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
-        request.timeoutInterval = 30.0  // 30 second timeout
+        request.timeoutInterval = 120.0  // 120 second timeout (large prompts with context can take time)
 
         do {
             let (data, response) = try await session.data(for: request)
