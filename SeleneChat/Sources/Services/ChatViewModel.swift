@@ -779,10 +779,8 @@ class ChatViewModel: ObservableObject {
 
                 // Consolidate each fact
                 for fact in facts {
-                    let allMemories = try await databaseService.getAllMemories(limit: 20)
                     try await memoryService.consolidateMemory(
                         candidateFact: fact,
-                        similarMemories: allMemories,
                         sessionId: currentSession.id
                     )
                 }

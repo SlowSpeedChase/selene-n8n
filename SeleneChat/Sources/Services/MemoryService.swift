@@ -107,20 +107,49 @@ actor MemoryService {
 
     // MARK: - Consolidation
 
-    /// Consolidate a candidate fact with existing memories
+    /// Consolidate a candidate fact with existing memories using embedding similarity
     func consolidateMemory(
         candidateFact: CandidateFact,
-        similarMemories: [ConversationMemory],
         sessionId: UUID
     ) async throws {
-        // If no similar memories, just ADD
+        // 1. Generate embedding for the candidate fact
+        var factEmbedding: [Float]? = nil
+        do {
+            factEmbedding = try await ollamaService.embed(text: candidateFact.fact)
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "MemoryService.consolidate: embedding failed - \(error)")
+            #endif
+        }
+
+        // 2. Find similar existing memories using embeddings
+        var similarMemories: [ConversationMemory] = []
+        if let embedding = factEmbedding {
+            do {
+                let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
+                let similar = MemoryService.findSimilarMemories(
+                    queryEmbedding: embedding,
+                    memories: allMemories,
+                    threshold: 0.7,
+                    limit: 10
+                )
+                similarMemories = similar.map { $0.memory }
+            } catch {
+                #if DEBUG
+                DebugLogger.shared.log(.error, "MemoryService.consolidate: similarity search failed - \(error)")
+                #endif
+            }
+        }
+
+        // 3. If no similar memories, just ADD
         if similarMemories.isEmpty {
             let memoryType = ConversationMemory.MemoryType(rawValue: candidateFact.type) ?? .fact
             _ = try await databaseService.insertMemory(
                 content: candidateFact.fact,
                 type: memoryType,
                 confidence: candidateFact.confidence,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                embedding: factEmbedding
             )
             #if DEBUG
             DebugLogger.shared.log(.state, "MemoryService.consolidate: ADD (no similar)")
@@ -128,7 +157,7 @@ actor MemoryService {
             return
         }
 
-        // Ask LLM to decide
+        // 4. Ask LLM to decide
         let similarStr = similarMemories.enumerated().map { (i, m) in
             "\(i + 1). [id=\(m.id)] \(m.content)"
         }.joined(separator: "\n")
@@ -157,13 +186,13 @@ actor MemoryService {
             #if DEBUG
             DebugLogger.shared.log(.error, "MemoryService.consolidate: no valid JSON in response")
             #endif
-            // Default to ADD if parsing fails
             let memoryType = ConversationMemory.MemoryType(rawValue: candidateFact.type) ?? .fact
             _ = try await databaseService.insertMemory(
                 content: candidateFact.fact,
                 type: memoryType,
                 confidence: candidateFact.confidence,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                embedding: factEmbedding
             )
             return
         }
@@ -178,7 +207,8 @@ actor MemoryService {
                     content: candidateFact.fact,
                     type: memoryType,
                     confidence: candidateFact.confidence,
-                    sourceSessionId: sessionId
+                    sourceSessionId: sessionId,
+                    embedding: factEmbedding
                 )
                 #if DEBUG
                 DebugLogger.shared.log(.state, "MemoryService.consolidate: ADD")
@@ -186,7 +216,19 @@ actor MemoryService {
 
             case .UPDATE:
                 if let memoryId = decision.memoryId, let merged = decision.merged {
-                    try await databaseService.updateMemory(id: memoryId, content: merged)
+                    var mergedEmbedding: [Float]? = nil
+                    do {
+                        mergedEmbedding = try await ollamaService.embed(text: merged)
+                    } catch {
+                        #if DEBUG
+                        DebugLogger.shared.log(.error, "MemoryService.consolidate: re-embed failed for UPDATE")
+                        #endif
+                    }
+                    try await databaseService.updateMemory(
+                        id: memoryId,
+                        content: merged,
+                        embedding: mergedEmbedding
+                    )
                     #if DEBUG
                     DebugLogger.shared.log(.state, "MemoryService.consolidate: UPDATE \(memoryId)")
                     #endif
@@ -207,7 +249,6 @@ actor MemoryService {
             }
 
         } catch {
-            // If JSON parsing fails, default to ADD
             #if DEBUG
             DebugLogger.shared.log(.error, "MemoryService.consolidate: JSON parse failed, defaulting to ADD")
             #endif
@@ -216,7 +257,8 @@ actor MemoryService {
                 content: candidateFact.fact,
                 type: memoryType,
                 confidence: candidateFact.confidence,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                embedding: factEmbedding
             )
         }
     }
