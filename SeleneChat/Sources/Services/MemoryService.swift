@@ -221,13 +221,79 @@ actor MemoryService {
         }
     }
 
+    // MARK: - Similarity Search
+
+    /// Result of a similarity search
+    struct SimilarMemory {
+        let memory: ConversationMemory
+        let similarity: Float
+        let weightedScore: Double
+    }
+
+    /// Find memories similar to a query embedding. Pure function for testability.
+    /// Ranks by similarity * confidence. Excludes memories without embeddings.
+    static func findSimilarMemories(
+        queryEmbedding: [Float],
+        memories: [(memory: ConversationMemory, embedding: [Float]?)],
+        threshold: Float,
+        limit: Int
+    ) -> [SimilarMemory] {
+        return memories
+            .compactMap { item -> SimilarMemory? in
+                guard let embedding = item.embedding else { return nil }
+                let similarity = cosineSimilarity(queryEmbedding, embedding)
+                guard similarity >= threshold else { return nil }
+                let weightedScore = Double(similarity) * item.memory.confidence
+                return SimilarMemory(memory: item.memory, similarity: similarity, weightedScore: weightedScore)
+            }
+            .sorted { $0.weightedScore > $1.weightedScore }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     // MARK: - Retrieval
 
-    /// Get relevant memories for a query (simple keyword match for MVP)
+    /// Get relevant memories for a query using embedding similarity.
+    /// Falls back to keyword matching if Ollama is unavailable.
     func getRelevantMemories(for query: String, limit: Int = 5) async throws -> [ConversationMemory] {
-        let allMemories = try await databaseService.getAllMemories(limit: 50)
+        // Try embedding-based retrieval
+        do {
+            let queryEmbedding = try await ollamaService.embed(text: query)
+            let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
 
-        // Simple keyword matching for MVP
+            let results = MemoryService.findSimilarMemories(
+                queryEmbedding: queryEmbedding,
+                memories: allMemories,
+                threshold: 0.5,
+                limit: limit
+            )
+
+            let relevant = results.map { $0.memory }
+
+            // Touch accessed memories for reinforcement
+            if !relevant.isEmpty {
+                try await databaseService.touchMemories(ids: relevant.map { $0.id })
+            }
+
+            #if DEBUG
+            DebugLogger.shared.log(.state, "MemoryService.getRelevant: \(relevant.count) memories via embedding search")
+            #endif
+
+            return relevant
+
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "MemoryService.getRelevant: embedding search failed, falling back to keywords - \(error)")
+            #endif
+
+            // Fallback to keyword matching
+            return try await getRelevantMemoriesByKeyword(for: query, limit: limit)
+        }
+    }
+
+    /// Keyword-based fallback when Ollama is unavailable
+    private func getRelevantMemoriesByKeyword(for query: String, limit: Int) async throws -> [ConversationMemory] {
+        let allMemories = try await databaseService.getAllMemories(limit: 50)
         let queryWords = Set(query.lowercased().split(separator: " ").map(String.init))
 
         let scored = allMemories.map { memory -> (memory: ConversationMemory, score: Double) in
@@ -243,15 +309,10 @@ actor MemoryService {
             .prefix(limit)
             .map { $0.memory }
 
-        // Touch accessed memories
         if !relevant.isEmpty {
             try await databaseService.touchMemories(ids: relevant.map { $0.id })
         }
 
-        #if DEBUG
-        DebugLogger.shared.log(.state, "MemoryService.getRelevant: \(relevant.count) memories for query")
-        #endif
-
-        return relevant
+        return Array(relevant)
     }
 }
