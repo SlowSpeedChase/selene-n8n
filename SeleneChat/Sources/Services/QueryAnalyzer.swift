@@ -82,8 +82,10 @@ class QueryAnalyzer {
 
     private let deepDiveIndicators = [
         "dig into", "let's dig into", "lets dig into",
-        "explore", "help me think through", "think through",
-        "unpack", "dive into", "deep dive"
+        "let's explore", "lets explore", "explore the",
+        "help me think through", "think through the",
+        "let's unpack", "lets unpack", "unpack the",
+        "dive into", "deep dive into", "deep dive on"
     ]
 
     private let synthesisIndicators = [
@@ -295,8 +297,12 @@ class QueryAnalyzer {
                             .trimmingCharacters(in: .whitespaces)
                     }
 
-                    // Only return if we extracted a non-empty thread name
-                    if !threadName.isEmpty {
+                    // Only return if we extracted a short, noun-phrase thread name
+                    // Real thread names are 1-5 words, not questions or clauses
+                    let wordCount = threadName.split(separator: " ").count
+                    let clauseStarters = ["what", "when", "where", "why", "how", "if", "whether", "that", "which"]
+                    let startsWithClause = clauseStarters.contains(where: { threadName.hasPrefix($0 + " ") || threadName == $0 })
+                    if !threadName.isEmpty && wordCount <= 5 && !startsWithClause {
                         return DeepDiveIntent(threadName: threadName)
                     }
                 }

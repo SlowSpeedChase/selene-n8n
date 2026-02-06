@@ -24,10 +24,10 @@ final class QueryAnalyzerDeepDiveTests: XCTestCase {
             ("lets dig into project journey", "project journey"),
             ("dig into event-driven architecture", "event-driven architecture"),
             ("explore the testing thread", "testing"),
-            ("explore testing", "testing"),
+            ("let's explore testing", "testing"),
             ("help me think through documentation", "documentation"),
             ("think through the api design thread", "api design"),
-            ("unpack swift development", "swift development"),
+            ("let's unpack swift development", "swift development"),
             ("dive into project planning", "project planning"),
             ("deep dive into memory management", "memory management"),
             ("deep dive into the architecture thread", "architecture")
@@ -53,7 +53,12 @@ final class QueryAnalyzerDeepDiveTests: XCTestCase {
             "what patterns do I have",
             "show me the testing thread",
             "what did I write about architecture",
-            "tell me about project journey thread"
+            "tell me about project journey thread",
+            // Conversational messages containing broad words should NOT trigger
+            "I want to explore new ideas with you",
+            "can you help me think through what happened today",
+            "let me unpack my feelings about the project",
+            "I need to explore why I feel this way about work"
         ]
 
         for query in nonDeepDiveQueries {
@@ -66,7 +71,7 @@ final class QueryAnalyzerDeepDiveTests: XCTestCase {
         // Test that analyze() returns .deepDive queryType
         let deepDiveQueries = [
             "let's dig into project journey",
-            "explore the testing thread",
+            "let's explore the testing thread",
             "help me think through documentation",
             "dive into architecture",
             "deep dive into memory management"
