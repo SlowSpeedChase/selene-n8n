@@ -31,7 +31,6 @@ Ideas captured but not yet ready for implementation.
 |------|----------|-------|-------|
 | 2026-02-04 | 2026-02-04-conversation-memory-design.md | selenechat | Persistent conversation memory with mem0-inspired patterns |
 | 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
-| 2026-01-26 | today-view-design.md | selenechat | ADHD landing page - needs acceptance criteria |
 | 2026-01-11 | selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop server |
 | 2026-01-05 | weekly-review-react-flow-design.md | ux-core | "Present -> React -> File" paradigm |
 | 2026-01-05 | selenechat-interface-inspiration-design.md | selenechat | Design patterns research - reference doc |
@@ -79,6 +78,7 @@ Branch exists, actively being worked on.
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
 | 2026-02-06 | 2026-02-06-memory-embedding-retrieval-design.md | 2026-02-06 | Embedding-based memory retrieval and consolidation |
+| 2026-01-26 | today-view-design.md | 2026-01-26 | ADHD landing page with new captures and heating threads |
 | 2026-02-05 | 2026-02-05-voice-input-design.md | 2026-02-05 | Voice input Phase 1: Apple Speech, push-to-talk, URL scheme |
 | 2026-02-05 | 2026-02-05-selene-thinking-partner-design.md | 2026-02-05 | Proactive briefing, cross-thread synthesis, deep-dive dialogue |
 | 2026-02-02 | 2026-02-02-imessage-daily-digest-design.md | 2026-02-02 | iMessage daily digest at 6am via AppleScript |
