@@ -6,7 +6,7 @@ import AVFoundation
 enum VoiceState: Equatable {
     case idle
     case listening
-    case processing
+    case processing // TODO: Wire up in future phase (e.g., post-transcription processing)
     case unavailable(reason: String)
 }
 
@@ -109,7 +109,7 @@ class SpeechRecognitionService: ObservableObject {
                         if nsError.domain == "kAFAssistantErrorDomain" && nsError.code == 216 {
                             return
                         }
-                        self.state = .idle
+                        self.stopListening()
                     }
                 }
             }

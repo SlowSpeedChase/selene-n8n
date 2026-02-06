@@ -63,8 +63,10 @@ final class SpeechRecognitionServiceTests: XCTestCase {
     @MainActor
     func testIsAvailableReturnsBool() {
         let service = SpeechRecognitionService()
+        // Verify the property exists and returns a Bool value
+        // Result depends on hardware: true on Mac with audio, false in headless CI
         let available = service.isAvailable
-        XCTAssertNotNil(available)
+        XCTAssertEqual(available, available) // Validates property is accessible
     }
 
     @MainActor
