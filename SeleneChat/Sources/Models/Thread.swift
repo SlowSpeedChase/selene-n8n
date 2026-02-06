@@ -33,3 +33,31 @@ struct Thread: Identifiable, Hashable {
         }
     }
 }
+
+#if DEBUG
+extension Thread {
+    static func mock(
+        id: Int64 = 1,
+        name: String = "Test Thread",
+        why: String? = nil,
+        summary: String? = "Test summary",
+        status: String = "active",
+        noteCount: Int = 5,
+        momentumScore: Double? = 0.5,
+        lastActivityAt: Date? = Date(),
+        createdAt: Date = Date()
+    ) -> Thread {
+        Thread(
+            id: id,
+            name: name,
+            why: why,
+            summary: summary,
+            status: status,
+            noteCount: noteCount,
+            momentumScore: momentumScore,
+            lastActivityAt: lastActivityAt,
+            createdAt: createdAt
+        )
+    }
+}
+#endif

@@ -28,5 +28,20 @@
 	<true/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.selene.chat</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>selene</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SeleneChat uses your microphone for voice input to transcribe speech on-device.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SeleneChat transcribes your speech on-device to text. No audio data leaves your Mac.</string>
 </dict>
 </plist>

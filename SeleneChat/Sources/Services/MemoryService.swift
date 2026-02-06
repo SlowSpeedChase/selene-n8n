@@ -107,20 +107,49 @@ actor MemoryService {
 
     // MARK: - Consolidation
 
-    /// Consolidate a candidate fact with existing memories
+    /// Consolidate a candidate fact with existing memories using embedding similarity
     func consolidateMemory(
         candidateFact: CandidateFact,
-        similarMemories: [ConversationMemory],
         sessionId: UUID
     ) async throws {
-        // If no similar memories, just ADD
+        // 1. Generate embedding for the candidate fact
+        var factEmbedding: [Float]? = nil
+        do {
+            factEmbedding = try await ollamaService.embed(text: candidateFact.fact)
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "MemoryService.consolidate: embedding failed - \(error)")
+            #endif
+        }
+
+        // 2. Find similar existing memories using embeddings
+        var similarMemories: [ConversationMemory] = []
+        if let embedding = factEmbedding {
+            do {
+                let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
+                let similar = MemoryService.findSimilarMemories(
+                    queryEmbedding: embedding,
+                    memories: allMemories,
+                    threshold: 0.7,
+                    limit: 10
+                )
+                similarMemories = similar.map { $0.memory }
+            } catch {
+                #if DEBUG
+                DebugLogger.shared.log(.error, "MemoryService.consolidate: similarity search failed - \(error)")
+                #endif
+            }
+        }
+
+        // 3. If no similar memories, just ADD
         if similarMemories.isEmpty {
             let memoryType = ConversationMemory.MemoryType(rawValue: candidateFact.type) ?? .fact
             _ = try await databaseService.insertMemory(
                 content: candidateFact.fact,
                 type: memoryType,
                 confidence: candidateFact.confidence,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                embedding: factEmbedding
             )
             #if DEBUG
             DebugLogger.shared.log(.state, "MemoryService.consolidate: ADD (no similar)")
@@ -128,7 +157,7 @@ actor MemoryService {
             return
         }
 
-        // Ask LLM to decide
+        // 4. Ask LLM to decide
         let similarStr = similarMemories.enumerated().map { (i, m) in
             "\(i + 1). [id=\(m.id)] \(m.content)"
         }.joined(separator: "\n")
@@ -157,13 +186,13 @@ actor MemoryService {
             #if DEBUG
             DebugLogger.shared.log(.error, "MemoryService.consolidate: no valid JSON in response")
             #endif
-            // Default to ADD if parsing fails
             let memoryType = ConversationMemory.MemoryType(rawValue: candidateFact.type) ?? .fact
             _ = try await databaseService.insertMemory(
                 content: candidateFact.fact,
                 type: memoryType,
                 confidence: candidateFact.confidence,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                embedding: factEmbedding
             )
             return
         }
@@ -178,7 +207,8 @@ actor MemoryService {
                     content: candidateFact.fact,
                     type: memoryType,
                     confidence: candidateFact.confidence,
-                    sourceSessionId: sessionId
+                    sourceSessionId: sessionId,
+                    embedding: factEmbedding
                 )
                 #if DEBUG
                 DebugLogger.shared.log(.state, "MemoryService.consolidate: ADD")
@@ -186,7 +216,19 @@ actor MemoryService {
 
             case .UPDATE:
                 if let memoryId = decision.memoryId, let merged = decision.merged {
-                    try await databaseService.updateMemory(id: memoryId, content: merged)
+                    var mergedEmbedding: [Float]? = nil
+                    do {
+                        mergedEmbedding = try await ollamaService.embed(text: merged)
+                    } catch {
+                        #if DEBUG
+                        DebugLogger.shared.log(.error, "MemoryService.consolidate: re-embed failed for UPDATE")
+                        #endif
+                    }
+                    try await databaseService.updateMemory(
+                        id: memoryId,
+                        content: merged,
+                        embedding: mergedEmbedding
+                    )
                     #if DEBUG
                     DebugLogger.shared.log(.state, "MemoryService.consolidate: UPDATE \(memoryId)")
                     #endif
@@ -207,7 +249,6 @@ actor MemoryService {
             }
 
         } catch {
-            // If JSON parsing fails, default to ADD
             #if DEBUG
             DebugLogger.shared.log(.error, "MemoryService.consolidate: JSON parse failed, defaulting to ADD")
             #endif
@@ -216,18 +257,125 @@ actor MemoryService {
                 content: candidateFact.fact,
                 type: memoryType,
                 confidence: candidateFact.confidence,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                embedding: factEmbedding
             )
         }
     }
 
+    // MARK: - Backfill
+
+    /// Backfill embeddings for memories that don't have them.
+    /// Returns the number of memories that were embedded.
+    func backfillEmbeddings() async throws -> Int {
+        let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
+        let needsEmbedding = allMemories.filter { $0.embedding == nil }
+
+        guard !needsEmbedding.isEmpty else {
+            #if DEBUG
+            DebugLogger.shared.log(.state, "MemoryService.backfill: all memories have embeddings")
+            #endif
+            return 0
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "MemoryService.backfill: embedding \(needsEmbedding.count) memories")
+        #endif
+
+        var count = 0
+        for item in needsEmbedding {
+            do {
+                let embedding = try await ollamaService.embed(text: item.memory.content)
+                try await databaseService.saveMemoryEmbedding(id: item.memory.id, embedding: embedding)
+                count += 1
+            } catch {
+                #if DEBUG
+                DebugLogger.shared.log(.error, "MemoryService.backfill: failed for memory \(item.memory.id) - \(error)")
+                #endif
+                // Continue with other memories - don't fail the whole batch
+            }
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "MemoryService.backfill: completed \(count)/\(needsEmbedding.count)")
+        #endif
+
+        return count
+    }
+
+    // MARK: - Similarity Search
+
+    /// Result of a similarity search
+    struct SimilarMemory {
+        let memory: ConversationMemory
+        let similarity: Float
+        let weightedScore: Double
+    }
+
+    /// Find memories similar to a query embedding. Pure function for testability.
+    /// Ranks by similarity * confidence. Excludes memories without embeddings.
+    static func findSimilarMemories(
+        queryEmbedding: [Float],
+        memories: [(memory: ConversationMemory, embedding: [Float]?)],
+        threshold: Float,
+        limit: Int
+    ) -> [SimilarMemory] {
+        return memories
+            .compactMap { item -> SimilarMemory? in
+                guard let embedding = item.embedding else { return nil }
+                let similarity = cosineSimilarity(queryEmbedding, embedding)
+                guard similarity >= threshold else { return nil }
+                let weightedScore = Double(similarity) * item.memory.confidence
+                return SimilarMemory(memory: item.memory, similarity: similarity, weightedScore: weightedScore)
+            }
+            .sorted { $0.weightedScore > $1.weightedScore }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     // MARK: - Retrieval
 
-    /// Get relevant memories for a query (simple keyword match for MVP)
+    /// Get relevant memories for a query using embedding similarity.
+    /// Falls back to keyword matching if Ollama is unavailable.
     func getRelevantMemories(for query: String, limit: Int = 5) async throws -> [ConversationMemory] {
-        let allMemories = try await databaseService.getAllMemories(limit: 50)
+        // Try embedding-based retrieval
+        do {
+            let queryEmbedding = try await ollamaService.embed(text: query)
+            let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
 
-        // Simple keyword matching for MVP
+            let results = MemoryService.findSimilarMemories(
+                queryEmbedding: queryEmbedding,
+                memories: allMemories,
+                threshold: 0.5,
+                limit: limit
+            )
+
+            let relevant = results.map { $0.memory }
+
+            // Touch accessed memories for reinforcement
+            if !relevant.isEmpty {
+                try await databaseService.touchMemories(ids: relevant.map { $0.id })
+            }
+
+            #if DEBUG
+            DebugLogger.shared.log(.state, "MemoryService.getRelevant: \(relevant.count) memories via embedding search")
+            #endif
+
+            return relevant
+
+        } catch {
+            #if DEBUG
+            DebugLogger.shared.log(.error, "MemoryService.getRelevant: embedding search failed, falling back to keywords - \(error)")
+            #endif
+
+            // Fallback to keyword matching
+            return try await getRelevantMemoriesByKeyword(for: query, limit: limit)
+        }
+    }
+
+    /// Keyword-based fallback when Ollama is unavailable
+    private func getRelevantMemoriesByKeyword(for query: String, limit: Int) async throws -> [ConversationMemory] {
+        let allMemories = try await databaseService.getAllMemories(limit: 50)
         let queryWords = Set(query.lowercased().split(separator: " ").map(String.init))
 
         let scored = allMemories.map { memory -> (memory: ConversationMemory, score: Double) in
@@ -243,15 +391,10 @@ actor MemoryService {
             .prefix(limit)
             .map { $0.memory }
 
-        // Touch accessed memories
         if !relevant.isEmpty {
             try await databaseService.touchMemories(ids: relevant.map { $0.id })
         }
 
-        #if DEBUG
-        DebugLogger.shared.log(.state, "MemoryService.getRelevant: \(relevant.count) memories for query")
-        #endif
-
-        return relevant
+        return Array(relevant)
     }
 }

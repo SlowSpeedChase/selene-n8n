@@ -12,6 +12,8 @@ class QueryAnalyzer {
         case general      // Open-ended: "how am I doing"
         case thread       // Thread queries: "what's emerging", "show me X thread"
         case semantic     // Conceptual/meaning-based query
+        case deepDive     // Thread deep-dive: "dig into X", "explore X thread"
+        case synthesis    // Cross-thread synthesis: "what should I focus on?"
     }
 
     enum TimeScope {
@@ -25,6 +27,10 @@ class QueryAnalyzer {
     enum ThreadQueryIntent {
         case listActive           // "what's emerging"
         case showSpecific(String) // "show me X thread"
+    }
+
+    struct DeepDiveIntent {
+        let threadName: String
     }
 
     struct AnalysisResult {
@@ -74,6 +80,26 @@ class QueryAnalyzer {
         "along the lines of"
     ]
 
+    private let deepDiveIndicators = [
+        "dig into", "let's dig into", "lets dig into",
+        "explore", "help me think through", "think through",
+        "unpack", "dive into", "deep dive"
+    ]
+
+    private let synthesisIndicators = [
+        "what should i focus on",
+        "what should i work on",
+        "help me prioritize",
+        "what's most important",
+        "whats most important",
+        "where should i put my energy",
+        "what needs my attention",
+        "what deserves my focus",
+        "prioritize my threads",
+        "what's the priority",
+        "whats the priority"
+    ]
+
     private let stopWords = Set([
         "a", "an", "the", "is", "are", "was", "were", "be", "been",
         "have", "has", "had", "do", "does", "did", "will", "would",
@@ -118,7 +144,17 @@ class QueryAnalyzer {
     // MARK: - Private Detection Methods
 
     private func detectQueryType(_ query: String) -> QueryType {
-        // Check thread queries first (most specific)
+        // Check synthesis before deep-dive (prioritization queries)
+        if detectSynthesisIntent(query) {
+            return .synthesis
+        }
+
+        // Check deep-dive queries (most specific)
+        if detectDeepDiveIntent(query) != nil {
+            return .deepDive
+        }
+
+        // Check thread queries next
         if detectThreadIntent(query) != nil {
             return .thread
         }
@@ -235,6 +271,52 @@ class QueryAnalyzer {
         return nil
     }
 
+    /// Detect if query is a deep-dive request and extract the thread name
+    func detectDeepDiveIntent(_ query: String) -> DeepDiveIntent? {
+        let lowercased = query.lowercased()
+
+        // Check if query contains any deep-dive indicators
+        for indicator in deepDiveIndicators {
+            if lowercased.contains(indicator) {
+                // Extract thread name after the indicator
+                if let range = lowercased.range(of: indicator) {
+                    var threadName = String(lowercased[range.upperBound...])
+                        .trimmingCharacters(in: .whitespaces)
+
+                    // Remove trailing "thread" if present
+                    if threadName.hasSuffix(" thread") {
+                        threadName = String(threadName.dropLast(7))
+                            .trimmingCharacters(in: .whitespaces)
+                    }
+
+                    // Remove leading "the" if present
+                    if threadName.hasPrefix("the ") {
+                        threadName = String(threadName.dropFirst(4))
+                            .trimmingCharacters(in: .whitespaces)
+                    }
+
+                    // Only return if we extracted a non-empty thread name
+                    if !threadName.isEmpty {
+                        return DeepDiveIntent(threadName: threadName)
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
+    /// Detect if query is a synthesis/prioritization request
+    func detectSynthesisIntent(_ query: String) -> Bool {
+        let lowercased = query.lowercased()
+        for indicator in synthesisIndicators {
+            if lowercased.contains(indicator) {
+                return true
+            }
+        }
+        return false
+    }
+
     private func extractThreadName(from query: String) -> String? {
         // Pattern 1: "show me [name] thread"
         let showPattern = #"(?:show me|tell me about|what's the|whats the|details on|more about)\s+(?:the\s+)?(.+?)\s+thread"#
@@ -272,6 +354,8 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
         case .general: return "general"
         case .thread: return "thread"
         case .semantic: return "semantic"
+        case .deepDive: return "deep-dive"
+        case .synthesis: return "synthesis"
         }
     }
 }

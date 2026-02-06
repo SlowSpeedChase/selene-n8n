@@ -247,6 +247,25 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 ## Recent Achievements
 
+### 2026-02-05
+- **Thinking Partner Phase 2 Complete** - Context Builder
+  - `ThinkingPartnerQueryType` enum with token budgets (1500/2000/3000)
+  - `ThinkingPartnerContextBuilder` service
+  - `buildBriefingContext()` - threads by momentum + recent notes
+  - `buildSynthesisContext()` - cross-thread with note titles
+  - `buildDeepDiveContext()` - full thread + chronological notes
+  - Token budget enforcement for all context types
+  - 26 tests (14 unit + 12 integration)
+
+- **Thinking Partner Phase 1 Complete** - Conversation Memory
+  - `SessionContext` model for formatting conversation history
+  - Token-aware truncation preserves recent messages
+  - Simple summary for older turns (first 5 words of user messages)
+  - Integrated into `ChatViewModel.handleOllamaQuery()`
+  - Toggle `useConversationHistory` for debugging
+  - Comprehensive CLI tests (7 integration tests)
+  - Multi-turn conversations now work
+
 ### 2026-02-02
 - **iMessage Daily Digest** - Condensed daily summary sent to phone at 6am via AppleScript
   - `daily-summary.ts` generates bullet-point digest via Ollama at midnight

@@ -374,4 +374,100 @@ final class ConversationMemoryTests: XCTestCase {
         let sessionIds = Set(allMemories.compactMap { $0.sourceSessionId })
         XCTAssertEqual(sessionIds.count, 2)
     }
+
+    // MARK: - Embedding Methods Tests
+
+    func testGetAllMemoriesWithEmbeddings() async throws {
+        let sessionId = UUID()
+        let embedding1: [Float] = [0.1, 0.2, 0.3]
+        let embedding2: [Float] = [0.4, 0.5, 0.6]
+
+        // Insert memories - one with embedding, one without
+        _ = try await databaseService.insertMemory(
+            content: "User prefers dark mode",
+            type: .preference,
+            confidence: 0.9,
+            sourceSessionId: sessionId,
+            embedding: embedding1
+        )
+        _ = try await databaseService.insertMemory(
+            content: "User works on Selene",
+            type: .fact,
+            confidence: 0.8,
+            sourceSessionId: sessionId
+        )
+        _ = try await databaseService.insertMemory(
+            content: "User likes Swift",
+            type: .preference,
+            confidence: 0.7,
+            sourceSessionId: sessionId,
+            embedding: embedding2
+        )
+
+        let results = try await databaseService.getAllMemoriesWithEmbeddings()
+
+        XCTAssertEqual(results.count, 3)
+
+        let withEmbeddings = results.filter { $0.embedding != nil }
+        let withoutEmbeddings = results.filter { $0.embedding == nil }
+        XCTAssertEqual(withEmbeddings.count, 2)
+        XCTAssertEqual(withoutEmbeddings.count, 1)
+
+        // Verify embedding values round-trip
+        if let firstEmb = results.first(where: { $0.memory.content == "User prefers dark mode" })?.embedding {
+            XCTAssertEqual(firstEmb.count, 3)
+            XCTAssertEqual(firstEmb[0], 0.1, accuracy: 0.0001)
+        } else {
+            XCTFail("Expected embedding for first memory")
+        }
+    }
+
+    func testSaveMemoryEmbedding() async throws {
+        let sessionId = UUID()
+
+        let memoryId = try await databaseService.insertMemory(
+            content: "User likes TypeScript",
+            type: .preference,
+            confidence: 0.8,
+            sourceSessionId: sessionId
+        )
+
+        // Verify no embedding initially
+        let before = try await databaseService.getAllMemoriesWithEmbeddings()
+        XCTAssertNil(before.first?.embedding)
+
+        // Save embedding
+        let embedding: [Float] = [0.1, 0.2, 0.3, 0.4]
+        try await databaseService.saveMemoryEmbedding(id: memoryId, embedding: embedding)
+
+        // Verify embedding was saved
+        let after = try await databaseService.getAllMemoriesWithEmbeddings()
+        XCTAssertNotNil(after.first?.embedding)
+        XCTAssertEqual(after.first?.embedding?.count, 4)
+        XCTAssertEqual(after.first?.embedding?[0] ?? 0, 0.1, accuracy: 0.0001)
+    }
+
+    func testUpdateMemoryWithEmbedding() async throws {
+        let sessionId = UUID()
+        let originalEmbedding: [Float] = [0.1, 0.2, 0.3]
+
+        let memoryId = try await databaseService.insertMemory(
+            content: "User likes coffee",
+            type: .preference,
+            confidence: 0.8,
+            sourceSessionId: sessionId,
+            embedding: originalEmbedding
+        )
+
+        let newEmbedding: [Float] = [0.4, 0.5, 0.6]
+        try await databaseService.updateMemory(
+            id: memoryId,
+            content: "User loves strong coffee",
+            embedding: newEmbedding
+        )
+
+        let results = try await databaseService.getAllMemoriesWithEmbeddings()
+        XCTAssertEqual(results.first?.memory.content, "User loves strong coffee")
+        XCTAssertEqual(results.first?.embedding?[0] ?? 0, 0.4, accuracy: 0.0001)
+    }
 }

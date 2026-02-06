@@ -40,17 +40,18 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
   // Get notes from the past week
   const notes = db
     .prepare(
-      `SELECT rn.title, rn.content, pn.summary, pn.themes
+      `SELECT rn.title, rn.content, pn.primary_theme, pn.secondary_themes, pn.concepts
        FROM raw_notes rn
-       LEFT JOIN processed_notes pn ON rn.id = pn.note_id
+       LEFT JOIN processed_notes pn ON rn.id = pn.raw_note_id
        WHERE rn.created_at BETWEEN ? AND ?
        ORDER BY rn.created_at`
     )
     .all(startOfWeek.toISOString(), endOfDay.toISOString()) as Array<{
     title: string;
     content: string;
-    summary: string | null;
-    themes: string | null;
+    primary_theme: string | null;
+    secondary_themes: string | null;
+    concepts: string | null;
   }>;
 
   log.info({ noteCount: notes.length }, 'Found notes for past week');
@@ -62,12 +63,38 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
 
   // Format notes for prompt
   const notesText = notes
-    .map((n) => `- ${n.title}: ${n.summary || n.content.slice(0, 100)}...`)
+    .map((n) => {
+      // Use concepts if available, otherwise first 100 chars of content
+      let preview = n.content.slice(0, 100);
+      if (n.concepts) {
+        try {
+          const conceptList = JSON.parse(n.concepts);
+          if (conceptList.length > 0) {
+            preview = conceptList.slice(0, 3).join(', ');
+          }
+        } catch (e) {
+          // Fall back to content preview
+        }
+      }
+      return `- ${n.title}: ${preview}...`;
+    })
     .join('\n');
 
   // Collect all themes
   const allThemes = notes
-    .flatMap((n) => (n.themes ? JSON.parse(n.themes) : []))
+    .flatMap((n) => {
+      const themes: string[] = [];
+      if (n.primary_theme) themes.push(n.primary_theme);
+      if (n.secondary_themes) {
+        try {
+          const secondary = JSON.parse(n.secondary_themes);
+          themes.push(...secondary);
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+      return themes;
+    })
     .filter((t, i, arr) => arr.indexOf(t) === i);
 
   const themesText = allThemes.length > 0 ? allThemes.join(', ') : 'No themes detected yet';

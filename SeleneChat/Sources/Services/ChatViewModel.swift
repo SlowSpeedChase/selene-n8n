@@ -7,6 +7,9 @@ class ChatViewModel: ObservableObject {
     @Published var isProcessing = false
     @Published var error: String?
 
+    /// Whether to include conversation history in prompts
+    @Published var useConversationHistory = true
+
     private let databaseService = DatabaseService.shared
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
@@ -14,6 +17,13 @@ class ChatViewModel: ObservableObject {
     private let queryAnalyzer = QueryAnalyzer()
     private let contextBuilder = ContextBuilder()
     private let memoryService = MemoryService.shared
+    private let deepDivePromptBuilder = DeepDivePromptBuilder()
+    private let synthesisPromptBuilder = SynthesisPromptBuilder()
+    private let actionExtractor = ActionExtractor()
+    private let actionService = ActionService()
+
+    /// Currently active deep-dive thread (if in deep-dive mode)
+    @Published var activeDeepDiveThread: Thread?
 
     init() {
         self.currentSession = ChatSession()
@@ -43,6 +53,41 @@ class ChatViewModel: ObservableObject {
                     content: response,
                     llmTier: .onDevice,
                     queryType: "thread"
+                )
+                currentSession.addMessage(assistantMessage)
+                await saveSession()
+                return
+            }
+
+            // Check for synthesis queries (cross-thread prioritization)
+            if queryAnalyzer.detectSynthesisIntent(content) {
+                let (response, citedNotes, contextNotes, queryType) = try await handleSynthesisQuery(query: content)
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .local,
+                    citedNotes: citedNotes,
+                    contextNotes: contextNotes,
+                    queryType: queryType
+                )
+                currentSession.addMessage(assistantMessage)
+                await saveSession()
+                return
+            }
+
+            // Check for deep-dive queries
+            if let deepDiveIntent = queryAnalyzer.detectDeepDiveIntent(content) {
+                let (response, citedNotes, contextNotes, queryType) = try await handleDeepDiveQuery(
+                    threadName: deepDiveIntent.threadName,
+                    query: content
+                )
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .local,
+                    citedNotes: citedNotes,
+                    contextNotes: contextNotes,
+                    queryType: queryType
                 )
                 currentSession.addMessage(assistantMessage)
                 await saveSession()
@@ -297,10 +342,29 @@ class ChatViewModel: ObservableObject {
         // Build system prompt with citation instructions and memories
         let systemPrompt = await buildSystemPromptWithMemories(for: analysis.queryType, query: query)
 
+        // Build conversation history (excluding current message which is in context)
+        let historySection: String
+        if useConversationHistory {
+            let priorMessages = Array(currentSession.messages.dropLast())  // Remove current user message
+            let sessionContext = SessionContext(messages: priorMessages)
+            if priorMessages.isEmpty {
+                historySection = ""
+            } else {
+                historySection = """
+
+## Conversation so far:
+\(sessionContext.historyWithSummary())
+
+"""
+            }
+        } else {
+            historySection = ""
+        }
+
         // Build full prompt
         let fullPrompt = """
         \(systemPrompt)
-
+        \(historySection)
         Notes:
         \(noteContext)
 
@@ -404,6 +468,103 @@ class ChatViewModel: ObservableObject {
         return response
     }
 
+    // MARK: - Deep-Dive Query Handling
+
+    /// Handle deep-dive queries into specific threads
+    private func handleDeepDiveQuery(threadName: String, query: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
+        // 1. Find thread by name
+        guard let (thread, notes) = try await databaseService.getThreadByName(threadName) else {
+            let notFound = "I couldn't find a thread matching \"\(threadName)\". Try \"what's emerging\" to see your active threads."
+            return (notFound, [], [], "deep-dive-not-found")
+        }
+
+        // 2. Set active thread
+        activeDeepDiveThread = thread
+
+        // 3. Build prompt (initial or follow-up based on history)
+        let prompt: String
+        if useConversationHistory {
+            let priorMessages = Array(currentSession.messages.dropLast())
+            let sessionContext = SessionContext(messages: priorMessages)
+
+            if priorMessages.isEmpty {
+                prompt = deepDivePromptBuilder.buildInitialPrompt(thread: thread, notes: notes)
+            } else {
+                prompt = deepDivePromptBuilder.buildFollowUpPrompt(
+                    thread: thread,
+                    notes: notes,
+                    conversationHistory: sessionContext.historyWithSummary(),
+                    currentQuery: query
+                )
+            }
+        } else {
+            prompt = deepDivePromptBuilder.buildInitialPrompt(thread: thread, notes: notes)
+        }
+
+        // 4. Generate response
+        let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+
+        // 5. Extract and capture actions
+        let actions = actionExtractor.extractActions(from: response)
+        for action in actions {
+            await actionService.capture(action, threadName: thread.name)
+        }
+
+        // 6. Clean response for display
+        let cleanResponse = actionExtractor.removeActionMarkers(from: response)
+
+        return (cleanResponse, notes, notes, "deep-dive")
+    }
+
+    // MARK: - Synthesis Query Handling
+
+    /// Handle synthesis queries (cross-thread prioritization)
+    private func handleSynthesisQuery(query: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
+        // 1. Get all active threads
+        let threads = try await databaseService.getActiveThreads(limit: 10)
+
+        guard !threads.isEmpty else {
+            let noThreads = "You don't have any active threads yet. Keep capturing notes and threads will emerge as related ideas cluster together."
+            return (noThreads, [], [], "synthesis-empty")
+        }
+
+        // 2. Get recent notes for each thread (3 notes each)
+        var notesPerThread: [Int64: [Note]] = [:]
+        for thread in threads {
+            if let (_, notes) = try await databaseService.getThreadByName(thread.name) {
+                notesPerThread[thread.id] = Array(notes.prefix(3))
+            }
+        }
+
+        // 3. Build prompt (with or without history)
+        let prompt: String
+        if useConversationHistory {
+            let priorMessages = Array(currentSession.messages.dropLast())
+            let sessionContext = SessionContext(messages: priorMessages)
+
+            if priorMessages.isEmpty {
+                prompt = synthesisPromptBuilder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
+            } else {
+                prompt = synthesisPromptBuilder.buildSynthesisPromptWithHistory(
+                    threads: threads,
+                    notesPerThread: notesPerThread,
+                    conversationHistory: sessionContext.historyWithSummary(),
+                    currentQuery: query
+                )
+            }
+        } else {
+            prompt = synthesisPromptBuilder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
+        }
+
+        // 4. Generate response
+        let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+
+        // 5. Collect all notes for citation
+        let allNotes = notesPerThread.values.flatMap { $0 }
+
+        return (response, allNotes, allNotes, "synthesis")
+    }
+
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
         switch queryType {
         case .pattern: return 100
@@ -412,6 +573,8 @@ class ChatViewModel: ObservableObject {
         case .general: return 30
         case .thread: return 50  // Thread queries need moderate context
         case .semantic: return 20  // Semantic queries return focused, conceptually related notes
+        case .deepDive: return 50  // Deep-dive needs thread context
+        case .synthesis: return 50  // Synthesis needs cross-thread context
         }
     }
 
@@ -460,6 +623,10 @@ class ChatViewModel: ObservableObject {
             querySpecific = "\n\nThis is a thread-related query. Show emerging threads and patterns in the notes. Group related ideas and cite specific notes."
         case .semantic:
             querySpecific = "\n\nThese notes are conceptually related to the query. Explore the connections and themes. Highlight how ideas relate to each other and cite specific notes."
+        case .deepDive:
+            querySpecific = "\n\nThis is a deep-dive into a specific thread. Analyze the thread's evolution, key insights, tensions, and suggest next actions. Use [ACTION: description | ENERGY: level | TIMEFRAME: time] markers for actionable items."
+        case .synthesis:
+            querySpecific = "\n\nThis is a synthesis/prioritization request. Analyze active threads and help prioritize where to focus energy. Consider thread momentum, urgency, and the user's current energy state."
         }
 
         return basePrompt + querySpecific
@@ -612,10 +779,8 @@ class ChatViewModel: ObservableObject {
 
                 // Consolidate each fact
                 for fact in facts {
-                    let allMemories = try await databaseService.getAllMemories(limit: 20)
                     try await memoryService.consolidateMemory(
                         candidateFact: fact,
-                        similarMemories: allMemories,
                         sessionId: currentSession.id
                     )
                 }

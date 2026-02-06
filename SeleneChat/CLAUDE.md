@@ -20,6 +20,13 @@ Native macOS app for querying and exploring notes stored in Selene SQLite databa
 - Sources/Models/ - Data models (Note, ChatMessage, Citation)
 - Sources/Services/ - Business logic (DatabaseService, SearchService, OllamaService)
 - Sources/Views/ - UI components (ChatView, CitationView, etc.)
+- Sources/Services/BriefingGenerator.swift - Morning briefing generation
+- Sources/ViewModels/BriefingViewModel.swift - Briefing state management
+- Sources/Views/BriefingView.swift - Morning briefing UI
+- Sources/Services/DeepDivePromptBuilder.swift - Thread deep-dive prompts
+- Sources/Services/ActionExtractor.swift - Parse actions from LLM responses
+- Sources/Services/ActionService.swift - Capture and manage actions
+- Sources/Services/SynthesisPromptBuilder.swift - Cross-thread synthesis prompts
 - Tests/ - Unit and integration tests
 - Sources/Debug/ - Debug logging and snapshot system (DEBUG builds only)
 
@@ -104,11 +111,43 @@ let results = try db.prepare(
 
 ## Testing
 
+### Standard Practice: CLI Tests Over Manual Testing
+
+**Always prefer automated CLI tests over manual app testing.** This enables:
+- Verification without launching the app
+- Tests run against test database (no production data risk)
+- Reproducible, documented test cases
+- CI/CD compatibility
+
+When implementing a feature, write integration tests that simulate the app flow:
+```swift
+// Example: Test conversation memory without needing Ollama
+func testPromptIncludesConversationHistory() {
+    var session = ChatSession()
+    session.addMessage(Message(role: .user, content: "Question 1", llmTier: .local))
+    session.addMessage(Message(role: .assistant, content: "Answer 1", llmTier: .local))
+    session.addMessage(Message(role: .user, content: "Follow-up", llmTier: .local))
+
+    // Simulate ChatViewModel flow
+    let priorMessages = Array(session.messages.dropLast())
+    let context = SessionContext(messages: priorMessages)
+
+    XCTAssertTrue(context.formattedHistory.contains("Question 1"))
+}
+```
+
 ### Run Tests
 ```bash
 cd SeleneChat
-swift test
+swift test                                    # All tests
+swift test --filter SessionContextTests       # Specific test class
+swift test --filter ConversationMemory        # Pattern match
 ```
+
+### Test Organization
+- `Tests/SeleneChatTests/Models/` - Unit tests for data models
+- `Tests/SeleneChatTests/Services/` - Unit tests for services
+- `Tests/SeleneChatTests/Integration/` - Integration tests (cross-component)
 
 ### Test Coverage Areas
 - DatabaseService - CRUD operations
@@ -116,6 +155,19 @@ swift test
 - OllamaService - LLM integration
 - Citation parsing - Extract [1], [2] markers
 - View models - State management
+- SessionContext - Conversation memory (Integration/)
+- BriefingState - Briefing status state machine
+- BriefingGenerator - Prompt building and response parsing
+- BriefingViewModel - State management and actions
+- BriefingIntegration - End-to-end briefing flow
+- QueryAnalyzerDeepDive - Deep-dive intent detection
+- DeepDivePromptBuilder - Prompt construction
+- ActionExtractor - Action parsing
+- ActionService - Action capture
+- DeepDiveIntegration - End-to-end flow
+- QueryAnalyzerSynthesis - Synthesis intent detection
+- SynthesisPromptBuilder - Prompt construction
+- SynthesisIntegration - End-to-end flow
 
 ## ADHD-Optimized Features
 

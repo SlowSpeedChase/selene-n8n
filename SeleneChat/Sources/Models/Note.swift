@@ -96,3 +96,64 @@ struct Note: Identifiable, Codable, Hashable {
         String(content.prefix(200))
     }
 }
+
+#if DEBUG
+extension Note {
+    static func mock(
+        id: Int = 1,
+        title: String = "Test Note",
+        content: String = "Test content",
+        contentHash: String = "mock-hash",
+        sourceType: String = "test",
+        wordCount: Int = 2,
+        characterCount: Int = 12,
+        tags: [String]? = nil,
+        createdAt: Date = Date(),
+        importedAt: Date = Date(),
+        processedAt: Date? = nil,
+        exportedAt: Date? = nil,
+        status: String = "processed",
+        exportedToObsidian: Bool = false,
+        sourceUUID: String? = nil,
+        testRun: String? = nil,
+        concepts: [String]? = nil,
+        conceptConfidence: [String: Double]? = nil,
+        primaryTheme: String? = nil,
+        secondaryThemes: [String]? = nil,
+        themeConfidence: Double? = nil,
+        overallSentiment: String? = nil,
+        sentimentScore: Double? = nil,
+        emotionalTone: String? = nil,
+        energyLevel: String? = nil
+    ) -> Note {
+        var note = Note(
+            id: id,
+            title: title,
+            content: content,
+            contentHash: contentHash,
+            sourceType: sourceType,
+            wordCount: wordCount,
+            characterCount: characterCount,
+            tags: tags,
+            createdAt: createdAt,
+            importedAt: importedAt,
+            processedAt: processedAt,
+            exportedAt: exportedAt,
+            status: status,
+            exportedToObsidian: exportedToObsidian,
+            sourceUUID: sourceUUID,
+            testRun: testRun
+        )
+        note.concepts = concepts
+        note.conceptConfidence = conceptConfidence
+        note.primaryTheme = primaryTheme
+        note.secondaryThemes = secondaryThemes
+        note.themeConfidence = themeConfidence
+        note.overallSentiment = overallSentiment
+        note.sentimentScore = sentimentScore
+        note.emotionalTone = emotionalTone
+        note.energyLevel = energyLevel
+        return note
+    }
+}
+#endif

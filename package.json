@@ -19,6 +19,7 @@
   "dependencies": {
     "@lancedb/lancedb": "^0.23.0",
     "better-sqlite3": "^11.0.0",
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "fastify": "^4.26.0",
     "pino": "^8.18.0",

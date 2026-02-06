@@ -6,6 +6,7 @@ struct SeleneChatApp: App {
     @StateObject private var databaseService = DatabaseService.shared
     @StateObject private var chatViewModel = ChatViewModel()
     @StateObject private var compressionService = CompressionService(databaseService: DatabaseService.shared)
+    @StateObject private var speechService = SpeechRecognitionService()
 
     init() {
         // Activate the app so it appears in the foreground
@@ -54,17 +55,44 @@ struct SeleneChatApp: App {
             ContentView()
                 .environmentObject(databaseService)
                 .environmentObject(chatViewModel)
+                .environmentObject(speechService)
                 .frame(minWidth: 800, minHeight: 600)
                 .task {
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
-                    
+
+                    // Backfill memory embeddings in background
+                    Task.detached(priority: .background) {
+                        do {
+                            let count = try await MemoryService.shared.backfillEmbeddings()
+                            if count > 0 {
+                                #if DEBUG
+                                DebugLogger.shared.log(.state, "SeleneChatApp: backfilled \(count) memory embeddings")
+                                #endif
+                            }
+                        } catch {
+                            #if DEBUG
+                            DebugLogger.shared.log(.error, "SeleneChatApp: memory backfill failed - \(error)")
+                            #endif
+                        }
+                    }
+
                     #if DEBUG
                     // Register chatViewModel provider on main actor
                     await MainActor.run {
                         DebugSnapshotService.shared.registerProvider(named: "chatViewModel", provider: chatViewModel)
                     }
                     #endif
+                }
+                .onOpenURL { url in
+                    let action = VoiceInputManager.parseURL(url)
+                    if action == .activateVoice {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(200))
+                            await speechService.startListening()
+                        }
+                    }
                 }
         }
         .commands {

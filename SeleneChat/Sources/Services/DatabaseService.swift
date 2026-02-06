@@ -353,6 +353,45 @@ class DatabaseService: ObservableObject {
         return notes
     }
 
+    /// Get recent notes from the last N days for briefing context
+    /// - Parameters:
+    ///   - days: Number of days to look back from today
+    ///   - limit: Maximum number of notes to return (default 10)
+    /// - Returns: Array of Note objects sorted by created_at descending
+    func getRecentNotes(days: Int, limit: Int = 10) async throws -> [Note] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Calculate start date (N days ago from now)
+        guard let startDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else {
+            throw DatabaseError.queryFailed("Failed to calculate start date")
+        }
+
+        let dateFormatter = iso8601Formatter
+        let startDateStr = dateFormatter.string(from: startDate)
+
+        let query = rawNotes
+            .join(.leftOuter, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .filter(rawNotes[createdAt] >= startDateStr)
+            .filter(rawNotes[testRun] == nil)
+            .order(rawNotes[createdAt].desc)
+            .limit(limit)
+
+        var notes: [Note] = []
+
+        for row in try db.prepare(query) {
+            let note = try parseNote(from: row)
+            notes.append(note)
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getRecentNotes: \(notes.count) notes from last \(days) days")
+        #endif
+
+        return notes
+    }
+
     func getNote(byId noteId: Int) async throws -> Note? {
         guard let db = db else {
             throw DatabaseError.notConnected
@@ -788,6 +827,15 @@ class DatabaseService: ObservableObject {
             // Semantic queries: use vector search via API, fall back to keyword search
             // Note: Full semantic search integration is handled in ChatViewModel
             return try await searchNotesByKeywords(keywords: keywords, limit: limit)
+
+        case .deepDive:
+            // Deep-dive queries: handled separately via thread notes
+            // Note: Full deep-dive integration uses specific thread notes, not general retrieval
+            return try await searchNotesByKeywords(keywords: keywords, limit: limit)
+
+        case .synthesis:
+            // Synthesis queries: get recent notes across all threads for prioritization
+            return try await getRecentProcessedNotes(limit: limit, timeScope: .recent)
         }
     }
 
@@ -1515,7 +1563,7 @@ class DatabaseService: ObservableObject {
         }
 
         if let emb = embedding {
-            let embeddingData = Data(bytes: emb, count: emb.count * MemoryLayout<Float>.size)
+            let embeddingData = serializeEmbedding(emb)
             setter.append(memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)))
         }
 
@@ -1529,7 +1577,7 @@ class DatabaseService: ObservableObject {
     }
 
     /// Update an existing memory
-    func updateMemory(id: Int64, content: String, confidence: Double? = nil) async throws {
+    func updateMemory(id: Int64, content: String, confidence: Double? = nil, embedding: [Float]? = nil) async throws {
         guard let db = db else {
             throw DatabaseError.notConnected
         }
@@ -1544,6 +1592,11 @@ class DatabaseService: ObservableObject {
 
         if let conf = confidence {
             setter.append(memConfidence <- conf)
+        }
+
+        if let emb = embedding {
+            let embeddingData = serializeEmbedding(emb)
+            setter.append(memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)))
         }
 
         try db.run(memory.update(setter))
@@ -1607,6 +1660,60 @@ class DatabaseService: ObservableObject {
         }
 
         return memories
+    }
+
+    /// Get all memories with their embeddings for similarity search
+    func getAllMemoriesWithEmbeddings(limit: Int = 500) async throws -> [(memory: ConversationMemory, embedding: [Float]?)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = memoriesTable
+            .order(memConfidence.desc)
+            .limit(limit)
+
+        var results: [(memory: ConversationMemory, embedding: [Float]?)] = []
+
+        for row in try db.prepare(query) {
+            let memory = ConversationMemory(
+                id: row[memId],
+                content: row[memContent],
+                sourceSessionId: row[memSourceSessionId],
+                memoryType: ConversationMemory.MemoryType(rawValue: row[memType] ?? "fact") ?? .fact,
+                confidence: row[memConfidence],
+                lastAccessed: row[memLastAccessed].flatMap { parseDateString($0) },
+                createdAt: parseDateString(row[memCreatedAt]) ?? Date(),
+                updatedAt: parseDateString(row[memUpdatedAt]) ?? Date()
+            )
+
+            var embedding: [Float]? = nil
+            if let blob = row[memEmbedding] {
+                let data = Data(blob.bytes)
+                embedding = deserializeEmbedding(data)
+            }
+
+            results.append((memory: memory, embedding: embedding))
+        }
+
+        return results
+    }
+
+    /// Save or update embedding for an existing memory (used for backfill)
+    func saveMemoryEmbedding(id: Int64, embedding: [Float]) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let embeddingData = serializeEmbedding(embedding)
+        let memory = memoriesTable.filter(memId == id)
+        try db.run(memory.update(
+            memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)),
+            memUpdatedAt <- iso8601Formatter.string(from: Date())
+        ))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.memoryEmbeddingSaved: \(id)")
+        #endif
     }
 
     // MARK: - Error Types
