@@ -61,6 +61,22 @@ struct SeleneChatApp: App {
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
 
+                    // Backfill memory embeddings in background
+                    Task.detached(priority: .background) {
+                        do {
+                            let count = try await MemoryService.shared.backfillEmbeddings()
+                            if count > 0 {
+                                #if DEBUG
+                                DebugLogger.shared.log(.state, "SeleneChatApp: backfilled \(count) memory embeddings")
+                                #endif
+                            }
+                        } catch {
+                            #if DEBUG
+                            DebugLogger.shared.log(.error, "SeleneChatApp: memory backfill failed - \(error)")
+                            #endif
+                        }
+                    }
+
                     #if DEBUG
                     // Register chatViewModel provider on main actor
                     await MainActor.run {

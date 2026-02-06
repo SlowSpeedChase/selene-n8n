@@ -263,6 +263,46 @@ actor MemoryService {
         }
     }
 
+    // MARK: - Backfill
+
+    /// Backfill embeddings for memories that don't have them.
+    /// Returns the number of memories that were embedded.
+    func backfillEmbeddings() async throws -> Int {
+        let allMemories = try await databaseService.getAllMemoriesWithEmbeddings()
+        let needsEmbedding = allMemories.filter { $0.embedding == nil }
+
+        guard !needsEmbedding.isEmpty else {
+            #if DEBUG
+            DebugLogger.shared.log(.state, "MemoryService.backfill: all memories have embeddings")
+            #endif
+            return 0
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "MemoryService.backfill: embedding \(needsEmbedding.count) memories")
+        #endif
+
+        var count = 0
+        for item in needsEmbedding {
+            do {
+                let embedding = try await ollamaService.embed(text: item.memory.content)
+                try await databaseService.saveMemoryEmbedding(id: item.memory.id, embedding: embedding)
+                count += 1
+            } catch {
+                #if DEBUG
+                DebugLogger.shared.log(.error, "MemoryService.backfill: failed for memory \(item.memory.id) - \(error)")
+                #endif
+                // Continue with other memories - don't fail the whole batch
+            }
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "MemoryService.backfill: completed \(count)/\(needsEmbedding.count)")
+        #endif
+
+        return count
+    }
+
     // MARK: - Similarity Search
 
     /// Result of a similarity search
