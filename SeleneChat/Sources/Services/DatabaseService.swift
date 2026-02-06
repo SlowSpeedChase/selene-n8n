@@ -1577,7 +1577,7 @@ class DatabaseService: ObservableObject {
     }
 
     /// Update an existing memory
-    func updateMemory(id: Int64, content: String, confidence: Double? = nil) async throws {
+    func updateMemory(id: Int64, content: String, confidence: Double? = nil, embedding: [Float]? = nil) async throws {
         guard let db = db else {
             throw DatabaseError.notConnected
         }
@@ -1592,6 +1592,11 @@ class DatabaseService: ObservableObject {
 
         if let conf = confidence {
             setter.append(memConfidence <- conf)
+        }
+
+        if let emb = embedding {
+            let embeddingData = serializeEmbedding(emb)
+            setter.append(memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)))
         }
 
         try db.run(memory.update(setter))
@@ -1655,6 +1660,60 @@ class DatabaseService: ObservableObject {
         }
 
         return memories
+    }
+
+    /// Get all memories with their embeddings for similarity search
+    func getAllMemoriesWithEmbeddings(limit: Int = 500) async throws -> [(memory: ConversationMemory, embedding: [Float]?)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = memoriesTable
+            .order(memConfidence.desc)
+            .limit(limit)
+
+        var results: [(memory: ConversationMemory, embedding: [Float]?)] = []
+
+        for row in try db.prepare(query) {
+            let memory = ConversationMemory(
+                id: row[memId],
+                content: row[memContent],
+                sourceSessionId: row[memSourceSessionId],
+                memoryType: ConversationMemory.MemoryType(rawValue: row[memType] ?? "fact") ?? .fact,
+                confidence: row[memConfidence],
+                lastAccessed: row[memLastAccessed].flatMap { parseDateString($0) },
+                createdAt: parseDateString(row[memCreatedAt]) ?? Date(),
+                updatedAt: parseDateString(row[memUpdatedAt]) ?? Date()
+            )
+
+            var embedding: [Float]? = nil
+            if let blob = row[memEmbedding] {
+                let data = Data(blob.bytes)
+                embedding = deserializeEmbedding(data)
+            }
+
+            results.append((memory: memory, embedding: embedding))
+        }
+
+        return results
+    }
+
+    /// Save or update embedding for an existing memory (used for backfill)
+    func saveMemoryEmbedding(id: Int64, embedding: [Float]) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let embeddingData = serializeEmbedding(embedding)
+        let memory = memoriesTable.filter(memId == id)
+        try db.run(memory.update(
+            memEmbedding <- SQLite.Blob(bytes: [UInt8](embeddingData)),
+            memUpdatedAt <- iso8601Formatter.string(from: Date())
+        ))
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.memoryEmbeddingSaved: \(id)")
+        #endif
     }
 
     // MARK: - Error Types
