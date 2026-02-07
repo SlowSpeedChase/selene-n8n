@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import { createWorkflowLogger, config } from '../lib';
 
 const log = createWorkflowLogger('send-digest');
@@ -30,8 +30,13 @@ function sendIMessage(to: string, message: string): void {
   }
 }
 
-export async function sendDigest(): Promise<{ sent: boolean }> {
-  log.info('Starting send-digest');
+export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: string }> {
+  log.info({ env: config.env }, 'Starting send-digest');
+
+  // In test mode, write to file instead of sending iMessage
+  if (config.isTestEnv) {
+    return sendDigestToFile();
+  }
 
   if (!config.imessageDigestEnabled) {
     log.info('iMessage digest disabled');
@@ -71,6 +76,44 @@ export async function sendDigest(): Promise<{ sent: boolean }> {
     log.error({ err }, 'Failed to send iMessage digest');
     return { sent: false };
   }
+}
+
+/**
+ * Test mode: write digest to file instead of sending iMessage
+ */
+async function sendDigestToFile(): Promise<{ sent: boolean; writtenToFile?: string }> {
+  log.info('Test mode: writing digest to file instead of iMessage');
+
+  // Look for today's digest, fall back to yesterday's
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  let digestPath = join(config.digestsPath, `${today}-digest.txt`);
+  if (!existsSync(digestPath)) {
+    digestPath = join(config.digestsPath, `${yesterday}-digest.txt`);
+  }
+
+  if (!existsSync(digestPath)) {
+    log.info('No digest file found, skipping');
+    return { sent: false };
+  }
+
+  const message = readFileSync(digestPath, 'utf-8').trim();
+  if (!message) {
+    log.info('Empty digest, skipping');
+    return { sent: false };
+  }
+
+  // Write to sent-digests subdirectory
+  const sentDir = join(config.digestsPath, 'sent');
+  mkdirSync(sentDir, { recursive: true });
+
+  const sentPath = join(sentDir, `${today}-sent.txt`);
+  const fullMessage = `🌅 Selene Daily Digest\n\n${message}`;
+  writeFileSync(sentPath, fullMessage);
+
+  log.info({ path: sentPath }, 'Digest written to file (test mode)');
+  return { sent: true, writtenToFile: sentPath };
 }
 
 // CLI entry point

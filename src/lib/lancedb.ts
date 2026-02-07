@@ -17,9 +17,9 @@ let dbConnection: Awaited<ReturnType<typeof lancedb.connect>> | null = null;
  */
 export async function getLanceDb() {
   if (!dbConnection) {
-    const dbPath = path.join(path.dirname(config.dbPath), 'vectors.lance');
-    log.info({ dbPath }, 'Connecting to LanceDB');
-    dbConnection = await lancedb.connect(dbPath);
+    // Use config.vectorsPath which is environment-aware
+    log.info({ dbPath: config.vectorsPath }, 'Connecting to LanceDB');
+    dbConnection = await lancedb.connect(config.vectorsPath);
   }
   return dbConnection;
 }
