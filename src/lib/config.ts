@@ -5,8 +5,8 @@ import { config as loadEnv } from 'dotenv';
 // Load environment variables from .env file
 loadEnv();
 
-// Also load .env.development if it exists (for test environment defaults)
-loadEnv({ path: join(__dirname, '../..', '.env.development') });
+// Load .env.development if it exists - override: true so test settings take precedence
+loadEnv({ path: join(__dirname, '../..', '.env.development'), override: true });
 
 const projectRoot = join(__dirname, '../..');
 
