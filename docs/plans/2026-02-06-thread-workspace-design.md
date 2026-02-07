@@ -1,8 +1,58 @@
 # Thread Workspace Design
 
 **Date:** 2026-02-06
-**Status:** Ready
+**Status:** In Progress
 **Topic:** selenechat
+**Branch:** `feature/thread-workspace`
+
+---
+
+## Development Handoff
+
+### Current State (Phase 1 Complete)
+
+Phase 1 is implemented and ready to test. The branch is pushed to GitHub.
+
+### To Continue Development on Mac mini
+
+```bash
+# 1. Fetch and checkout the branch
+cd ~/path/to/selene-n8n
+git fetch origin
+git checkout feature/thread-workspace
+
+# 2. Build and run
+cd SeleneChat
+swift build
+swift run
+```
+
+### To Test Thread Workspace
+
+1. Launch app → dismiss briefing
+2. Go to **Today** view (first sidebar item)
+3. Look for **"Heating Up"** column on the right side
+4. Tap a thread → Thread Workspace should open
+
+**If no threads in "Heating Up":** Check database has active threads with momentum:
+```bash
+sqlite3 data/selene.db "SELECT id, name, status, momentum_score FROM threads WHERE status='active';"
+```
+
+### Files Changed in Phase 1
+
+| File | Purpose |
+|------|---------|
+| `database/migrations/016_thread_tasks.sql` | SQL migration for thread_tasks table |
+| `SeleneChat/Sources/Services/Migrations/Migration009_ThreadTasks.swift` | Swift migration |
+| `SeleneChat/Sources/Models/ThreadTask.swift` | ThreadTask model |
+| `SeleneChat/Sources/Views/ThreadWorkspaceView.swift` | Main workspace UI |
+| `SeleneChat/Sources/Services/DatabaseService.swift` | Added getTasksForThread, linkTaskToThread, getThreadById |
+| `SeleneChat/Sources/App/ContentView.swift` | Navigation to workspace from Today view |
+
+### Next: Phase 2
+
+Add chat to the workspace for task creation and planning. See "Phases" section below.
 
 ---
 
