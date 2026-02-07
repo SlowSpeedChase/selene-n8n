@@ -4,6 +4,7 @@ struct ContentView: View {
     @State private var selectedView: NavigationItem = .today
     @State private var pendingThreadQuery: String?
     @State private var showBriefing = true  // Show briefing on app open
+    @State private var selectedThreadId: Int64?  // For thread workspace navigation
     @EnvironmentObject var databaseService: DatabaseService
 
     enum NavigationItem: String, CaseIterable {
@@ -31,7 +32,21 @@ struct ContentView: View {
             .navigationTitle("Selene")
             .frame(minWidth: 200)
         } detail: {
-            if showBriefing {
+            if let threadId = selectedThreadId {
+                // Thread Workspace view
+                ThreadWorkspaceView(threadId: threadId)
+                    .environmentObject(databaseService)
+                    .onDisappear {
+                        // Clear when navigating away (though sheet dismissal handles this too)
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .navigation) {
+                            Button(action: { selectedThreadId = nil }) {
+                                Image(systemName: "xmark")
+                            }
+                        }
+                    }
+            } else if showBriefing {
                 BriefingView(
                     onDismiss: {
                         showBriefing = false
@@ -47,13 +62,13 @@ struct ContentView: View {
                 case .today:
                     TodayView(
                         onThreadSelected: { thread in
-                            pendingThreadQuery = "show me \(thread.name) thread"
-                            selectedView = .chat
+                            // Navigate to Thread Workspace
+                            selectedThreadId = thread.id
                         },
                         onNoteThreadTap: { note in
-                            if let threadName = note.threadName {
-                                pendingThreadQuery = "What's happening with \(threadName)?"
-                                selectedView = .chat
+                            if let threadId = note.threadId {
+                                // Navigate to Thread Workspace
+                                selectedThreadId = threadId
                             }
                         }
                     )
