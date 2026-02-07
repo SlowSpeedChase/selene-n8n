@@ -45,7 +45,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| - | - | - | No ready designs |
+| 2026-02-06 | 2026-02-06-test-environment-isolation-design.md | infrastructure | Complete test isolation with anonymized data |
 
 ---
 

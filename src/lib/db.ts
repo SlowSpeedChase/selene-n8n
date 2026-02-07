@@ -8,7 +8,43 @@ export const db: DatabaseType = new Database(config.dbPath);
 // Enable WAL mode for better concurrency
 db.pragma('journal_mode = WAL');
 
-logger.info({ dbPath: config.dbPath }, 'Database connected');
+logger.info({ dbPath: config.dbPath, env: config.env }, 'Database connected');
+
+// Fail-safe: Verify test environment is using test database
+if (config.isTestEnv) {
+  try {
+    const result = db.prepare(
+      "SELECT value FROM _selene_metadata WHERE key = 'environment'"
+    ).get() as { value: string } | undefined;
+
+    if (!result || result.value !== 'test') {
+      logger.error(
+        { dbPath: config.dbPath },
+        'SELENE_ENV=test but database is not a test database. Run ./scripts/create-test-db.sh first.'
+      );
+      throw new Error(
+        `SELENE_ENV=test but database is not marked as test environment.\n` +
+        `Expected _selene_metadata.environment = 'test'.\n` +
+        `Run ./scripts/create-test-db.sh to create a test database.`
+      );
+    }
+
+    logger.info('Test environment verified');
+  } catch (err: unknown) {
+    // If table doesn't exist, that's also a failure
+    if (err instanceof Error && err.message.includes('no such table')) {
+      logger.error(
+        { dbPath: config.dbPath },
+        'SELENE_ENV=test but _selene_metadata table not found. Run ./scripts/create-test-db.sh first.'
+      );
+      throw new Error(
+        `SELENE_ENV=test but _selene_metadata table not found.\n` +
+        `Run ./scripts/create-test-db.sh to create a test database.`
+      );
+    }
+    throw err;
+  }
+}
 
 // Type for raw_notes table
 export interface RawNote {
