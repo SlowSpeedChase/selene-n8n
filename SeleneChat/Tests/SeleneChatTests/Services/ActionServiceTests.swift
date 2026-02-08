@@ -154,4 +154,21 @@ final class ActionServiceTests: XCTestCase {
         let expectedNotes = "From Selene thread: My Thread\nEnergy: low"
         XCTAssertEqual(task.notes, expectedNotes)
     }
+
+    // MARK: - sendToThingsAndLinkThread Task Building
+
+    func testBuildThingsTaskForThreadLinkIncludesThreadName() {
+        let service = ActionService()
+        let action = makeTestAction(
+            description: "Set up test database",
+            energy: .medium,
+            timeframe: .thisWeek
+        )
+
+        let task = service.buildThingsTask(from: action, threadName: "Infrastructure")
+
+        XCTAssertEqual(task.title, "Set up test database")
+        XCTAssertTrue(task.notes.contains("Infrastructure"))
+        XCTAssertTrue(task.tags.contains("selene"))
+    }
 }

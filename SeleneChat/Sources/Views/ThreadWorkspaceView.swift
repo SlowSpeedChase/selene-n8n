@@ -1,8 +1,8 @@
 // ThreadWorkspaceView.swift
 // SeleneChat
 //
-// Thread Workspace: See a thread with its context, tasks, and notes in one view.
-// Phase 1: Read-only view (no chat yet)
+// Thread Workspace: Thread context, tasks, notes, and scoped chat in one view.
+// Phase 2: Chat with task creation via action confirmation
 
 import SwiftUI
 
@@ -17,6 +17,9 @@ struct ThreadWorkspaceView: View {
     @State private var notes: [Note] = []
     @State private var isLoading = true
     @State private var error: String?
+    @State private var chatViewModel: ThreadWorkspaceChatViewModel?
+    @State private var chatInput = ""
+    @State private var isConfirmingActions = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,22 +33,25 @@ struct ThreadWorkspaceView: View {
             } else if let error = error {
                 errorView(error)
             } else if let thread = thread {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Thread context
-                        threadContextSection(thread)
-
-                        // Tasks section
-                        tasksSection
-
-                        // Notes section
-                        notesSection
+                HSplitView {
+                    // Left: Thread context, tasks, notes
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            threadContextSection(thread)
+                            tasksSection
+                            notesSection
+                        }
+                        .padding()
                     }
-                    .padding()
+                    .frame(minWidth: 280)
+
+                    // Right: Chat
+                    chatSection
+                        .frame(minWidth: 300)
                 }
             }
         }
-        .frame(minWidth: 500, minHeight: 400)
+        .frame(minWidth: 700, minHeight: 500)
         .task {
             await loadData()
         }
@@ -70,7 +76,6 @@ struct ThreadWorkspaceView: View {
 
             Spacer()
 
-            // Placeholder for future actions
             Button(action: { Task { await loadData() } }) {
                 Image(systemName: "arrow.clockwise")
             }
@@ -298,6 +303,186 @@ struct ThreadWorkspaceView: View {
         .cornerRadius(8)
     }
 
+    // MARK: - Chat Section
+
+    private var chatSection: some View {
+        VStack(spacing: 0) {
+            // Chat header
+            HStack {
+                Text("CHAT")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if let vm = chatViewModel, vm.isProcessing {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            // Messages
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        if let vm = chatViewModel {
+                            if vm.messages.isEmpty {
+                                chatEmptyState
+                            } else {
+                                ForEach(vm.messages) { message in
+                                    chatMessageRow(message)
+                                        .id(message.id)
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: chatViewModel?.messages.count) {
+                    if let lastId = chatViewModel?.messages.last?.id {
+                        withAnimation {
+                            proxy.scrollTo(lastId, anchor: .bottom)
+                        }
+                    }
+                }
+            }
+
+            // Pending actions banner
+            if let vm = chatViewModel, !vm.pendingActions.isEmpty {
+                pendingActionsBanner(vm.pendingActions)
+            }
+
+            Divider()
+
+            // Input
+            chatInputArea
+        }
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private var chatEmptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.title2)
+                .foregroundColor(.secondary)
+            Text("Ask about this thread")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Text("\"What should I focus on next?\" or \"Break this down into tasks\"")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+
+    private func chatMessageRow(_ message: Message) -> some View {
+        HStack {
+            if message.isUser { Spacer(minLength: 40) }
+
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
+                Text(message.isUser ? "You" : "Selene")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                Text(message.content)
+                    .font(.body)
+                    .padding(10)
+                    .background(message.isUser ? Color.blue.opacity(0.15) : Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(12)
+            }
+
+            if !message.isUser { Spacer(minLength: 40) }
+        }
+    }
+
+    // MARK: - Pending Actions Banner
+
+    private func pendingActionsBanner(_ actions: [ActionExtractor.ExtractedAction]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundColor(.orange)
+                Text("Suggested Tasks (\(actions.count))")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+
+            ForEach(Array(actions.enumerated()), id: \.offset) { _, action in
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(energyColor(action.energy))
+                        .frame(width: 8, height: 8)
+                    Text(action.description)
+                        .font(.caption)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(action.timeframe.rawValue)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            HStack {
+                Button("Create in Things") {
+                    confirmPendingActions()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(isConfirmingActions)
+
+                if isConfirmingActions {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                }
+
+                Spacer()
+
+                Button("Dismiss") {
+                    chatViewModel?.dismissActions()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.08))
+        .cornerRadius(8)
+        .padding(.horizontal)
+        .padding(.bottom, 4)
+    }
+
+    private func energyColor(_ energy: ActionExtractor.ExtractedAction.EnergyLevel) -> Color {
+        switch energy {
+        case .high: return .red
+        case .medium: return .orange
+        case .low: return .green
+        }
+    }
+
+    // MARK: - Chat Input
+
+    private var chatInputArea: some View {
+        HStack(spacing: 8) {
+            TextField("Ask about this thread...", text: $chatInput)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { sendChatMessage() }
+
+            Button(action: { sendChatMessage() }) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(chatInput.trimmingCharacters(in: .whitespaces).isEmpty ? .secondary : .blue)
+            }
+            .buttonStyle(.plain)
+            .disabled(chatInput.trimmingCharacters(in: .whitespaces).isEmpty || (chatViewModel?.isProcessing ?? false))
+        }
+        .padding()
+    }
+
     // MARK: - States
 
     private var loadingView: some View {
@@ -337,7 +522,7 @@ struct ThreadWorkspaceView: View {
             // Load thread details
             thread = try await databaseService.getThreadById(threadId)
 
-            guard thread != nil else {
+            guard let loadedThread = thread else {
                 error = "Thread not found"
                 return
             }
@@ -346,8 +531,19 @@ struct ThreadWorkspaceView: View {
             tasks = try await databaseService.getTasksForThread(threadId)
 
             // Load notes for thread
-            if let result = try await databaseService.getThreadByName(thread!.name) {
+            if let result = try await databaseService.getThreadByName(loadedThread.name) {
                 notes = result.1
+            }
+
+            // Initialize chat VM with loaded data
+            if chatViewModel == nil {
+                chatViewModel = ThreadWorkspaceChatViewModel(
+                    thread: loadedThread,
+                    notes: notes,
+                    tasks: tasks
+                )
+            } else {
+                chatViewModel?.updateTasks(tasks)
             }
         } catch {
             self.error = error.localizedDescription
@@ -360,6 +556,35 @@ struct ThreadWorkspaceView: View {
         let urlString = "things:///show?id=\(taskId)"
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func sendChatMessage() {
+        let content = chatInput.trimmingCharacters(in: .whitespaces)
+        guard !content.isEmpty, let vm = chatViewModel else { return }
+        chatInput = ""
+
+        Task {
+            await vm.sendMessage(content)
+        }
+    }
+
+    private func confirmPendingActions() {
+        guard let vm = chatViewModel else { return }
+        isConfirmingActions = true
+
+        Task {
+            let createdIds = await vm.confirmActions()
+            isConfirmingActions = false
+
+            // Reload tasks to show newly created ones
+            if !createdIds.isEmpty {
+                do {
+                    tasks = try await databaseService.getTasksForThread(threadId)
+                } catch {
+                    print("[ThreadWorkspaceView] Failed to reload tasks: \(error)")
+                }
+            }
         }
     }
 }
