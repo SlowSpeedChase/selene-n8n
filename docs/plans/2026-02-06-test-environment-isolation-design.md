@@ -1,7 +1,8 @@
 # Test Environment Isolation Design
 
 **Date:** 2026-02-06
-**Status:** Ready
+**Status:** Done
+**Completed:** 2026-02-06
 **Topic:** infrastructure
 
 ---
@@ -175,6 +176,62 @@ Run ./scripts/create-test-db.sh to create a test database.
 - [x] Less than 1 week of focused work
 - [x] No external dependencies
 - [x] Clear boundaries (no feature creep)
+
+---
+
+
+## Quick Start Guide
+
+### Mac Mini (has production database)
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Create anonymized test database from production
+./scripts/create-test-db.sh
+
+# Verify it works
+npm run start
+# Should show: dbPath: ".../data-test/selene.db", env: "test"
+```
+
+### MacBook (no production database)
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Create synthetic test database (fake data)
+./scripts/create-synthetic-test-db.sh
+
+# Verify it works
+npm run start
+# Should show: dbPath: ".../data-test/selene.db", env: "test"
+```
+
+### How It Works
+
+1. `.env.development` sets `SELENE_ENV=test` automatically
+2. All paths route to `data-test/` directory
+3. Fail-safe prevents accidental production access
+4. iMessage digest writes to file instead of sending
+
+### Scripts
+
+| Script | Use Case |
+|--------|----------|
+| `scripts/create-test-db.sh` | Mac Mini - anonymizes production data |
+| `scripts/create-synthetic-test-db.sh` | MacBook - creates fake test data |
+
+### Switching to Production (Mac Mini only)
+
+```bash
+# Temporarily use production
+SELENE_ENV=production npx ts-node src/workflows/process-llm.ts
+
+# Or remove .env.development to default to production
+```
 
 ---
 
