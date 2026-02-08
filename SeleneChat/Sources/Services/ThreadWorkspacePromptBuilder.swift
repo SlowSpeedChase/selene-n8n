@@ -9,7 +9,7 @@ class ThreadWorkspacePromptBuilder {
     // MARK: - Action Marker Format
 
     private let actionMarkerFormat = """
-    When suggesting actions, use this format:
+    Only use action markers when the user asks for task breakdown, next steps, or actionable items. When you do, use this format:
     [ACTION: Brief action description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
     """
 
@@ -26,21 +26,17 @@ class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are a thinking partner for someone with ADHD, helping them plan and break down work for "\(thread.name)".
+        You are a thinking partner for someone with ADHD, grounded in the context of their "\(thread.name)" thread.
 
         \(threadContext)
 
         \(taskContext)
 
-        Your task:
-        1. Understand what's already been explored in the notes
-        2. Consider what tasks already exist and what gaps remain
-        3. Help break down next steps into concrete, actionable tasks
-        4. Ask 1-2 clarifying questions if the direction isn't clear
+        Respond naturally to whatever the user asks. Use the thread context and notes above to give informed, specific answers. You can help with planning, brainstorming, answering questions, giving advice, or anything else related to this thread.
 
         \(actionMarkerFormat)
 
-        Keep your response under 200 words. Focus on actionable next steps, not summary.
+        Keep your response under 200 words. Be direct and specific.
         """
     }
 
@@ -65,7 +61,7 @@ class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are a thinking partner for someone with ADHD, continuing a planning session for "\(thread.name)".
+        You are a thinking partner for someone with ADHD, continuing a conversation about "\(thread.name)".
 
         \(threadContext)
 
@@ -76,6 +72,8 @@ class ThreadWorkspacePromptBuilder {
 
         ## Current Question
         \(currentQuery)
+
+        Respond naturally to the user's question. Use the thread context to give informed, specific answers.
 
         \(actionMarkerFormat)
 

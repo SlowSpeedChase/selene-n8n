@@ -9,6 +9,7 @@ struct ContentView: View {
 
     enum NavigationItem: String, CaseIterable {
         case today = "Today"
+        case threads = "Threads"
         case chat = "Chat"
         case search = "Search"
         case planning = "Planning"
@@ -16,6 +17,7 @@ struct ContentView: View {
         var icon: String {
             switch self {
             case .today: return "sun.horizon.fill"
+            case .threads: return "flame.fill"
             case .chat: return "message.fill"
             case .search: return "magnifyingglass"
             case .planning: return "list.bullet.clipboard"
@@ -34,18 +36,8 @@ struct ContentView: View {
         } detail: {
             if let threadId = selectedThreadId {
                 // Thread Workspace view
-                ThreadWorkspaceView(threadId: threadId)
+                ThreadWorkspaceView(threadId: threadId, onDismiss: { selectedThreadId = nil })
                     .environmentObject(databaseService)
-                    .onDisappear {
-                        // Clear when navigating away (though sheet dismissal handles this too)
-                    }
-                    .toolbar {
-                        ToolbarItem(placement: .navigation) {
-                            Button(action: { selectedThreadId = nil }) {
-                                Image(systemName: "xmark")
-                            }
-                        }
-                    }
             } else if showBriefing {
                 BriefingView(
                     onDismiss: {
@@ -62,16 +54,21 @@ struct ContentView: View {
                 case .today:
                     TodayView(
                         onThreadSelected: { thread in
-                            // Navigate to Thread Workspace
                             selectedThreadId = thread.id
                         },
                         onNoteThreadTap: { note in
                             if let threadId = note.threadId {
-                                // Navigate to Thread Workspace
                                 selectedThreadId = threadId
                             }
                         }
                     )
+                case .threads:
+                    ThreadListSidebarView(
+                        onThreadSelected: { threadId in
+                            selectedThreadId = threadId
+                        }
+                    )
+                    .environmentObject(databaseService)
                 case .chat:
                     ChatView(initialQuery: pendingThreadQuery)
                         .onAppear { pendingThreadQuery = nil }

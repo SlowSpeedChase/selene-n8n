@@ -161,6 +161,28 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.contains("[ACTION:"), "Follow-up prompt should include action marker format")
     }
 
+    func testActionMarkersAreConditional() {
+        let thread = Thread.mock(name: "Test Thread")
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildInitialPrompt(thread: thread, notes: [Note.mock()], tasks: [])
+
+        XCTAssertTrue(prompt.contains("Only use action markers"), "Action markers should be conditional, not always applied")
+    }
+
+    func testFollowUpActionMarkersAreConditional() {
+        let thread = Thread.mock(name: "Test Thread")
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildFollowUpPrompt(
+            thread: thread,
+            notes: [Note.mock()],
+            tasks: [],
+            conversationHistory: "User: Q\nAssistant: A",
+            currentQuery: "Next?"
+        )
+
+        XCTAssertTrue(prompt.contains("Only use action markers"), "Follow-up action markers should be conditional")
+    }
+
     func testBuildFollowUpPromptIncludesThreadContext() {
         let thread = Thread.mock(name: "Architecture Decisions")
         let builder = ThreadWorkspacePromptBuilder()
