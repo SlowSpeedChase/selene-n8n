@@ -117,4 +117,33 @@ actor ActionService {
             print("[ActionService] Failed to send task to Things: \(error)")
         }
     }
+
+    /// Create a task in Things and link it to a thread in the database.
+    /// - Parameters:
+    ///   - action: The extracted action to create
+    ///   - threadName: The name of the thread (used in task notes)
+    ///   - threadId: The thread ID for database linking
+    /// - Returns: The Things task ID
+    @discardableResult
+    func sendToThingsAndLinkThread(
+        _ action: ActionExtractor.ExtractedAction,
+        threadName: String,
+        threadId: Int64
+    ) async throws -> String {
+        let task = buildThingsTask(from: action, threadName: threadName)
+
+        let thingsTaskId = try await thingsService.createTask(
+            title: task.title,
+            notes: task.notes,
+            tags: task.tags,
+            energy: action.energy.rawValue
+        )
+
+        try await DatabaseService.shared.linkTaskToThread(
+            threadId: threadId,
+            thingsTaskId: thingsTaskId
+        )
+
+        return thingsTaskId
+    }
 }

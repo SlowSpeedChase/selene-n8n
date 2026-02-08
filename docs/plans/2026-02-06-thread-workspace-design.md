@@ -1,8 +1,22 @@
 # Thread Workspace Design
 
 **Date:** 2026-02-06
-**Status:** Ready
+**Status:** In Progress
 **Topic:** selenechat
+**Branch:** `feature/thread-workspace`
+
+---
+
+## Development Handoff
+
+### Current State (Phase 2 Complete)
+
+Phase 1 (read-only workspace) and Phase 2 (chat with task creation) are implemented.
+
+### Completed
+
+- Phase 1: Thread context, task list, notes display
+- Phase 2: Thread-scoped chat, action extraction, confirmation banner, Things integration
 
 ---
 

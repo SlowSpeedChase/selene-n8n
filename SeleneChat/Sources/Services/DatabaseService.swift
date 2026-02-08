@@ -179,6 +179,7 @@ class DatabaseService: ObservableObject {
             try? Migration006_OptionalRawNoteId.run(db: db!)
             try? Migration007_ThingsHeading.run(db: db!)
             try? Migration008_ConversationMemory.run(db: db!)
+            try? Migration009_ThreadTasks.run(db: db!)
 
             // Configure services that need database access
             if let db = db {
@@ -554,6 +555,99 @@ class DatabaseService: ObservableObject {
             sentimentScore: try? row.get(processedNotes[sentimentScore]),
             emotionalTone: try? row.get(processedNotes[emotionalTone]),
             energyLevel: try? row.get(processedNotes[energyLevel])
+        )
+    }
+
+    // MARK: - Thread Tasks
+
+    /// Table definitions for thread_tasks
+    private let threadTasksTable = Table("thread_tasks")
+    private let threadTasksId = SQLite.Expression<Int64>("id")
+    private let threadTasksThreadId = SQLite.Expression<Int64>("thread_id")
+    private let threadTasksThingsTaskId = SQLite.Expression<String>("things_task_id")
+    private let threadTasksCreatedAt = SQLite.Expression<String>("created_at")
+    private let threadTasksCompletedAt = SQLite.Expression<String?>("completed_at")
+
+    /// Get all tasks linked to a thread
+    func getTasksForThread(_ threadId: Int64) async throws -> [ThreadTask] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if table exists first
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='thread_tasks'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = threadTasksTable
+            .filter(threadTasksThreadId == threadId)
+            .order(threadTasksCreatedAt.desc)
+
+        var tasks: [ThreadTask] = []
+        for row in try db.prepare(query) {
+            let task = ThreadTask(
+                id: row[threadTasksId],
+                threadId: row[threadTasksThreadId],
+                thingsTaskId: row[threadTasksThingsTaskId],
+                createdAt: parseDateString(row[threadTasksCreatedAt]) ?? Date(),
+                completedAt: row[threadTasksCompletedAt].flatMap { parseDateString($0) }
+            )
+            tasks.append(task)
+        }
+
+        return tasks
+    }
+
+    /// Link a Things task to a thread
+    func linkTaskToThread(threadId: Int64, thingsTaskId: String) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let insert = threadTasksTable.insert(or: .ignore,
+            threadTasksThreadId <- threadId,
+            threadTasksThingsTaskId <- thingsTaskId
+        )
+        try db.run(insert)
+    }
+
+    /// Mark a thread task as completed
+    func markThreadTaskCompleted(thingsTaskId: String, completedAt: Date = Date()) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateStr = iso8601Formatter.string(from: completedAt)
+        let task = threadTasksTable.filter(threadTasksThingsTaskId == thingsTaskId)
+        try db.run(task.update(threadTasksCompletedAt <- dateStr))
+    }
+
+    /// Get thread by ID with full details
+    func getThreadById(_ threadId: Int64) async throws -> Thread? {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let query = threadsTable.filter(threadsId == threadId)
+
+        guard let row = try db.pluck(query) else {
+            return nil
+        }
+
+        return Thread(
+            id: row[threadsId],
+            name: row[threadsName],
+            why: row[threadsWhy],
+            summary: row[threadsSummary],
+            status: row[threadsStatus],
+            noteCount: Int(row[threadsNoteCount]),
+            momentumScore: row[threadsMomentumScore],
+            lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
+            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
         )
     }
 
