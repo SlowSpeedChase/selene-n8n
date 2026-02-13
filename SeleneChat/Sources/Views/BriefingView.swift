@@ -71,35 +71,19 @@ struct BriefingView: View {
             .background(Color(.controlBackgroundColor))
             .cornerRadius(16)
 
-            // Action buttons
+            // Action buttons (will be replaced by card-based navigation in Task 6)
             VStack(spacing: 12) {
-                // Primary action: Dig in
+                // Primary action: Dismiss to chat
                 Button(action: {
-                    Task {
-                        let query = await viewModel.digIn()
-                        onDigIn(query)
-                    }
+                    onDismiss()
                 }) {
-                    Text("Yes, let's dig in")
+                    Text("Got it, let's go")
                         .frame(maxWidth: 300)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                // Secondary action: Show something else
-                Button(action: {
-                    Task {
-                        let query = await viewModel.showSomethingElse()
-                        onDigIn(query)
-                    }
-                }) {
-                    Text("Show me something else")
-                        .frame(maxWidth: 300)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-
-                // Tertiary action: Skip
+                // Skip
                 Button(action: {
                     onDismiss()
                 }) {
