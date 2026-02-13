@@ -50,9 +50,9 @@ class BriefingViewModel: ObservableObject {
 
             // Track 4: LLM Intro (or fallback)
             let intro = await generateIntro(
-                changedCount: whatChangedCards.count,
-                attentionCount: needsAttentionCards.count,
-                connectionCount: connectionCards.count
+                whatChanged: whatChangedCards,
+                needsAttention: needsAttentionCards,
+                connections: connectionCards
             )
 
             let briefing = StructuredBriefing(
@@ -133,10 +133,14 @@ class BriefingViewModel: ObservableObject {
     }
 
     func buildFallbackIntro(changedCount: Int, attentionCount: Int, connectionCount: Int) -> String {
+        if changedCount == 0 && attentionCount == 0 && connectionCount == 0 {
+            return "Nothing new since last time."
+        }
+
         var parts: [String] = []
 
         if changedCount > 0 {
-            parts.append("\(changedCount) new note\(changedCount == 1 ? "" : "s") since last time")
+            parts.append("\(changedCount) new note\(changedCount == 1 ? "" : "s")")
         }
         if attentionCount > 0 {
             parts.append("\(attentionCount) thread\(attentionCount == 1 ? "" : "s") need\(attentionCount == 1 ? "s" : "") attention")
@@ -145,11 +149,7 @@ class BriefingViewModel: ObservableObject {
             parts.append("\(connectionCount) connection\(connectionCount == 1 ? "" : "s") found")
         }
 
-        if parts.isEmpty {
-            return "Nothing new since last time."
-        }
-
-        return parts.joined(separator: ". ") + "."
+        return parts.joined(separator: ", ") + "."
     }
 
     // MARK: - Helpers
@@ -235,27 +235,55 @@ class BriefingViewModel: ObservableObject {
         return "High semantic similarity"
     }
 
-    private func generateIntro(changedCount: Int, attentionCount: Int, connectionCount: Int) async -> String {
+    private func generateIntro(
+        whatChanged: [BriefingCard],
+        needsAttention: [BriefingCard],
+        connections: [BriefingCard]
+    ) async -> String {
         let isAvailable = await ollamaService.isAvailable()
         guard isAvailable else {
-            return buildFallbackIntro(changedCount: changedCount, attentionCount: attentionCount, connectionCount: connectionCount)
+            return buildFallbackIntro(changedCount: whatChanged.count, attentionCount: needsAttention.count, connectionCount: connections.count)
+        }
+
+        // Build specific context so the LLM can reference real content
+        var context = ""
+
+        if !whatChanged.isEmpty {
+            let titles = whatChanged.prefix(5).compactMap { $0.noteTitle }
+            let threads = Set(whatChanged.compactMap { $0.threadName })
+            context += "New notes: \(titles.joined(separator: ", "))\n"
+            if !threads.isEmpty {
+                context += "In threads: \(threads.joined(separator: ", "))\n"
+            }
+        }
+
+        if !needsAttention.isEmpty {
+            let threadNames = needsAttention.compactMap { $0.threadName }
+            context += "Stalled threads: \(threadNames.joined(separator: ", "))\n"
+        }
+
+        if !connections.isEmpty {
+            let pairs = connections.prefix(2).map { card in
+                "\(card.noteATitle ?? "?") <-> \(card.noteBTitle ?? "?")"
+            }
+            context += "Connections found: \(pairs.joined(separator: "; "))\n"
         }
 
         let prompt = """
-        Write a 1-2 sentence morning greeting for someone with ADHD opening their thinking app. \
-        Be warm but concise. Here's what's happening:
-        - \(changedCount) new notes captured
-        - \(attentionCount) threads need attention
-        - \(connectionCount) interesting connections found
+        You are Selene, a thinking partner for someone with ADHD. Write a 1-2 sentence morning \
+        briefing intro that references SPECIFIC topics from the data below. Don't be generic — \
+        name actual threads or note topics. Be warm but direct.
 
-        Keep it under 30 words. Don't use bullet points. Just a natural greeting.
+        \(context)
+
+        Keep it under 40 words. No bullet points. Reference at least one specific topic by name.
         """
 
         do {
             let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
             return response.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return buildFallbackIntro(changedCount: changedCount, attentionCount: attentionCount, connectionCount: connectionCount)
+            return buildFallbackIntro(changedCount: whatChanged.count, attentionCount: needsAttention.count, connectionCount: connections.count)
         }
     }
 }
