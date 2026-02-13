@@ -554,6 +554,36 @@ export function touchMemories(ids: number[]): number {
   return result.changes;
 }
 
+// Type for cross-thread association result
+export interface CrossThreadAssociation {
+  noteAId: number;
+  noteBId: number;
+  similarity: number;
+}
+
+// Helper: Get high-similarity note pairs where the two notes are in different threads
+export function getCrossThreadAssociations(options: {
+  minSimilarity?: number;
+  recentDays?: number;
+  limit?: number;
+}): CrossThreadAssociation[] {
+  const { minSimilarity = 0.7, recentDays = 7, limit = 10 } = options;
+
+  const stmt = db.prepare(`
+    SELECT na.note_a_id AS noteAId, na.note_b_id AS noteBId, na.similarity_score AS similarity
+    FROM note_associations na
+    JOIN thread_notes tn_a ON tn_a.raw_note_id = na.note_a_id
+    JOIN thread_notes tn_b ON tn_b.raw_note_id = na.note_b_id
+    WHERE na.similarity_score >= ?
+      AND tn_a.thread_id != tn_b.thread_id
+      AND na.created_at >= datetime('now', '-' || ? || ' days')
+    ORDER BY na.similarity_score DESC
+    LIMIT ?
+  `);
+
+  return stmt.all(minSimilarity, recentDays, limit) as CrossThreadAssociation[];
+}
+
 // Cleanup on process exit
 process.on('exit', () => {
   db.close();

@@ -8,6 +8,8 @@ import { notesRoutes } from './routes/notes';
 import { threadsRoutes } from './routes/threads';
 import { sessionsRoutes } from './routes/sessions';
 import { memoriesRoutes } from './routes/memories';
+import { llmRoutes } from './routes/llm';
+import { briefingRoutes } from './routes/briefing';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -134,6 +136,12 @@ sessionsRoutes(server);
 
 // Memories API routes
 memoriesRoutes(server);
+
+// LLM proxy routes
+llmRoutes(server);
+
+// Briefing routes
+briefingRoutes(server);
 
 // Start server
 async function start() {
