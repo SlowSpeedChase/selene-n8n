@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.selene.transcribe-voice-memos</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/npx</string>
+        <string>ts-node</string>
+        <string>src/workflows/transcribe-voice-memos.ts</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/chaseeasterling/selene-n8n</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>SELENE_DB_PATH</key>
+        <string>/Users/chaseeasterling/selene-data/selene.db</string>
+    </dict>
+
+    <key>WatchPaths</key>
+    <array>
+        <string>/Users/chaseeasterling/Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings</string>
+    </array>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/chaseeasterling/selene-n8n/logs/transcribe-voice-memos.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/chaseeasterling/selene-n8n/logs/transcribe-voice-memos.error.log</string>
+</dict>
+</plist>
