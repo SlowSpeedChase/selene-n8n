@@ -69,6 +69,13 @@ struct SeleneChatApp: App {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
 
+                    // Install Silver Crystal menu bar icon (once)
+                    if appDelegate.crystalStatusItem == nil {
+                        let crystal = CrystalStatusItem(scheduler: scheduler)
+                        crystal.install()
+                        appDelegate.crystalStatusItem = crystal
+                    }
+
                     // Start scheduler on first window open
                     if !scheduler.isEnabled {
                         scheduler.enable()
@@ -119,18 +126,15 @@ struct SeleneChatApp: App {
             SettingsView()
                 .environmentObject(databaseService)
         }
-
-        MenuBarExtra("Selene", systemImage: scheduler.isOllamaActive ? "moon.stars.fill" : "moon.stars") {
-            MenuBarStatusView()
-                .environmentObject(scheduler)
-        }
-        .menuBarExtraStyle(.window)
     }
 }
 
 // MARK: - AppDelegate
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    /// The Silver Crystal menu bar icon manager.
+    var crystalStatusItem: CrystalStatusItem?
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         // Don't quit when windows close — stay in menu bar
         DispatchQueue.main.async {

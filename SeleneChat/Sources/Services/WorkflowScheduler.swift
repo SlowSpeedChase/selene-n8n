@@ -203,10 +203,40 @@ class WorkflowScheduler: ObservableObject {
     // MARK: - Server Management
 
     /// Launches the Selene server as a long-running child process.
+    /// If an orphaned server from a previous launch is already healthy, adopts it.
     private func startServer() {
         // Don't launch if already running
         if let existing = serverProcess, existing.isRunning { return }
 
+        // Check if an orphaned server is already healthy on port 5678
+        Task { [weak self] in
+            if await Self.isServerHealthy() {
+                await MainActor.run {
+                    self?.lastError = nil
+                }
+                return
+            }
+            await MainActor.run {
+                self?.launchServerProcess()
+            }
+        }
+    }
+
+    /// Returns true if the server at localhost:5678 responds to a health check.
+    private static func isServerHealthy() async -> Bool {
+        guard let url = URL(string: "http://localhost:5678/health") else { return false }
+        do {
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 2
+            let (_, response) = try await URLSession.shared.data(for: request)
+            return (response as? HTTPURLResponse)?.statusCode == 200
+        } catch {
+            return false
+        }
+    }
+
+    /// Actually spawns the server child process.
+    private func launchServerProcess() {
         guard let serverWorkflow = workflows.first(where: { $0.schedule == .persistent }) else {
             return
         }
