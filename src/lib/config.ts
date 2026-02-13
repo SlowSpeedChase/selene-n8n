@@ -82,7 +82,6 @@ export const config = {
   // Things bridge - unchanged
   thingsPendingDir: join(projectRoot, 'scripts/things-bridge/pending'),
 
-  // iMessage digest - disabled in test mode
-  imessageDigestTo: process.env.IMESSAGE_DIGEST_TO || '',
-  imessageDigestEnabled: !isTestEnv && process.env.IMESSAGE_DIGEST_ENABLED !== 'false',
+  // Apple Notes digest - disabled in test mode
+  appleNotesDigestEnabled: !isTestEnv && process.env.APPLE_NOTES_DIGEST_ENABLED !== 'false',
 };

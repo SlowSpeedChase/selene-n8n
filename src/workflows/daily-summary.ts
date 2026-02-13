@@ -142,7 +142,7 @@ ${notes.map((n) => `- [[${n.title}]]`).join('\n')}
   writeFileSync(outputPath, markdown);
   log.info({ outputPath }, 'Daily summary written');
 
-  // Generate condensed digest for iMessage
+  // Generate condensed digest for Apple Notes
   let digest: string;
   if (await isAvailable()) {
     digest = await generate(DIGEST_PROMPT.replace('{summary}', summary));

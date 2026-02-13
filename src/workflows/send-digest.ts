@@ -1,51 +1,47 @@
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { createWorkflowLogger, config } from '../lib';
 
 const log = createWorkflowLogger('send-digest');
 
-function sendIMessage(to: string, message: string): void {
-  // Escape for AppleScript string - use single quotes to avoid escaping
-  const escaped = message.replace(/'/g, "'\"'\"'");
+function digestToHtml(digestText: string, date: string): string {
+  const lines = digestText.split('\n').filter((l) => l.trim());
+  const bodyHtml = lines.map((line) => `<p>${line}</p>`).join('\n');
 
-  const script = `osascript -e 'tell application "Messages" to send "${escaped}" to buddy "${to}"'`;
+  return `<h1>Selene Daily</h1>
+<p style="color: #888; font-size: 14px;">Updated: ${date}</p>
+<hr>
+${bodyHtml}`;
+}
 
-  try {
-    execSync(script, {
-      timeout: 10000,
-      stdio: 'pipe',
-    });
-  } catch (err: any) {
-    // If direct buddy send fails, try with phone/email format
-    if (err.status !== 0) {
-      const fallbackScript = `osascript -e 'tell application "Messages"' -e 'set targetService to 1st service whose service type = iMessage' -e 'set targetBuddy to buddy "${to}" of targetService' -e 'send "${escaped}" to targetBuddy' -e 'end tell'`;
-      execSync(fallbackScript, {
-        timeout: 10000,
-        stdio: 'pipe',
-      });
-    } else {
-      throw err;
-    }
-  }
+function updateAppleNote(noteName: string, htmlBody: string): void {
+  // Escape for AppleScript: backslashes, double quotes, backslash-n for newlines
+  const escaped = htmlBody
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n');
+
+  const script = `osascript -e 'tell application "Notes"' \
+    -e 'set noteName to "Selene Daily"' \
+    -e 'set noteBody to "${escaped}"' \
+    -e 'try' \
+    -e 'set targetNote to first note whose name is noteName' \
+    -e 'set body of targetNote to noteBody' \
+    -e 'on error' \
+    -e 'make new note with properties {name:noteName, body:noteBody}' \
+    -e 'end try' \
+    -e 'end tell'`;
+
+  execSync(script, { timeout: 15000, stdio: 'pipe' });
 }
 
 export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: string }> {
   log.info({ env: config.env }, 'Starting send-digest');
 
-  // In test mode, write to file instead of sending iMessage
+  // In test mode, write to file instead of posting to Apple Notes
   if (config.isTestEnv) {
     return sendDigestToFile();
-  }
-
-  if (!config.imessageDigestEnabled) {
-    log.info('iMessage digest disabled');
-    return { sent: false };
-  }
-
-  if (!config.imessageDigestTo) {
-    log.warn('IMESSAGE_DIGEST_TO not configured');
-    return { sent: false };
   }
 
   // Look for today's digest, fall back to yesterday's
@@ -69,20 +65,27 @@ export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: str
   }
 
   try {
-    sendIMessage(config.imessageDigestTo, `🌅 Selene Daily Digest\n\n${message}`);
-    log.info({ to: config.imessageDigestTo }, 'Digest sent via iMessage');
+    const dateStr = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const html = digestToHtml(message, dateStr);
+    updateAppleNote('Selene Daily', html);
+    log.info('Digest posted to Apple Notes');
     return { sent: true };
   } catch (err) {
-    log.error({ err }, 'Failed to send iMessage digest');
+    log.error({ err }, 'Failed to post digest to Apple Notes');
     return { sent: false };
   }
 }
 
 /**
- * Test mode: write digest to file instead of sending iMessage
+ * Test mode: write digest to file instead of posting to Apple Notes
  */
 async function sendDigestToFile(): Promise<{ sent: boolean; writtenToFile?: string }> {
-  log.info('Test mode: writing digest to file instead of iMessage');
+  log.info('Test mode: writing digest to file instead of Apple Notes');
 
   // Look for today's digest, fall back to yesterday's
   const today = new Date().toISOString().split('T')[0];
