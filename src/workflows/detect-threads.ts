@@ -248,6 +248,25 @@ async function assignToExistingThreads(): Promise<number> {
       if (match) {
         linkStmt.run(match.threadId, noteId, now, match.relevanceScore);
         updateThreadStmt.run(now, now, match.threadId);
+
+        // Reactivate archived threads when new notes are assigned
+        const threadStatus = db
+          .prepare('SELECT status FROM threads WHERE id = ?')
+          .get(match.threadId) as { status: string } | undefined;
+
+        if (threadStatus?.status === 'archived') {
+          db.prepare(
+            `UPDATE threads SET status = 'active', updated_at = ? WHERE id = ?`
+          ).run(now, match.threadId);
+
+          db.prepare(
+            `INSERT INTO thread_history (thread_id, trigger_note_id, change_type, created_at)
+             VALUES (?, ?, 'reactivated', ?)`
+          ).run(match.threadId, noteId, now);
+
+          log.info({ threadId: match.threadId, noteId }, 'Reactivated archived thread');
+        }
+
         threadMembership.set(noteId, match.threadId);
         assigned++;
 
