@@ -127,6 +127,96 @@ export function insertNote(note: {
   return result.lastInsertRowid as number;
 }
 
+// Helper: Get all notes with processed data
+export function getAllNotes(limit = 100): RawNote[] {
+  const stmt = db.prepare(`
+    SELECT r.*, p.concepts, p.concept_confidence, p.primary_theme,
+           p.secondary_themes, p.overall_sentiment, p.sentiment_score,
+           p.emotional_tone, p.energy_level
+    FROM raw_notes r
+    LEFT JOIN processed_notes p ON r.id = p.raw_note_id
+    WHERE r.test_run IS NULL
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `);
+  return stmt.all(limit) as RawNote[];
+}
+
+// Helper: Get note by ID with processed data
+export function getNoteById(id: number): RawNote | undefined {
+  const stmt = db.prepare(`
+    SELECT r.*, p.concepts, p.concept_confidence, p.primary_theme,
+           p.secondary_themes, p.overall_sentiment, p.sentiment_score,
+           p.emotional_tone, p.energy_level
+    FROM raw_notes r
+    LEFT JOIN processed_notes p ON r.id = p.raw_note_id
+    WHERE r.id = ? AND r.test_run IS NULL
+  `);
+  return stmt.get(id) as RawNote | undefined;
+}
+
+// Helper: Keyword search across notes
+export function searchNotesKeyword(query: string, limit = 50): RawNote[] {
+  const stmt = db.prepare(`
+    SELECT r.*, p.concepts, p.concept_confidence, p.primary_theme,
+           p.secondary_themes, p.overall_sentiment, p.sentiment_score,
+           p.emotional_tone, p.energy_level
+    FROM raw_notes r
+    LEFT JOIN processed_notes p ON r.id = p.raw_note_id
+    WHERE r.test_run IS NULL
+      AND (r.content LIKE ? OR r.title LIKE ?)
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `);
+  const pattern = '%' + query + '%';
+  return stmt.all(pattern, pattern, limit) as RawNote[];
+}
+
+// Helper: Get recent notes within N days
+export function getRecentNotes(days: number, limit = 10): RawNote[] {
+  const stmt = db.prepare(`
+    SELECT r.*, p.concepts, p.concept_confidence, p.primary_theme,
+           p.secondary_themes, p.overall_sentiment, p.sentiment_score,
+           p.emotional_tone, p.energy_level
+    FROM raw_notes r
+    LEFT JOIN processed_notes p ON r.id = p.raw_note_id
+    WHERE r.test_run IS NULL
+      AND r.created_at >= datetime('now', '-' || ? || ' days')
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `);
+  return stmt.all(days, limit) as RawNote[];
+}
+
+// Helper: Get notes since a specific date
+export function getNotesSince(date: string, limit = 20): RawNote[] {
+  const stmt = db.prepare(`
+    SELECT r.*, p.concepts, p.concept_confidence, p.primary_theme,
+           p.secondary_themes, p.overall_sentiment, p.sentiment_score,
+           p.emotional_tone, p.energy_level
+    FROM raw_notes r
+    LEFT JOIN processed_notes p ON r.id = p.raw_note_id
+    WHERE r.test_run IS NULL
+      AND r.created_at >= ?
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `);
+  return stmt.all(date, limit) as RawNote[];
+}
+
+// Helper: Get thread assignments for a batch of note IDs
+export function getThreadAssignmentsForNotes(noteIds: number[]): Array<{ noteId: number; threadName: string; threadId: number }> {
+  if (noteIds.length === 0) return [];
+  const placeholders = noteIds.map(() => '?').join(',');
+  const stmt = db.prepare(`
+    SELECT tn.raw_note_id as noteId, t.name as threadName, t.id as threadId
+    FROM thread_notes tn
+    JOIN threads t ON tn.thread_id = t.id
+    WHERE tn.raw_note_id IN (${placeholders})
+  `);
+  return stmt.all(...noteIds) as Array<{ noteId: number; threadName: string; threadId: number }>;
+}
+
 // Cleanup on process exit
 process.on('exit', () => {
   db.close();
