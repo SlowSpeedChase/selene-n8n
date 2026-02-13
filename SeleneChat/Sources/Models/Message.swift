@@ -13,6 +13,7 @@ struct Message: Identifiable, Codable, Hashable {
     var citedNotes: [Note]? // Notes that were cited in the response
     var contextNotes: [Note]? // All notes used to build context
     var queryType: String? // For debugging/analytics
+    var voiceOriginated: Bool
 
     enum Role: String, Codable {
         case user
@@ -54,7 +55,8 @@ struct Message: Identifiable, Codable, Hashable {
         relatedNotes: [Int]? = nil,
         citedNotes: [Note]? = nil,
         contextNotes: [Note]? = nil,
-        queryType: String? = nil
+        queryType: String? = nil,
+        voiceOriginated: Bool = false
     ) {
         self.id = id
         self.role = role
@@ -65,6 +67,19 @@ struct Message: Identifiable, Codable, Hashable {
         self.citedNotes = citedNotes
         self.contextNotes = contextNotes
         self.queryType = queryType
+        self.voiceOriginated = voiceOriginated
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        role = try container.decode(Role.self, forKey: .role)
+        content = try container.decode(String.self, forKey: .content)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        llmTier = try container.decode(LLMTier.self, forKey: .llmTier)
+        relatedNotes = try container.decodeIfPresent([Int].self, forKey: .relatedNotes)
+        queryType = try container.decodeIfPresent(String.self, forKey: .queryType)
+        voiceOriginated = try container.decodeIfPresent(Bool.self, forKey: .voiceOriginated) ?? false
     }
 
     var formattedTime: String {
@@ -89,6 +104,6 @@ struct Message: Identifiable, Codable, Hashable {
 
     // Custom coding keys to exclude non-codable properties
     enum CodingKeys: String, CodingKey {
-        case id, role, content, timestamp, llmTier, relatedNotes, queryType
+        case id, role, content, timestamp, llmTier, relatedNotes, queryType, voiceOriginated
     }
 }
