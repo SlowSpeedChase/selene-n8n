@@ -1,12 +1,35 @@
-import { createWorkflowLogger, db } from '../lib';
+import { createWorkflowLogger, db, generate } from '../lib';
 import type { WorkflowResult } from '../types';
 
 const log = createWorkflowLogger('thread-lifecycle');
 
 // Configuration
 const STALE_THRESHOLD_DAYS = 60;
+const MIN_SPLIT_NOTES = 6;
+const MIN_COMPONENT_SIZE = 3;
+const SPLIT_SIMILARITY_THRESHOLD = 0.65;
+const MAX_NOTES_PER_SYNTHESIS = 15;
 
 // Types
+interface AssociationRecord {
+  note_a_id: number;
+  note_b_id: number;
+  similarity_score: number;
+}
+
+interface NoteRecord {
+  id: number;
+  title: string;
+  content: string;
+  created_at: string;
+}
+
+interface ThreadSynthesis {
+  name: string;
+  why: string;
+  summary: string;
+}
+
 interface ThreadRecord {
   id: number;
   name: string;
@@ -79,10 +102,327 @@ function archiveStaleThreads(): number {
 }
 
 /**
+ * BFS to find connected components in a graph.
+ */
+function findConnectedComponents(adjacency: Map<number, Set<number>>): number[][] {
+  const visited = new Set<number>();
+  const components: number[][] = [];
+
+  for (const nodeId of adjacency.keys()) {
+    if (visited.has(nodeId)) continue;
+
+    const component: number[] = [];
+    const queue: number[] = [nodeId];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+
+      visited.add(current);
+      component.push(current);
+
+      const neighbors = adjacency.get(current) || new Set();
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    components.push(component);
+  }
+
+  return components;
+}
+
+/**
+ * Build LLM prompt for naming a new thread from a cluster of notes.
+ */
+function buildSynthesisPrompt(notes: NoteRecord[]): string {
+  const noteTexts = notes
+    .slice(0, MAX_NOTES_PER_SYNTHESIS)
+    .map((n, i) => `--- Note ${i + 1} (${n.created_at}) ---\nTitle: ${n.title}\n${n.content}`)
+    .join('\n\n');
+
+  return `These notes were written over time by the same person. They cluster together based on semantic similarity.
+
+${noteTexts}
+
+Questions:
+1. What thread of thinking connects these notes?
+2. What is the underlying want, need, or motivation?
+3. Is there a clear direction or is this still exploring?
+4. Suggest a short name for this thread (2-5 words)
+
+Respond ONLY with valid JSON (no explanation):
+{
+  "name": "Short Thread Name",
+  "why": "The underlying motivation or goal",
+  "summary": "What connects these notes together"
+}`;
+}
+
+/**
+ * Parse LLM JSON response into a ThreadSynthesis.
+ */
+function parseSynthesis(response: string): ThreadSynthesis | null {
+  try {
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.name || !parsed.summary) return null;
+
+    return {
+      name: parsed.name,
+      why: parsed.why || '',
+      summary: parsed.summary,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build LLM prompt for re-synthesizing a thread after a split.
+ */
+function buildResynthesisPrompt(thread: ThreadRecord, notes: NoteRecord[]): string {
+  const noteTexts = notes
+    .slice(0, MAX_NOTES_PER_SYNTHESIS)
+    .map((n, i) => `--- Note ${i + 1} (${n.created_at}) ---\nTitle: ${n.title}\n${n.content}`)
+    .join('\n\n');
+
+  return `Thread: ${thread.name}
+Previous summary: ${thread.summary || '(none)'}
+Previous "why": ${thread.why || '(none)'}
+
+Notes in this thread (newest first):
+${noteTexts}
+
+Questions:
+1. Has the direction of this thread shifted?
+2. What is the updated summary?
+3. Has the underlying motivation become clearer or changed?
+
+Respond ONLY with valid JSON:
+{
+  "name": "${thread.name}",
+  "summary": "...",
+  "why": "..."
+}`;
+}
+
+/**
+ * Detect threads whose notes have drifted into distinct sub-clusters
+ * and split them into separate threads.
+ */
+async function splitDivergentThreads(): Promise<{ splits: number; errors: number }> {
+  let splits = 0;
+  let errors = 0;
+
+  // Find active threads with enough notes to potentially split
+  const threads = db
+    .prepare(
+      `SELECT id, name, why, summary, status, note_count, last_activity_at
+       FROM threads
+       WHERE status = 'active'
+         AND note_count >= ?
+       ORDER BY note_count DESC`
+    )
+    .all(MIN_SPLIT_NOTES) as ThreadRecord[];
+
+  if (threads.length === 0) {
+    log.info({ minNotes: MIN_SPLIT_NOTES }, 'No threads eligible for split detection');
+    return { splits, errors };
+  }
+
+  log.info({ count: threads.length }, 'Checking threads for divergence');
+
+  for (const thread of threads) {
+    try {
+      // Get note IDs belonging to this thread
+      const threadNoteRows = db
+        .prepare(`SELECT raw_note_id FROM thread_notes WHERE thread_id = ?`)
+        .all(thread.id) as { raw_note_id: number }[];
+
+      const noteIds = threadNoteRows.map((r) => r.raw_note_id);
+
+      if (noteIds.length < MIN_SPLIT_NOTES) continue;
+
+      // Get associations between these notes above the similarity threshold
+      const placeholders = noteIds.map(() => '?').join(',');
+      const associations = db
+        .prepare(
+          `SELECT note_a_id, note_b_id, similarity_score
+           FROM note_associations
+           WHERE note_a_id IN (${placeholders})
+             AND note_b_id IN (${placeholders})
+             AND similarity_score >= ?`
+        )
+        .all(...noteIds, ...noteIds, SPLIT_SIMILARITY_THRESHOLD) as AssociationRecord[];
+
+      // Build adjacency graph
+      const adjacency = new Map<number, Set<number>>();
+      for (const noteId of noteIds) {
+        adjacency.set(noteId, new Set());
+      }
+      for (const assoc of associations) {
+        adjacency.get(assoc.note_a_id)?.add(assoc.note_b_id);
+        adjacency.get(assoc.note_b_id)?.add(assoc.note_a_id);
+      }
+
+      // Find connected components
+      const components = findConnectedComponents(adjacency);
+
+      // Filter to viable components (>= MIN_COMPONENT_SIZE)
+      const viableComponents = components.filter((c) => c.length >= MIN_COMPONENT_SIZE);
+
+      if (viableComponents.length < 2) {
+        log.debug(
+          { threadId: thread.id, name: thread.name, components: components.length, viable: viableComponents.length },
+          'Thread is cohesive, no split needed'
+        );
+        continue;
+      }
+
+      log.info(
+        { threadId: thread.id, name: thread.name, components: viableComponents.length },
+        'Thread has divergent clusters, splitting'
+      );
+
+      // Sort by size DESC - largest keeps the original thread
+      viableComponents.sort((a, b) => b.length - a.length);
+
+      const nowIso = new Date().toISOString();
+
+      // Process new clusters (skip index 0, that stays with the original thread)
+      for (let i = 1; i < viableComponents.length; i++) {
+        const clusterNoteIds = viableComponents[i];
+
+        // Get note content for synthesis
+        const clusterPlaceholders = clusterNoteIds.map(() => '?').join(',');
+        const clusterNotes = db
+          .prepare(
+            `SELECT id, title, content, created_at
+             FROM raw_notes
+             WHERE id IN (${clusterPlaceholders})
+             ORDER BY created_at DESC`
+          )
+          .all(...clusterNoteIds) as NoteRecord[];
+
+        // Ask LLM to name the new thread
+        const prompt = buildSynthesisPrompt(clusterNotes);
+        const response = await generate(prompt);
+        const synthesis = parseSynthesis(response);
+
+        if (!synthesis) {
+          log.warn(
+            { threadId: thread.id, cluster: i, noteCount: clusterNoteIds.length },
+            'Failed to parse synthesis for split cluster'
+          );
+          errors++;
+          continue;
+        }
+
+        // Create new thread
+        const insertResult = db
+          .prepare(
+            `INSERT INTO threads (name, why, summary, status, note_count, last_activity_at, created_at, updated_at)
+             VALUES (?, ?, ?, 'active', ?, ?, ?, ?)`
+          )
+          .run(
+            synthesis.name,
+            synthesis.why,
+            synthesis.summary,
+            clusterNoteIds.length,
+            nowIso,
+            nowIso,
+            nowIso
+          );
+
+        const newThreadId = insertResult.lastInsertRowid as number;
+
+        // Move notes from old thread to new thread
+        const moveNotePlaceholders = clusterNoteIds.map(() => '?').join(',');
+        db.prepare(
+          `UPDATE thread_notes SET thread_id = ? WHERE thread_id = ? AND raw_note_id IN (${moveNotePlaceholders})`
+        ).run(newThreadId, thread.id, ...clusterNoteIds);
+
+        // Record history for the new thread
+        db.prepare(
+          `INSERT INTO thread_history (thread_id, summary_before, summary_after, change_type, created_at)
+           VALUES (?, NULL, ?, 'created', ?)`
+        ).run(newThreadId, synthesis.summary, nowIso);
+
+        log.info(
+          {
+            originalThreadId: thread.id,
+            newThreadId,
+            newName: synthesis.name,
+            noteCount: clusterNoteIds.length,
+          },
+          'Created split thread'
+        );
+      }
+
+      // Update original thread's note_count to reflect remaining notes
+      const remainingCount = viableComponents[0].length;
+      db.prepare(`UPDATE threads SET note_count = ?, updated_at = ? WHERE id = ?`).run(
+        remainingCount,
+        nowIso,
+        thread.id
+      );
+
+      // Record split history on original thread
+      db.prepare(
+        `INSERT INTO thread_history (thread_id, summary_before, summary_after, change_type, created_at)
+         VALUES (?, ?, ?, 'split', ?)`
+      ).run(thread.id, thread.summary, thread.summary, nowIso);
+
+      // Re-synthesize original thread with remaining notes
+      const remainingNoteIds = viableComponents[0];
+      const remainingPlaceholders = remainingNoteIds.map(() => '?').join(',');
+      const remainingNotes = db
+        .prepare(
+          `SELECT id, title, content, created_at
+           FROM raw_notes
+           WHERE id IN (${remainingPlaceholders})
+           ORDER BY created_at DESC`
+        )
+        .all(...remainingNoteIds) as NoteRecord[];
+
+      const resynthPrompt = buildResynthesisPrompt(thread, remainingNotes);
+      const resynthResponse = await generate(resynthPrompt);
+      const resynth = parseSynthesis(resynthResponse);
+
+      if (resynth) {
+        db.prepare(
+          `UPDATE threads SET summary = ?, why = ?, updated_at = ? WHERE id = ?`
+        ).run(resynth.summary, resynth.why, nowIso, thread.id);
+
+        log.info(
+          { threadId: thread.id, name: thread.name },
+          'Re-synthesized original thread after split'
+        );
+      }
+
+      splits++;
+    } catch (err) {
+      const error = err as Error;
+      log.error({ err: error, threadId: thread.id, name: thread.name }, 'Error splitting thread');
+      errors++;
+    }
+  }
+
+  log.info({ splits, errors }, 'Split detection complete');
+  return { splits, errors };
+}
+
+/**
  * Main workflow: thread lifecycle management
  *
  * Phase 1: Archive stale threads (inactive > 60 days)
- * Phase 2: Split divergent threads (TODO)
+ * Phase 2: Split divergent threads (notes drifted into distinct sub-clusters)
  * Phase 3: Merge convergent threads (TODO)
  */
 export async function threadLifecycle(): Promise<WorkflowResult> {
@@ -109,8 +449,17 @@ export async function threadLifecycle(): Promise<WorkflowResult> {
   }
 
   // Phase 2: Split divergent threads
-  // TODO: Detect threads whose notes have drifted into distinct sub-clusters
-  // and split them into separate threads
+  try {
+    const splitResult = await splitDivergentThreads();
+    result.processed += splitResult.splits;
+    result.errors += splitResult.errors;
+    result.details.push({ id: 0, success: true, error: `Split ${splitResult.splits} threads` });
+  } catch (err) {
+    const error = err as Error;
+    log.error({ err: error }, 'Error in split phase');
+    result.errors++;
+    result.details.push({ id: 0, success: false, error: error.message });
+  }
 
   // Phase 3: Merge convergent threads
   // TODO: Detect pairs of threads with high semantic overlap
