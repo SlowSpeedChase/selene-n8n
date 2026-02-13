@@ -1810,6 +1810,142 @@ class DatabaseService: ObservableObject {
         #endif
     }
 
+    // MARK: - Briefing Queries
+
+    /// Get notes created since a specific date.
+    /// Used by briefing "What Changed" section.
+    func getNotesSince(_ date: Date, limit: Int = 20) async throws -> [Note] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let dateStr = iso8601Formatter.string(from: date)
+
+        let query = rawNotes
+            .join(.leftOuter, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .filter(rawNotes[createdAt] >= dateStr)
+            .filter(rawNotes[testRun] == nil)
+            .order(rawNotes[createdAt].desc)
+            .limit(limit)
+
+        var notes: [Note] = []
+
+        for row in try db.prepare(query) {
+            let note = try parseNote(from: row)
+            notes.append(note)
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getNotesSince: \(notes.count) notes since \(dateStr)")
+        #endif
+
+        return notes
+    }
+
+    /// Get thread assignments for a list of note IDs.
+    /// Returns a dictionary mapping noteId to (threadName, threadId).
+    func getThreadAssignmentsForNotes(_ noteIds: [Int]) async throws -> [Int: (threadName: String, threadId: Int64)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        if noteIds.isEmpty {
+            return [:]
+        }
+
+        // Check if tables exist
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='thread_notes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return [:]
+        }
+
+        let placeholders = noteIds.map { _ in "?" }.joined(separator: ", ")
+        let sql = """
+            SELECT tn.raw_note_id, t.id, t.name
+            FROM thread_notes tn
+            JOIN threads t ON tn.thread_id = t.id
+            WHERE tn.raw_note_id IN (\(placeholders))
+            AND t.status = 'active'
+        """
+
+        var result: [Int: (threadName: String, threadId: Int64)] = [:]
+
+        let bindings: [Binding?] = noteIds.map { Int64($0) as Binding? }
+        for row in try db.prepare(sql, bindings) {
+            let rawNoteId = Int(row[0] as! Int64)
+            let tId = row[1] as! Int64
+            let tName = row[2] as! String
+            result[rawNoteId] = (threadName: tName, threadId: tId)
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getThreadAssignmentsForNotes: \(result.count) assignments for \(noteIds.count) notes")
+        #endif
+
+        return result
+    }
+
+    /// Get high-similarity note pairs from different threads, where at least one note is recent.
+    /// Used by briefing "Connections" section.
+    func getCrossThreadAssociations(
+        minSimilarity: Double = 0.7,
+        recentDays: Int = 7,
+        limit: Int = 10
+    ) async throws -> [(noteAId: Int, noteBId: Int, similarity: Double)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if required tables exist
+        let tablesExist = try db.scalar("""
+            SELECT COUNT(*) FROM sqlite_master
+            WHERE type='table' AND name IN ('note_associations', 'thread_notes')
+        """) as? Int64 ?? 0
+
+        if tablesExist < 2 {
+            return []
+        }
+
+        guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -recentDays, to: Date()) else {
+            throw DatabaseError.queryFailed("Failed to calculate cutoff date")
+        }
+        let cutoffStr = iso8601Formatter.string(from: cutoffDate)
+
+        let sql = """
+            SELECT na.note_id_a, na.note_id_b, na.similarity_score
+            FROM note_associations na
+            JOIN raw_notes ra ON na.note_id_a = ra.id
+            JOIN raw_notes rb ON na.note_id_b = rb.id
+            JOIN thread_notes tna ON na.note_id_a = tna.raw_note_id
+            JOIN thread_notes tnb ON na.note_id_b = tnb.raw_note_id
+            WHERE na.similarity_score >= ?
+            AND tna.thread_id != tnb.thread_id
+            AND (ra.created_at >= ? OR rb.created_at >= ?)
+            AND ra.test_run IS NULL
+            AND rb.test_run IS NULL
+            ORDER BY na.similarity_score DESC
+            LIMIT ?
+        """
+
+        var results: [(noteAId: Int, noteBId: Int, similarity: Double)] = []
+
+        for row in try db.prepare(sql, minSimilarity, cutoffStr, cutoffStr, limit) {
+            let noteAId = Int(row[0] as! Int64)
+            let noteBId = Int(row[1] as! Int64)
+            let similarity = row[2] as! Double
+            results.append((noteAId: noteAId, noteBId: noteBId, similarity: similarity))
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getCrossThreadAssociations: \(results.count) cross-thread pairs")
+        #endif
+
+        return results
+    }
+
     // MARK: - Error Types
 
     enum DatabaseError: Error, LocalizedError {

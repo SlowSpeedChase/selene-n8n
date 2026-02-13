@@ -11,6 +11,7 @@ struct ChatView: View {
     @Namespace private var focusNamespace
 
     var initialQuery: String?
+    var briefingCard: BriefingCard?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,6 +87,13 @@ struct ChatView: View {
                     await chatViewModel.sendMessage(query)
                 }
                 // Note: We don't clear messageText here since sendMessage handles that logic
+            }
+
+            // Handle briefing card discussion (from morning briefing)
+            if let card = briefingCard {
+                Task {
+                    await chatViewModel.startBriefingDiscussion(card: card)
+                }
             }
         }
         .onDisappear {

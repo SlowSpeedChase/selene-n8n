@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var selectedView: NavigationItem = .today
     @State private var pendingThreadQuery: String?
+    @State private var pendingBriefingCard: BriefingCard?
     @State private var showBriefing = true  // Show briefing on app open
     @State private var selectedThreadId: Int64?  // For thread workspace navigation
     @EnvironmentObject var databaseService: DatabaseService
@@ -43,12 +44,13 @@ struct ContentView: View {
                     onDismiss: {
                         showBriefing = false
                     },
-                    onDigIn: { query in
+                    onDiscussCard: { card in
                         showBriefing = false
-                        pendingThreadQuery = query
+                        pendingBriefingCard = card
                         selectedView = .chat
                     }
                 )
+                .environmentObject(databaseService)
             } else {
                 switch selectedView {
                 case .today:
@@ -70,8 +72,11 @@ struct ContentView: View {
                     )
                     .environmentObject(databaseService)
                 case .chat:
-                    ChatView(initialQuery: pendingThreadQuery)
-                        .onAppear { pendingThreadQuery = nil }
+                    ChatView(initialQuery: pendingThreadQuery, briefingCard: pendingBriefingCard)
+                        .onAppear {
+                            pendingThreadQuery = nil
+                            pendingBriefingCard = nil
+                        }
                 case .search:
                     SearchView()
                 case .planning:

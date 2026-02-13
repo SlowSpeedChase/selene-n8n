@@ -1,81 +1,261 @@
 import Foundation
 
-/// ViewModel for managing morning briefing state and orchestrating briefing generation
 @MainActor
 class BriefingViewModel: ObservableObject {
-    /// Current briefing state
     @Published var state = BriefingState()
-
-    /// Whether the briefing has been dismissed
     @Published var isDismissed = false
 
-    /// Briefing generator service
-    private let generator = BriefingGenerator()
-
-    /// Database service for fetching threads and notes
     private let databaseService = DatabaseService.shared
-
-    /// Ollama service for LLM generation
     private let ollamaService = OllamaService.shared
+    private let contextBuilder = BriefingContextBuilder()
 
-    // MARK: - Public Methods
+    private static let lastOpenKey = "briefing_last_open_date"
 
-    /// Load the morning briefing
-    /// - Checks Ollama availability
-    /// - Fetches active threads and recent notes
-    /// - Generates briefing via LLM
+    // MARK: - Load Briefing
+
     func loadBriefing() async {
         state.status = .loading
 
-        // Check if Ollama is available
-        let isAvailable = await ollamaService.isAvailable()
-        guard isAvailable else {
-            state.status = .failed("Selene is thinking... (Ollama not available)")
-            return
-        }
-
         do {
-            // Fetch active threads (top 5 by momentum)
-            let threads = try await databaseService.getActiveThreads(limit: 5)
+            // Track 1: What Changed (pure DB)
+            let lastOpen = UserDefaults.standard.object(forKey: Self.lastOpenKey) as? Date
+                ?? Calendar.current.date(byAdding: .day, value: -1, to: Date())!
 
-            // Fetch recent notes (last 7 days, up to 10)
-            let recentNotes = try await databaseService.getRecentNotes(days: 7, limit: 10)
+            let recentNotes = try await databaseService.getNotesSince(lastOpen, limit: 20)
+            let noteIds = recentNotes.map { $0.id }
+            let threadMap = noteIds.isEmpty ? [:] : try await databaseService.getThreadAssignmentsForNotes(noteIds)
+            let whatChangedCards = buildWhatChangedCards(notes: recentNotes, threadMap: threadMap)
 
-            // Build the briefing prompt
-            let prompt = generator.buildBriefingPrompt(threads: threads, recentNotes: recentNotes)
+            // Track 2: Needs Attention (pure DB)
+            let activeThreads = try await databaseService.getActiveThreads(limit: 20)
+            let stalledThreads = BriefingDataService.identifyStalledThreads(activeThreads, staleDays: 5)
 
-            // Generate briefing via Ollama
-            let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+            var openTaskCounts: [Int64: Int] = [:]
+            for thread in stalledThreads {
+                let tasks = try await databaseService.getTasksForThread(thread.id)
+                openTaskCounts[thread.id] = tasks.filter { !$0.isCompleted }.count
+            }
+            let needsAttentionCards = buildNeedsAttentionCards(threads: stalledThreads, openTaskCounts: openTaskCounts)
 
-            // Parse the response into a Briefing struct
-            let briefing = generator.parseBriefingResponse(response, threads: threads)
+            // Track 3: Connections (embeddings + LLM)
+            var connectionCards: [BriefingCard] = []
+            do {
+                let pairs = try await databaseService.getCrossThreadAssociations(minSimilarity: 0.7, recentDays: 7, limit: 3)
+                if !pairs.isEmpty {
+                    connectionCards = await buildConnectionCardsFromPairs(pairs)
+                }
+            } catch {
+                // Connections are optional — continue without them
+            }
 
-            // Update state to loaded
+            // Track 4: LLM Intro (or fallback)
+            let intro = await generateIntro(
+                changedCount: whatChangedCards.count,
+                attentionCount: needsAttentionCards.count,
+                connectionCount: connectionCards.count
+            )
+
+            let briefing = StructuredBriefing(
+                intro: intro,
+                whatChanged: whatChangedCards,
+                needsAttention: needsAttentionCards,
+                connections: connectionCards,
+                generatedAt: Date()
+            )
+
             state.status = .loaded(briefing)
+            UserDefaults.standard.set(Date(), forKey: Self.lastOpenKey)
 
         } catch {
             state.status = .failed(error.localizedDescription)
         }
     }
 
-    /// Dismiss the briefing
     func dismiss() async {
         isDismissed = true
     }
 
-    /// Get a query to dig into the suggested thread
-    /// - Returns: A query string to start exploring the suggested thread
-    func digIn() async -> String {
-        if case .loaded(let briefing) = state.status,
-           let thread = briefing.suggestedThread {
-            return "Let's dig into \(thread)"
+    // MARK: - Card Builders (internal for testing)
+
+    func buildWhatChangedCards(notes: [Note], threadMap: [Int: (threadName: String, threadId: Int64)]) -> [BriefingCard] {
+        notes.map { note in
+            let assignment = threadMap[note.id]
+            return BriefingCard.whatChanged(
+                noteTitle: note.title,
+                noteId: note.id,
+                threadName: assignment?.threadName,
+                threadId: assignment?.threadId,
+                date: note.createdAt,
+                primaryTheme: note.primaryTheme,
+                energyLevel: note.energyLevel
+            )
         }
-        return "What should I focus on?"
     }
 
-    /// Get a query to explore something else
-    /// - Returns: A query string to explore other notes
-    func showSomethingElse() async -> String {
-        return "What else is happening in my notes?"
+    func buildNeedsAttentionCards(threads: [Thread], openTaskCounts: [Int64: Int]) -> [BriefingCard] {
+        threads.map { thread in
+            let taskCount = openTaskCounts[thread.id] ?? 0
+            let daysSince = daysSinceLastActivity(thread)
+
+            var reasons: [String] = []
+            if daysSince >= 5 {
+                reasons.append("no activity in \(daysSince) days")
+            }
+            if taskCount > 0 {
+                reasons.append("\(taskCount) open task\(taskCount == 1 ? "" : "s")")
+            }
+            if reasons.isEmpty {
+                reasons.append("needs review")
+            }
+
+            return BriefingCard.needsAttention(
+                threadName: thread.name,
+                threadId: thread.id,
+                reason: reasons.joined(separator: ", "),
+                noteCount: thread.noteCount,
+                openTaskCount: taskCount
+            )
+        }
+    }
+
+    func buildConnectionCards(connections: [(noteA: Note, noteB: Note, threadAName: String, threadBName: String, explanation: String)]) -> [BriefingCard] {
+        connections.map { conn in
+            BriefingCard.connection(
+                noteATitle: conn.noteA.title,
+                noteAId: conn.noteA.id,
+                threadAName: conn.threadAName,
+                noteBTitle: conn.noteB.title,
+                noteBId: conn.noteB.id,
+                threadBName: conn.threadBName,
+                explanation: conn.explanation
+            )
+        }
+    }
+
+    func buildFallbackIntro(changedCount: Int, attentionCount: Int, connectionCount: Int) -> String {
+        var parts: [String] = []
+
+        if changedCount > 0 {
+            parts.append("\(changedCount) new note\(changedCount == 1 ? "" : "s") since last time")
+        }
+        if attentionCount > 0 {
+            parts.append("\(attentionCount) thread\(attentionCount == 1 ? "" : "s") need\(attentionCount == 1 ? "s" : "") attention")
+        }
+        if connectionCount > 0 {
+            parts.append("\(connectionCount) connection\(connectionCount == 1 ? "" : "s") found")
+        }
+
+        if parts.isEmpty {
+            return "Nothing new since last time."
+        }
+
+        return parts.joined(separator: ". ") + "."
+    }
+
+    // MARK: - Helpers
+
+    func daysSinceLastActivity(_ thread: Thread) -> Int {
+        guard let lastActivity = thread.lastActivityAt else { return 999 }
+        return Calendar.current.dateComponents([.day], from: lastActivity, to: Date()).day ?? 0
+    }
+
+    private func buildConnectionCardsFromPairs(_ pairs: [(noteAId: Int, noteBId: Int, similarity: Double)]) async -> [BriefingCard] {
+        var cards: [BriefingCard] = []
+
+        for pair in pairs.prefix(3) {
+            do {
+                guard let noteA = try await databaseService.getNote(byId: pair.noteAId),
+                      let noteB = try await databaseService.getNote(byId: pair.noteBId) else { continue }
+
+                let threadMapA = try await databaseService.getThreadAssignmentsForNotes([pair.noteAId])
+                let threadMapB = try await databaseService.getThreadAssignmentsForNotes([pair.noteBId])
+
+                let threadAName = threadMapA[pair.noteAId]?.threadName ?? "Unthreaded"
+                let threadBName = threadMapB[pair.noteBId]?.threadName ?? "Unthreaded"
+
+                let explanation = await generateConnectionExplanation(noteA: noteA, noteB: noteB)
+
+                cards.append(BriefingCard.connection(
+                    noteATitle: noteA.title,
+                    noteAId: noteA.id,
+                    threadAName: threadAName,
+                    noteBTitle: noteB.title,
+                    noteBId: noteB.id,
+                    threadBName: threadBName,
+                    explanation: explanation
+                ))
+            } catch {
+                continue
+            }
+        }
+
+        return cards
+    }
+
+    private func generateConnectionExplanation(noteA: Note, noteB: Note) async -> String {
+        let isAvailable = await ollamaService.isAvailable()
+        guard isAvailable else {
+            return fallbackConnectionExplanation(noteA: noteA, noteB: noteB)
+        }
+
+        let prompt = """
+        You are analyzing two notes from different thinking threads. Explain in ONE sentence \
+        what connects them conceptually. Be specific, not generic.
+
+        Note A: "\(noteA.title)"
+        \(String(noteA.content.prefix(300)))
+
+        Note B: "\(noteB.title)"
+        \(String(noteB.content.prefix(300)))
+
+        Connection (one sentence):
+        """
+
+        do {
+            let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+            let trimmed = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let firstSentence = trimmed.components(separatedBy: ".").first, !firstSentence.isEmpty {
+                return firstSentence.trimmingCharacters(in: .whitespaces) + "."
+            }
+            return trimmed
+        } catch {
+            return fallbackConnectionExplanation(noteA: noteA, noteB: noteB)
+        }
+    }
+
+    private func fallbackConnectionExplanation(noteA: Note, noteB: Note) -> String {
+        let conceptsA = Set(noteA.concepts ?? [])
+        let conceptsB = Set(noteB.concepts ?? [])
+        let shared = conceptsA.intersection(conceptsB)
+
+        if !shared.isEmpty {
+            return "Shared concepts: \(shared.sorted().joined(separator: ", "))"
+        }
+
+        return "High semantic similarity"
+    }
+
+    private func generateIntro(changedCount: Int, attentionCount: Int, connectionCount: Int) async -> String {
+        let isAvailable = await ollamaService.isAvailable()
+        guard isAvailable else {
+            return buildFallbackIntro(changedCount: changedCount, attentionCount: attentionCount, connectionCount: connectionCount)
+        }
+
+        let prompt = """
+        Write a 1-2 sentence morning greeting for someone with ADHD opening their thinking app. \
+        Be warm but concise. Here's what's happening:
+        - \(changedCount) new notes captured
+        - \(attentionCount) threads need attention
+        - \(connectionCount) interesting connections found
+
+        Keep it under 30 words. Don't use bullet points. Just a natural greeting.
+        """
+
+        do {
+            let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+            return response.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            return buildFallbackIntro(changedCount: changedCount, attentionCount: attentionCount, connectionCount: connectionCount)
+        }
     }
 }

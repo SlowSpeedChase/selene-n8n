@@ -3,9 +3,10 @@ import SwiftUI
 
 struct BriefingView: View {
     @StateObject private var viewModel = BriefingViewModel()
+    @EnvironmentObject var databaseService: DatabaseService
 
     var onDismiss: () -> Void
-    var onDigIn: (String) -> Void
+    var onDiscussCard: (BriefingCard) -> Void
 
     var body: some View {
         ZStack {
@@ -55,63 +56,99 @@ struct BriefingView: View {
 
     // MARK: - Loaded State
 
-    private func loadedView(_ briefing: Briefing) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
+    private func loadedView(_ briefing: StructuredBriefing) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Intro text
+                Text(briefing.intro)
+                    .font(.title3)
+                    .lineSpacing(4)
+                    .padding(.top, 16)
 
-            // Briefing content card
-            VStack(alignment: .leading, spacing: 16) {
-                Text(briefing.content)
-                    .font(.body)
-                    .lineSpacing(6)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(24)
-            .frame(maxWidth: 500)
-            .background(Color(.controlBackgroundColor))
-            .cornerRadius(16)
-
-            // Action buttons
-            VStack(spacing: 12) {
-                // Primary action: Dig in
-                Button(action: {
-                    Task {
-                        let query = await viewModel.digIn()
-                        onDigIn(query)
+                if briefing.isEmpty {
+                    emptyState
+                } else {
+                    // What Changed section
+                    if !briefing.whatChanged.isEmpty {
+                        briefingSection(
+                            title: "What Changed",
+                            icon: "arrow.triangle.2.circlepath",
+                            cards: briefing.whatChanged
+                        )
                     }
-                }) {
-                    Text("Yes, let's dig in")
-                        .frame(maxWidth: 300)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
 
-                // Secondary action: Show something else
-                Button(action: {
-                    Task {
-                        let query = await viewModel.showSomethingElse()
-                        onDigIn(query)
+                    // Needs Attention section
+                    if !briefing.needsAttention.isEmpty {
+                        briefingSection(
+                            title: "Needs Attention",
+                            icon: "exclamationmark.triangle",
+                            cards: briefing.needsAttention
+                        )
                     }
-                }) {
-                    Text("Show me something else")
-                        .frame(maxWidth: 300)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
 
-                // Tertiary action: Skip
-                Button(action: {
-                    onDismiss()
-                }) {
-                    Text("Skip")
+                    // Connections section
+                    if !briefing.connections.isEmpty {
+                        briefingSection(
+                            title: "Connections",
+                            icon: "link",
+                            cards: briefing.connections
+                        )
+                    }
                 }
-                .buttonStyle(.plain)
-                .foregroundColor(.secondary)
+
+                // Done button
+                HStack {
+                    Spacer()
+                    Button(action: { onDismiss() }) {
+                        Text("Done")
+                            .frame(minWidth: 100)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    Spacer()
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-
-            Spacer()
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 600)
         }
-        .padding()
+    }
+
+    // MARK: - Section Builder
+
+    private func briefingSection(title: String, icon: String, cards: [BriefingCard]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(spacing: 8) {
+                ForEach(cards) { card in
+                    BriefingCardView(card: card, onDiscuss: onDiscussCard)
+                        .environmentObject(databaseService)
+                }
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 36))
+                .foregroundColor(.green)
+
+            Text("All caught up!")
+                .font(.headline)
+
+            Text("No new activity since last time.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
     }
 
     // MARK: - Error State
