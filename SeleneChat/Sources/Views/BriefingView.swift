@@ -3,9 +3,10 @@ import SwiftUI
 
 struct BriefingView: View {
     @StateObject private var viewModel = BriefingViewModel()
+    @EnvironmentObject var databaseService: DatabaseService
 
     var onDismiss: () -> Void
-    var onDigIn: (String) -> Void
+    var onDiscussCard: (BriefingCard) -> Void
 
     var body: some View {
         ZStack {
@@ -56,46 +57,98 @@ struct BriefingView: View {
     // MARK: - Loaded State
 
     private func loadedView(_ briefing: StructuredBriefing) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            // Briefing content card (legacy - will be replaced in Task 6)
-            VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Intro text
                 Text(briefing.intro)
-                    .font(.body)
-                    .lineSpacing(6)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(24)
-            .frame(maxWidth: 500)
-            .background(Color(.controlBackgroundColor))
-            .cornerRadius(16)
+                    .font(.title3)
+                    .lineSpacing(4)
+                    .padding(.top, 16)
 
-            // Action buttons (will be replaced by card-based navigation in Task 6)
-            VStack(spacing: 12) {
-                // Primary action: Dismiss to chat
-                Button(action: {
-                    onDismiss()
-                }) {
-                    Text("Got it, let's go")
-                        .frame(maxWidth: 300)
+                if briefing.isEmpty {
+                    emptyState
+                } else {
+                    // What Changed section
+                    if !briefing.whatChanged.isEmpty {
+                        briefingSection(
+                            title: "What Changed",
+                            icon: "arrow.triangle.2.circlepath",
+                            cards: briefing.whatChanged
+                        )
+                    }
+
+                    // Needs Attention section
+                    if !briefing.needsAttention.isEmpty {
+                        briefingSection(
+                            title: "Needs Attention",
+                            icon: "exclamationmark.triangle",
+                            cards: briefing.needsAttention
+                        )
+                    }
+
+                    // Connections section
+                    if !briefing.connections.isEmpty {
+                        briefingSection(
+                            title: "Connections",
+                            icon: "link",
+                            cards: briefing.connections
+                        )
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
 
-                // Skip
-                Button(action: {
-                    onDismiss()
-                }) {
-                    Text("Skip")
+                // Done button
+                HStack {
+                    Spacer()
+                    Button(action: { onDismiss() }) {
+                        Text("Done")
+                            .frame(minWidth: 100)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    Spacer()
                 }
-                .buttonStyle(.plain)
-                .foregroundColor(.secondary)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-
-            Spacer()
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 600)
         }
-        .padding()
+    }
+
+    // MARK: - Section Builder
+
+    private func briefingSection(title: String, icon: String, cards: [BriefingCard]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(spacing: 8) {
+                ForEach(cards) { card in
+                    BriefingCardView(card: card, onDiscuss: onDiscussCard)
+                        .environmentObject(databaseService)
+                }
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 36))
+                .foregroundColor(.green)
+
+            Text("All caught up!")
+                .font(.headline)
+
+            Text("No new activity since last time.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
     }
 
     // MARK: - Error State

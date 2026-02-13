@@ -11,6 +11,7 @@ struct ChatView: View {
     @Namespace private var focusNamespace
 
     var initialQuery: String?
+    var briefingCard: BriefingCard?  // Wired in Task 7 — no behavior yet
 
     var body: some View {
         VStack(spacing: 0) {
