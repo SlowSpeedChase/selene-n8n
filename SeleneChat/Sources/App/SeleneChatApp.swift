@@ -3,17 +3,17 @@ import AppKit
 
 @main
 struct SeleneChatApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var databaseService = DatabaseService.shared
     @StateObject private var chatViewModel = ChatViewModel()
     @StateObject private var compressionService = CompressionService(databaseService: DatabaseService.shared)
     @StateObject private var speechService = SpeechRecognitionService()
+    @StateObject private var scheduler = WorkflowScheduler()
 
     init() {
-        // Activate the app so it appears in the foreground
-        NSApplication.shared.setActivationPolicy(.regular)
-        DispatchQueue.main.async {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
+        // Start as menu bar accessory — no dock icon until window opens
+        NSApplication.shared.setActivationPolicy(.accessory)
 
         // Configure services with database connection
         configureServices()
@@ -56,8 +56,18 @@ struct SeleneChatApp: App {
                 .environmentObject(databaseService)
                 .environmentObject(chatViewModel)
                 .environmentObject(speechService)
+                .environmentObject(scheduler)
                 .frame(minWidth: 800, minHeight: 600)
                 .task {
+                    // Show dock icon when window opens
+                    NSApplication.shared.setActivationPolicy(.regular)
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+
+                    // Start scheduler on first window open
+                    if !scheduler.isEnabled {
+                        scheduler.enable()
+                    }
+
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
 
@@ -103,5 +113,31 @@ struct SeleneChatApp: App {
             SettingsView()
                 .environmentObject(databaseService)
         }
+
+        MenuBarExtra {
+            MenuBarStatusView()
+                .environmentObject(scheduler)
+        } label: {
+            SilverCrystalIcon(
+                state: CrystalIconState.from(
+                    isOllamaActive: scheduler.isOllamaActive,
+                    hasError: scheduler.lastError != nil
+                ),
+                size: 18
+            )
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+// MARK: - AppDelegate
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Don't quit when windows close — stay in menu bar
+        DispatchQueue.main.async {
+            NSApplication.shared.setActivationPolicy(.accessory)
+        }
+        return false
     }
 }
