@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-02-07
 
 Design docs are the planning unit for Selene development. Each doc captures an idea, architecture, and implementation plan.
 
@@ -45,8 +45,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| 2026-02-06 | 2026-02-06-thread-workspace-design.md | selenechat | Thread workspace with tasks, planning chat, feedback loop |
-| 2026-02-06 | 2026-02-06-test-environment-isolation-design.md | infrastructure | Complete test isolation with anonymized data |
+| 2026-02-12 | 2026-02-12-voice-memo-transcription-design.md | automation | Whisper.cpp transcription + Selene pipeline integration |
 
 ---
 
@@ -70,7 +69,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
-| - | - | - | No active branches |
+| 2026-02-06 | 2026-02-06-thread-workspace-design.md | `main` (merged) | Phase 1-2 complete, Phase 3 (feedback loop) remaining |
 
 ---
 
