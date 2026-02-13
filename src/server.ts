@@ -5,6 +5,7 @@ import { ingest } from './workflows/ingest';
 import { exportObsidian } from './workflows/export-obsidian';
 import { getRelatedNotes, searchNotes } from './queries/related-notes';
 import { notesRoutes } from './routes/notes';
+import { threadsRoutes } from './routes/threads';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -122,6 +123,9 @@ server.post<{
 
 // Notes API routes
 notesRoutes(server);
+
+// Threads API routes
+threadsRoutes(server);
 
 // Start server
 async function start() {
