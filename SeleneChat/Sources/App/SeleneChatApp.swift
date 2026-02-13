@@ -1,22 +1,28 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 @main
 struct SeleneChatApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var databaseService = DatabaseService.shared
     @StateObject private var chatViewModel = ChatViewModel()
     @StateObject private var compressionService = CompressionService(databaseService: DatabaseService.shared)
     @StateObject private var speechService = SpeechRecognitionService()
+    @StateObject private var scheduler = WorkflowScheduler()
 
     init() {
-        // Activate the app so it appears in the foreground
-        NSApplication.shared.setActivationPolicy(.regular)
-        DispatchQueue.main.async {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
+        // Start as menu bar accessory — no dock icon until window opens
+        NSApplication.shared.setActivationPolicy(.accessory)
 
         // Configure services with database connection
         configureServices()
+
+        // Register as login item (user can manage in System Settings > General > Login Items)
+        if #available(macOS 13.0, *) {
+            try? SMAppService.mainApp.register()
+        }
 
         #if DEBUG
         setupDebugSystem()
@@ -56,8 +62,18 @@ struct SeleneChatApp: App {
                 .environmentObject(databaseService)
                 .environmentObject(chatViewModel)
                 .environmentObject(speechService)
+                .environmentObject(scheduler)
                 .frame(minWidth: 800, minHeight: 600)
                 .task {
+                    // Show dock icon when window opens
+                    NSApplication.shared.setActivationPolicy(.regular)
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+
+                    // Start scheduler on first window open
+                    if !scheduler.isEnabled {
+                        scheduler.enable()
+                    }
+
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
 
@@ -103,5 +119,23 @@ struct SeleneChatApp: App {
             SettingsView()
                 .environmentObject(databaseService)
         }
+
+        MenuBarExtra("Selene", systemImage: scheduler.isOllamaActive ? "moon.stars.fill" : "moon.stars") {
+            MenuBarStatusView()
+                .environmentObject(scheduler)
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+// MARK: - AppDelegate
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Don't quit when windows close — stay in menu bar
+        DispatchQueue.main.async {
+            NSApplication.shared.setActivationPolicy(.accessory)
+        }
+        return false
     }
 }
