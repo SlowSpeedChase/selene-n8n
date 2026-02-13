@@ -120,17 +120,9 @@ struct SeleneChatApp: App {
                 .environmentObject(databaseService)
         }
 
-        MenuBarExtra {
+        MenuBarExtra("Selene", systemImage: scheduler.isOllamaActive ? "moon.stars.fill" : "moon.stars") {
             MenuBarStatusView()
                 .environmentObject(scheduler)
-        } label: {
-            SilverCrystalIcon(
-                state: CrystalIconState.from(
-                    isOllamaActive: scheduler.isOllamaActive,
-                    hasError: scheduler.lastError != nil
-                ),
-                size: 18
-            )
         }
         .menuBarExtraStyle(.window)
     }
