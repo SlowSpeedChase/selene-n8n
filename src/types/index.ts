@@ -53,3 +53,22 @@ export interface ExportResult {
   errors: number;
   message: string;
 }
+
+// Voice memo transcription types
+export interface ProcessedFileEntry {
+  transcribedAt: string;
+  archivedTo: string;
+  markdownPath: string;
+  ingestedToSelene: boolean;
+}
+
+export interface ProcessedManifest {
+  files: Record<string, ProcessedFileEntry>;
+}
+
+export interface VoiceMemoWorkflowResult {
+  processed: number;
+  errors: number;
+  retried: number;
+  details: Array<{ filename: string; success: boolean; error?: string }>;
+}
