@@ -234,33 +234,22 @@ function getAudioDuration(filePath: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Selene webhook ingestion
+// Send to Drafts app for review/editing
 // ---------------------------------------------------------------------------
 
-async function ingestToSelene(title: string, content: string): Promise<boolean> {
+async function sendToDrafts(title: string, content: string): Promise<boolean> {
   try {
-    const response = await fetch(config.seleneWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        content,
-        tags: ['voice-memo'],
-        source: 'voice-memos',
-      }),
-    });
+    const draftText = `${title}\n\n${content}`;
+    const encoded = encodeURIComponent(draftText);
+    const tag = encodeURIComponent('voice-memo');
+    const url = `drafts://x-callback-url/create?text=${encoded}&tag=${tag}`;
 
-    if (!response.ok) {
-      log.warn({ status: response.status, statusText: response.statusText }, 'Webhook returned non-OK status');
-      return false;
-    }
-
-    const result = await response.json() as { status: string; id?: number };
-    log.info({ status: result.status, id: result.id }, 'Ingested to Selene');
+    execFileSync('open', [url]);
+    log.info({ title }, 'Sent to Drafts app for review');
     return true;
   } catch (err) {
     const error = err as Error;
-    log.warn({ err: error }, 'Failed to POST to Selene webhook');
+    log.warn({ err: error }, 'Failed to send to Drafts app');
     return false;
   }
 }
@@ -325,9 +314,9 @@ ${transcription}
     writeFileSync(markdownPath, markdown);
     log.info({ markdownPath }, 'Transcript written');
 
-    // Step 6: Ingest to Selene
+    // Step 6: Send to Drafts for review
     const title = `Voice Memo ${parsed.friendlyName}`;
-    const ingested = await ingestToSelene(title, transcription);
+    const ingested = await sendToDrafts(title, transcription);
 
     // Step 7: Update manifest
     const entry: ProcessedFileEntry = {
@@ -362,18 +351,17 @@ ${transcription}
 }
 
 // ---------------------------------------------------------------------------
-// Retry failed ingestions
+// Retry failed Drafts sends
 // ---------------------------------------------------------------------------
 
-async function retryFailedIngestions(manifest: ProcessedManifest): Promise<number> {
+async function retryFailedSends(manifest: ProcessedManifest): Promise<number> {
   let retried = 0;
 
   for (const [filename, entry] of Object.entries(manifest.files)) {
     if (entry.ingestedToSelene) continue;
 
-    log.info({ filename }, 'Retrying failed Selene ingestion');
+    log.info({ filename }, 'Retrying failed Drafts send');
 
-    // Read the transcript markdown to extract the transcription text
     try {
       if (!existsSync(entry.markdownPath)) {
         log.warn({ filename, markdownPath: entry.markdownPath }, 'Transcript file missing, cannot retry');
@@ -381,15 +369,14 @@ async function retryFailedIngestions(manifest: ProcessedManifest): Promise<numbe
       }
 
       const markdown = readFileSync(entry.markdownPath, 'utf-8');
-      // Extract content after the "---" separator
       const parts = markdown.split('\n---\n');
       const transcription = parts.length > 1 ? parts.slice(1).join('\n---\n').trim() : markdown;
 
       const parsed = parseMemoFilename(filename);
       const title = `Voice Memo ${parsed.friendlyName}`;
 
-      const ingested = await ingestToSelene(title, transcription);
-      if (ingested) {
+      const sent = await sendToDrafts(title, transcription);
+      if (sent) {
         entry.ingestedToSelene = true;
         saveManifest(manifest);
         retried++;
@@ -449,7 +436,7 @@ export async function transcribeVoiceMemos(): Promise<VoiceMemoWorkflowResult> {
   }
 
   // Retry failed ingestions
-  result.retried = await retryFailedIngestions(manifest);
+  result.retried = await retryFailedSends(manifest);
 
   log.info(
     { processed: result.processed, errors: result.errors, retried: result.retried },
