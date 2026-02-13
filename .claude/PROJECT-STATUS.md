@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
 **Last Updated:** 2026-02-13
-**Status:** Thread Lifecycle Complete | Thread Workspace Phase 2 | Voice Input Phase 1 | Living System Active
+**Status:** Menu Bar Orchestrator | Voice Memo Transcription | Morning Briefing Redesign | Living System Active
 
 ---
 
@@ -15,27 +15,36 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 **Location:** `/Users/chaseeasterling/selene-n8n`
 
 ---
-## Current Focus: Thread Lifecycle Complete
+## Current Focus: All Major Features Shipped
 
 **Branch:** `main` (all work merged)
 
-Threads now have a full automatic lifecycle: stale threads archive after 60 days of inactivity, divergent threads split into focused sub-threads, and converging threads merge with LLM confirmation. Archived threads reactivate automatically when new related notes appear.
+All three "Ready" designs from 2026-02-12 are now implemented and merged. The system has grown significantly: menu bar orchestrator manages workflow scheduling, voice memos are auto-transcribed via whisper.cpp, and the morning briefing got a full redesign with structured cards.
 
 ### Recent Completions
+- **Morning Briefing Redesign** (2026-02-13) - Structured cards, deep context chat, cross-thread connections
+- **Menu Bar Orchestrator** (2026-02-13) - Silver Crystal icon, WorkflowScheduler replaces launchd, animated processing state
+- **Voice Memo Transcription** (2026-02-13) - whisper.cpp pipeline, auto-detect new recordings, Selene ingestion
+- **Apple Notes Daily Digest** (2026-02-13) - Replaced iMessage with pinned Apple Note
 - **Thread Lifecycle** (2026-02-13) - Auto archive, split, merge with daily launchd schedule
 - **Thread Workspace Phase 2** (2026-02-07) - Chat + task creation via confirmation banner
-- **Thread Workspace Phase 1** (2026-02-06) - Read-only workspace view
 - **Voice Input Phase 1** (2026-02-05) - SpeechRecognitionService, VoiceMicButton, URL scheme
 - **Thinking Partner** (2026-02-05) - Conversation memory, context builder, deep-dive, synthesis
 - **Test Environment Isolation** (2026-02-06) - Anonymized test data, environment switching
 
 ### Living System (Background)
-The thread system runs automatically via launchd:
-- Embedding generation (every 5 min)
-- Association computation (every 5 min)
-- Thread detection (every 30 min)
-- Thread reconsolidation (hourly) - updates summaries + calculates momentum
+The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat menu bar app + launchd):
+- LLM processing (every 5 min) - concept extraction via Ollama
+- Task extraction (every 5 min) - classify and route to Things
+- Vector indexing (every 10 min) - LanceDB embeddings via nomic-embed-text
+- Relationship computation (every 10 min) - typed note relationships
+- Thread detection (every 30 min) - cluster notes into threads
+- Thread reconsolidation (hourly) - update summaries + calculate momentum
+- Obsidian export (hourly) - sync threads/notes to vault
+- Daily summary (midnight) - aggregate daily insights
+- Apple Notes digest (6am) - post summary to pinned note
 - Thread lifecycle (daily 2am) - archive stale, split divergent, merge converging
+- Voice memo transcription (WatchPaths trigger) - auto-transcribe new recordings
 
 ### Completed Components
 
@@ -49,12 +58,15 @@ The thread system runs automatically via launchd:
 | Ingestion Workflow | `src/workflows/ingest.ts` | Done |
 | LLM Processing | `src/workflows/process-llm.ts` | Done |
 | Task Extraction | `src/workflows/extract-tasks.ts` | Done |
-| Embedding Generation | `src/workflows/compute-embeddings.ts` | Done |
-| Association Computation | `src/workflows/compute-associations.ts` | Done |
+| Vector Indexing | `src/workflows/index-vectors.ts` | Done |
+| Relationship Computation | `src/workflows/compute-relationships.ts` | Done |
 | Thread Detection | `src/workflows/detect-threads.ts` | Done |
 | Thread Reconsolidation | `src/workflows/reconsolidate-threads.ts` | Done |
+| Thread Lifecycle | `src/workflows/thread-lifecycle.ts` | Done |
+| Obsidian Export | `src/workflows/export-obsidian.ts` | Done |
 | Daily Summary | `src/workflows/daily-summary.ts` | Done |
-| iMessage Digest | `src/workflows/send-digest.ts` | Done |
+| Apple Notes Digest | `src/workflows/send-digest.ts` | Done |
+| Voice Memo Transcription | `src/workflows/transcribe-voice-memos.ts` | Done |
 | Launchd Agents | `launchd/*.plist` | Done |
 | Install Script | `scripts/install-launchd.sh` | Done |
 
@@ -73,29 +85,34 @@ The thread system runs automatically via launchd:
 ### Components
 
 ```
-Drafts App
+Drafts App / Voice Memos
     |
     v
 Fastify Server (port 5678)
     |
     v
-SQLite Database (data/selene.db)
+SQLite Database (~/selene-data/selene.db) + LanceDB (~/selene-data/vectors.lance)
     ^
     |
-launchd Scheduled Jobs:
+SeleneChat Menu Bar (WorkflowScheduler) + launchd:
   - process-llm (every 5 min)
   - extract-tasks (every 5 min)
-  - compute-embeddings (every 5 min)
-  - compute-associations (every 5 min)
+  - index-vectors (every 10 min)
+  - compute-relationships (every 10 min)
   - detect-threads (every 30 min)
   - reconsolidate-threads (hourly)
+  - export-obsidian (hourly)
   - daily-summary (midnight)
-  - send-digest (6am)
+  - thread-lifecycle (daily 2am)
+  - send-digest (daily 6am)
+  - transcribe-voice-memos (WatchPaths trigger)
     |
     v
 Ollama (localhost:11434)
   - mistral:7b (text generation)
   - nomic-embed-text (embeddings)
+whisper.cpp (~/.local/whisper.cpp/)
+  - ggml-medium.bin (voice transcription)
 ```
 
 ### Key Files
@@ -109,13 +126,18 @@ src/
     logger.ts         # Pino structured logging
     ollama.ts         # Ollama API client
   workflows/
-    ingest.ts         # Note ingestion (called by webhook)
-    process-llm.ts    # LLM concept extraction
-    extract-tasks.ts  # Task classification
-    compute-embeddings.ts
-    compute-associations.ts
-    daily-summary.ts
-    send-digest.ts
+    ingest.ts                   # Note ingestion (called by webhook)
+    process-llm.ts              # LLM concept extraction
+    extract-tasks.ts            # Task classification
+    index-vectors.ts            # LanceDB vector indexing
+    compute-relationships.ts    # Typed note relationships
+    detect-threads.ts           # Thread detection
+    reconsolidate-threads.ts    # Thread summary + momentum
+    thread-lifecycle.ts         # Archive/split/merge threads
+    export-obsidian.ts          # Obsidian vault sync
+    daily-summary.ts            # Daily digest generation
+    send-digest.ts              # Apple Notes digest delivery
+    transcribe-voice-memos.ts   # whisper.cpp transcription
   types/
     index.ts          # Shared TypeScript types
 
@@ -123,10 +145,15 @@ launchd/
   com.selene.server.plist
   com.selene.process-llm.plist
   com.selene.extract-tasks.plist
-  com.selene.compute-embeddings.plist
-  com.selene.compute-associations.plist
+  com.selene.index-vectors.plist
+  com.selene.compute-relationships.plist
+  com.selene.detect-threads.plist
+  com.selene.reconsolidate-threads.plist
+  com.selene.thread-lifecycle.plist
+  com.selene.export-obsidian.plist
   com.selene.daily-summary.plist
   com.selene.send-digest.plist
+  com.selene.transcribe-voice-memos.plist
 
 logs/
   selene.log          # Workflow logs (Pino JSON)
@@ -155,10 +182,10 @@ logs/
 - Things 3 integration for actionable tasks
 - Discussion threads for planning items
 
-### Embeddings & Associations
-- Semantic embeddings via nomic-embed-text
-- Cosine similarity for note relationships
-- Note clustering and thread detection
+### Vector Search & Relationships
+- LanceDB for semantic vector search (replaced brute-force cosine similarity)
+- Typed note relationships (BT/NT/RT/TEMPORAL/SAME_THREAD/SAME_PROJECT)
+- Thread detection via note clustering
 
 ### Daily Summary
 - Aggregates notes, insights, patterns
@@ -195,7 +222,15 @@ launchctl kickstart -k gui/$(id -u)/com.selene.server  # Restart
 ```bash
 npx ts-node src/workflows/process-llm.ts
 npx ts-node src/workflows/extract-tasks.ts
-npx ts-node src/workflows/compute-embeddings.ts
+npx ts-node src/workflows/index-vectors.ts
+npx ts-node src/workflows/compute-relationships.ts
+npx ts-node src/workflows/detect-threads.ts
+npx ts-node src/workflows/reconsolidate-threads.ts
+npx ts-node src/workflows/thread-lifecycle.ts
+npx ts-node src/workflows/export-obsidian.ts
+npx ts-node src/workflows/daily-summary.ts
+npx ts-node src/workflows/send-digest.ts
+npx ts-node src/workflows/transcribe-voice-memos.ts
 tail -f logs/selene.log | npx pino-pretty   # View logs
 ```
 
@@ -220,12 +255,15 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Next Steps
 
 **Completed:**
+- ✅ Menu Bar Orchestrator (Silver Crystal icon, WorkflowScheduler, animated states)
+- ✅ Voice Memo Transcription (whisper.cpp, auto-detect, Selene pipeline)
+- ✅ Apple Notes Daily Digest (replaced iMessage with pinned Apple Note)
+- ✅ Morning Briefing Redesign (structured cards, deep context chat)
 - ✅ Thread Lifecycle (auto archive, split, merge — daily launchd schedule)
 - ✅ Thread Workspace Phase 1-2 (read-only view + chat with task creation)
 - ✅ Voice Input Phase 1 (Apple Speech, push-to-talk, URL scheme)
 - ✅ Thinking Partner (conversation memory, context builder, deep-dive, synthesis)
 - ✅ Test Environment Isolation (anonymized data, environment switching)
-- ✅ iMessage Daily Digest (condensed summary at 6am)
 - ✅ Thread System Phase 1-3 (embeddings, associations, detection, reconsolidation)
 - ✅ Phase 7.2 (SeleneChat Planning Integration)
 - ✅ n8n replacement (TypeScript + Fastify + launchd)
@@ -243,20 +281,10 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - TTS responses
 
 **Track C: SeleneChat UI**
-- Forest Study visual redesign (design docs ready)
+- Forest Study visual redesign (design docs in Vision)
 - Interface improvements (command palette, focus mode)
 
-**Track D: Menu Bar Orchestrator** (design ready)
-- Menu bar app with Silver Crystal icon
-- Workflow orchestration from system tray
-
-**Track E: Apple Notes Daily Digest** (design ready)
-- Replace iMessage digest with pinned Apple Notes daily note
-
-**Track F: Voice Memo Transcription** (design ready)
-- Whisper.cpp transcription + Selene pipeline integration
-
-**Track G: Phase 7.3 (Cloud AI Integration)**
+**Track D: Phase 7.3 (Cloud AI Integration)**
 - Privacy-preserving cloud AI with sanitization
 - Bundled with Things Checklist Generation
 
@@ -265,6 +293,22 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Recent Achievements
 
 ### 2026-02-13
+- **Morning Briefing Redesign** - Structured cards with BriefingCardView, deep context chat integration
+  - `BriefingContextBuilder` for discuss-this chat context
+  - Removed old `BriefingGenerator`, rewrote `BriefingViewModel` with structured card orchestration
+- **Menu Bar Orchestrator** - SeleneChat becomes a menu bar utility
+  - `WorkflowScheduler` service replaces 7 launchd plists
+  - Silver Crystal moon icon with animated shimmer during Ollama processing
+  - `MenuBarStatusView`, `SilverCrystalIcon`, `CrystalStatusItem`
+  - Launch at login, dock icon toggles with chat window
+- **Voice Memo Transcription** - whisper.cpp pipeline for auto-transcription
+  - `transcribe-voice-memos.ts` watches Voice Memos directory
+  - Converts .m4a → WAV → text via whisper.cpp medium model
+  - Posts transcriptions to Selene pipeline with `voice-memo` tag
+  - `setup-whisper.sh` for one-command installation
+- **Apple Notes Daily Digest** - Replaced iMessage with pinned Apple Note
+  - `send-digest.ts` now uses AppleScript to update "Selene Daily" note
+  - Removed iMessage code and `IMESSAGE_DIGEST_TO` dependency
 - **Thread Lifecycle Complete** - Auto Archive, Split, Merge
   - `thread-lifecycle.ts` — single workflow with 3 phases (archive → split → merge)
   - Archive: threads inactive 60+ days set to `archived` status
@@ -313,10 +357,9 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
   - Multi-turn conversations now work
 
 ### 2026-02-02
-- **iMessage Daily Digest** - Condensed daily summary sent to phone at 6am via AppleScript
+- **Daily Digest** - Condensed daily summary generated at midnight, delivered at 6am
   - `daily-summary.ts` generates bullet-point digest via Ollama at midnight
-  - `send-digest.ts` sends via iMessage at 6am (new launchd job)
-  - Configured with `IMESSAGE_DIGEST_TO` env var
+  - `send-digest.ts` delivers at 6am (originally iMessage, now Apple Notes)
   - End-to-end tested and working
 
 ### 2026-01-11
@@ -332,7 +375,7 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - **Thread System Phase 3 Complete** - Living System active
 - Created `reconsolidate-threads.ts` workflow (summary updates + momentum)
 - Created launchd plist for hourly reconsolidation
-- Updated launchd intervals: embeddings/associations now 5 min, detect-threads 30 min
+- Updated launchd intervals: index-vectors/compute-relationships now 10 min, detect-threads 30 min
 - Fixed server launchd plist to use `npm run start`
 - End-to-end pipeline tested and verified
 - 2 active threads with momentum scores calculated
@@ -386,6 +429,6 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 ## Questions for Next Session
 
-1. Which track to pursue next? (A: Workspace Phase 3, B: Voice Phase 2, C: UI Redesign, D: Thread Advanced, E: Cloud AI, F: LanceDB)
-2. Manual test: Open app, navigate to thread workspace, send a chat message, verify actions appear in confirmation card
-3. Does confirming actions successfully create tasks in Things and link them to the thread?
+1. Which track to pursue next? (A: Workspace Phase 3 feedback loop, B: Voice Phase 2+, C: UI Redesign, D: Cloud AI)
+2. Is the menu bar orchestrator running stably? Any issues with WorkflowScheduler?
+3. Are voice memo transcriptions flowing through the pipeline correctly?

@@ -1,7 +1,7 @@
 # SeleneChat Menu Bar App + Workflow Orchestration
 
 **Date:** 2026-02-12
-**Status:** Ready
+**Status:** Done
 **Topic:** selenechat, infra
 
 ---

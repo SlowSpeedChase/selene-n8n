@@ -77,20 +77,20 @@ git worktree list
 ```
 +-------------------------------------------------------------+
 | TIER 1: CAPTURE                                             |
-| Drafts App -> Webhook -> src/workflows/ingest.ts -> SQLite  |
+| Drafts App / Voice Memos -> Webhook -> SQLite + LanceDB    |
 | Design: One-click capture, zero friction                    |
 +-------------------------------------------------------------+
 
 +-------------------------------------------------------------+
 | TIER 2: PROCESS                                             |
 | TypeScript Scripts -> Ollama LLM -> Extract patterns        |
-| Scheduled via launchd (macOS)                               |
+| Scheduled via SeleneChat WorkflowScheduler + launchd        |
 | Design: Automatic organization, visual patterns             |
 +-------------------------------------------------------------+
 
 +-------------------------------------------------------------+
 | TIER 3: RETRIEVE                                            |
-| SeleneChat (macOS) + Obsidian -> Query & Explore            |
+| SeleneChat (macOS menu bar) + Obsidian -> Query & Explore   |
 | Design: Information visible without mental overhead         |
 +-------------------------------------------------------------+
 ```
@@ -106,21 +106,32 @@ src/
     logger.ts         # Pino structured logging
     ollama.ts         # Ollama API client
   workflows/
-    ingest.ts         # Note ingestion (called by webhook)
-    process-llm.ts    # LLM concept extraction
-    extract-tasks.ts  # Task classification and routing
-    compute-embeddings.ts  # Generate embeddings
-    compute-associations.ts # Compute note relationships
-    daily-summary.ts  # Daily summary generation
+    ingest.ts                   # Note ingestion (called by webhook)
+    process-llm.ts              # LLM concept extraction
+    extract-tasks.ts            # Task classification and routing
+    index-vectors.ts            # LanceDB vector indexing
+    compute-relationships.ts    # Typed note relationships
+    detect-threads.ts           # Thread detection
+    reconsolidate-threads.ts    # Thread summary + momentum
+    thread-lifecycle.ts         # Archive/split/merge threads
+    export-obsidian.ts          # Obsidian vault sync
+    daily-summary.ts            # Daily summary generation
+    send-digest.ts              # Apple Notes digest delivery
+    transcribe-voice-memos.ts   # whisper.cpp voice transcription
 
 launchd/
-  com.selene.server.plist           # Webhook server (always running)
-  com.selene.process-llm.plist      # Every 5 minutes
-  com.selene.extract-tasks.plist    # Every 5 minutes
-  com.selene.compute-embeddings.plist  # Every 10 minutes
-  com.selene.compute-associations.plist # Every 10 minutes
-  com.selene.daily-summary.plist    # Daily at midnight
-  com.selene.send-digest.plist      # Daily at 6am
+  com.selene.server.plist                  # Webhook server (always running)
+  com.selene.process-llm.plist             # Every 5 minutes
+  com.selene.extract-tasks.plist           # Every 5 minutes
+  com.selene.index-vectors.plist           # Every 10 minutes
+  com.selene.compute-relationships.plist   # Every 10 minutes
+  com.selene.detect-threads.plist          # Every 30 minutes
+  com.selene.reconsolidate-threads.plist   # Hourly
+  com.selene.export-obsidian.plist         # Hourly
+  com.selene.daily-summary.plist           # Daily at midnight
+  com.selene.thread-lifecycle.plist        # Daily at 2am
+  com.selene.send-digest.plist             # Daily at 6am
+  com.selene.transcribe-voice-memos.plist  # WatchPaths trigger
 ```
 
 **Why this architecture?** See `@.claude/DEVELOPMENT.md` (System Architecture section)
@@ -199,10 +210,15 @@ launchctl kickstart -k gui/$(id -u)/com.selene.server
 # Run workflows manually
 npx ts-node src/workflows/process-llm.ts
 npx ts-node src/workflows/extract-tasks.ts
-npx ts-node src/workflows/compute-embeddings.ts
-npx ts-node src/workflows/compute-associations.ts
+npx ts-node src/workflows/index-vectors.ts
+npx ts-node src/workflows/compute-relationships.ts
+npx ts-node src/workflows/detect-threads.ts
+npx ts-node src/workflows/reconsolidate-threads.ts
+npx ts-node src/workflows/thread-lifecycle.ts
+npx ts-node src/workflows/export-obsidian.ts
 npx ts-node src/workflows/daily-summary.ts
 npx ts-node src/workflows/send-digest.ts
+npx ts-node src/workflows/transcribe-voice-memos.ts
 
 # View workflow logs
 tail -f logs/selene.log | npx pino-pretty
@@ -251,18 +267,23 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Server infrastructure - Fastify webhook server with health checks
 - Ingestion - Note capture with duplicate detection
 - LLM Processing - Concept extraction working
-- Pattern Detection - Theme trend analysis
-- Obsidian Export - ADHD-optimized export
-- Embeddings - Semantic similarity via nomic-embed-text
-- Associations - Note clustering and relationships
-- Thread System - Detection, reconsolidation, Obsidian export
-- SeleneChat - Database integration, Ollama AI, thread queries
+- Vector Search - LanceDB integration (replaced brute-force similarity)
+- Relationships - Typed note relationships with incremental computation
+- Thread System - Detection, reconsolidation, lifecycle (archive/split/merge), Obsidian export
+- SeleneChat - Database integration, Ollama AI, thread queries, thread workspace
+- Thinking Partner - Conversation memory, context builder, deep-dive, synthesis
+- Voice Input - Apple Speech recognition, push-to-talk, URL scheme
+- Voice Memo Transcription - whisper.cpp pipeline, auto-detect, Selene ingestion
+- Menu Bar Orchestrator - Silver Crystal icon, WorkflowScheduler, animated states
+- Morning Briefing - Structured cards with deep context chat
+- Apple Notes Digest - Replaced iMessage with pinned daily note
 - Phase 7.2 - SeleneChat Planning Integration
 
 **Next Up (see `docs/plans/INDEX.md` for status):**
+- Thread Workspace Phase 3 - Feedback loop (Things sync, momentum updates)
+- Voice Input Phase 2+ - Global hotkey, Voxtral, TTS
+- SeleneChat UI Redesign - Forest Study design system
 - Phase 7.3 - Cloud AI Integration (sanitization layer)
-- SeleneChat Contextual Evolution - Project-scoped chats
-- LanceDB Transition - Vector database migration
 
 **Details:** `@.claude/PROJECT-STATUS.md`
 

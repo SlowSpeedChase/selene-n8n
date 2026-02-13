@@ -44,11 +44,7 @@ Ideas captured but not yet ready for implementation.
 
 These have acceptance criteria, ADHD check, and scope check. Ready to create a branch.
 
-| Date | Document | Topic | Notes |
-|------|----------|-------|-------|
-| 2026-02-12 | 2026-02-12-menu-bar-orchestrator-design.md | selenechat, infra | Menu bar app with Silver Crystal icon + workflow orchestration |
-| 2026-02-12 | 2026-02-12-apple-notes-daily-digest-design.md | automation | Replace iMessage digest with pinned Apple Notes daily note |
-| 2026-02-12 | 2026-02-12-voice-memo-transcription-design.md | automation | Whisper.cpp transcription + Selene pipeline integration |
+*No designs currently in Ready status.*
 
 ---
 
@@ -72,7 +68,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
-| 2026-02-06 | 2026-02-06-thread-workspace-design.md | `main` (merged) | Phase 1-2 complete, Phase 3 (feedback loop) remaining |
+| 2026-02-06 | 2026-02-06-thread-workspace-design.md | `main` (Phase 1-2 merged) | Phase 3 (feedback loop) remaining |
 
 ---
 
@@ -80,6 +76,9 @@ Branch exists, actively being worked on.
 
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
+| 2026-02-12 | 2026-02-12-menu-bar-orchestrator-design.md | 2026-02-13 | Menu bar app with Silver Crystal icon + workflow orchestration |
+| 2026-02-12 | 2026-02-12-voice-memo-transcription-design.md | 2026-02-13 | Whisper.cpp transcription + Selene pipeline integration |
+| 2026-02-12 | 2026-02-12-apple-notes-daily-digest-design.md | 2026-02-13 | Replace iMessage digest with pinned Apple Notes daily note |
 | 2026-02-13 | 2026-02-13-morning-briefing-redesign.md | 2026-02-13 | Structured cards, deep context chat, cross-thread connections |
 | 2026-02-13 | 2026-02-13-thread-lifecycle-design.md | 2026-02-13 | Auto archive, split, merge threads — full lifecycle |
 | 2026-02-06 | 2026-02-06-test-environment-isolation-design.md | 2026-02-06 | Complete test isolation with anonymized data |
