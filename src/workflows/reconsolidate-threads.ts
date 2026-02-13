@@ -1,6 +1,6 @@
 import { createWorkflowLogger, db, generate } from '../lib';
 import type { WorkflowResult } from '../types';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 const log = createWorkflowLogger('reconsolidate-threads');
@@ -243,6 +243,8 @@ function getStatusEmoji(status: string): string {
     paused: '⏸️',
     completed: '✅',
     abandoned: '💤',
+    archived: '📦',
+    merged: '🔗',
   };
   return emojis[status] || '📌';
 }
@@ -385,11 +387,16 @@ function exportThreadsToObsidian(): number {
   }
 
   const threadsDir = join(vaultPath, 'Selene', 'Threads');
+  const archiveDir = join(threadsDir, 'Archive');
 
-  // Ensure directory exists
+  // Ensure both directories exist
   if (!existsSync(threadsDir)) {
     mkdirSync(threadsDir, { recursive: true });
     log.info({ threadsDir }, 'Created Threads directory');
+  }
+  if (!existsSync(archiveDir)) {
+    mkdirSync(archiveDir, { recursive: true });
+    log.info({ archiveDir }, 'Created Threads/Archive directory');
   }
 
   const threads = getAllThreadsForExport();
@@ -400,10 +407,23 @@ function exportThreadsToObsidian(): number {
       const notes = getLinkedNotesForExport(thread.id);
       const markdown = generateThreadMarkdown(thread, notes);
       const slug = createSlug(thread.name);
-      const filePath = join(threadsDir, `${slug}.md`);
+      const fileName = `${slug}.md`;
+
+      // Route archived/merged threads to Archive subfolder
+      const isArchived = thread.status === 'archived' || thread.status === 'merged';
+      const targetDir = isArchived ? archiveDir : threadsDir;
+      const otherDir = isArchived ? threadsDir : archiveDir;
+      const filePath = join(targetDir, fileName);
 
       writeFileSync(filePath, markdown, 'utf-8');
       exported++;
+
+      // Clean up: remove from old location if thread moved between active and archived
+      const oldPath = join(otherDir, fileName);
+      if (existsSync(oldPath)) {
+        unlinkSync(oldPath);
+        log.info({ threadId: thread.id, oldPath, newPath: filePath }, 'Moved thread file to new location');
+      }
 
       log.debug({ threadId: thread.id, filePath }, 'Exported thread to Obsidian');
     } catch (err) {
