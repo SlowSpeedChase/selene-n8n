@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-02-02
-**Status:** Phase 7.2 Complete | Thread System Phase 3 Complete | iMessage Daily Digest Active | Living System Active
+**Last Updated:** 2026-02-07
+**Status:** Thread Workspace Phase 2 Complete | Voice Input Phase 1 | Thinking Partner | Living System Active
 
 ---
 
@@ -15,11 +15,21 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 **Location:** `/Users/chaseeasterling/selene-n8n`
 
 ---
-## Current Focus: Thread System Phase 3 Complete
+## Current Focus: Thread Workspace Phase 2 Complete
 
 **Branch:** `main` (all work merged)
 
-The thread system is now a **living system** - new notes flow through the full pipeline automatically:
+Thread Workspace now provides **thread-scoped chat with task creation**. Users can plan and break down work inside the thread context, with tasks flowing directly to Things.
+
+### Recent Completions
+- **Thread Workspace Phase 2** (2026-02-07) - Chat + task creation via confirmation banner
+- **Thread Workspace Phase 1** (2026-02-06) - Read-only workspace view
+- **Voice Input Phase 1** (2026-02-05) - SpeechRecognitionService, VoiceMicButton, URL scheme
+- **Thinking Partner** (2026-02-05) - Conversation memory, context builder, deep-dive, synthesis
+- **Test Environment Isolation** (2026-02-06) - Anonymized test data, environment switching
+
+### Living System (Background)
+The thread system runs automatically via launchd:
 - Embedding generation (every 5 min)
 - Association computation (every 5 min)
 - Thread detection (every 30 min)
@@ -208,44 +218,64 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Next Steps
 
 **Completed:**
-- ✅ n8n replacement merged to main (TypeScript + Fastify + launchd)
-- ✅ Phase 7.2 complete (SeleneChat Planning Integration)
-- ✅ Thread System Phase 1-2 complete (Embeddings, Associations, Detection)
-- ✅ Thread System Phase 3 complete (Living System with reconsolidation)
+- ✅ Thread Workspace Phase 1-2 (read-only view + chat with task creation)
+- ✅ Voice Input Phase 1 (Apple Speech, push-to-talk, URL scheme)
+- ✅ Thinking Partner (conversation memory, context builder, deep-dive, synthesis)
+- ✅ Test Environment Isolation (anonymized data, environment switching)
 - ✅ iMessage Daily Digest (condensed summary at 6am)
+- ✅ Thread System Phase 1-3 (embeddings, associations, detection, reconsolidation)
+- ✅ Phase 7.2 (SeleneChat Planning Integration)
+- ✅ n8n replacement (TypeScript + Fastify + launchd)
 
 **Up Next (choose one track):**
 
-**Track A: Thread System Phase 3+ (Advanced Features)**
+**Track A: Thread Workspace Phase 3 (Feedback Loop)**
+- Task completion syncs back from Things
+- Thread momentum updates based on task progress
+- "What's done" view in workspace
+
+**Track B: Voice Input Phase 2+**
+- Global hotkey for voice capture
+- Voxtral upgrade for better recognition
+- TTS responses
+
+**Track C: SeleneChat UI**
+- Forest Study visual redesign (design docs ready)
+- Interface improvements (command palette, focus mode)
+
+**Track D: Thread System Advanced**
 - Thread splitting (sub-clusters emerge)
 - Thread merging (related threads combine)
 - Stale thread archiving (60+ days inactive)
 
-**Track B: SeleneChat UI**
-- Forest Study visual redesign (design docs ready)
-- Interface improvements (command palette, focus mode)
+**Track E: Phase 7.3 (Cloud AI Integration)**
+- Privacy-preserving cloud AI with sanitization
+- Bundled with Things Checklist Generation
 
-**Track C: Phase 7.4 (Contextual Surfacing)**
-- Thread continuation prompts
-- Resurface dormant threads
-
-**Track D: Thread System Phase 4 (Interfaces)**
-- ~~SeleneChat thread queries~~ ✅ Done
-- ~~Thread export to Obsidian~~ ✅ Done
-- Link tasks to threads
-
-**Track E: LanceDB Migration**
+**Track F: LanceDB Migration**
 - Vector database for better embedding storage/queries
 - Design doc ready in `docs/plans/`
-
-**Deprioritized (bundled for future):**
-- Phase 7.3 (Cloud AI Integration) + Things Checklist Generation
-- Rationale: Checklist quality would benefit significantly from Cloud AI
-- Branch `feature/things-checklist` preserved with implementation (7 commits)
 
 ---
 
 ## Recent Achievements
+
+### 2026-02-07
+- **Thread Workspace Phase 2 Complete** - Chat with Task Creation
+  - `ThreadWorkspacePromptBuilder` - includes task state in LLM context
+  - `ThreadWorkspaceChatViewModel` - thread-scoped message pipeline
+  - Pending actions confirmation banner (Create in Things / Dismiss)
+  - `ActionService.sendToThingsAndLinkThread()` - create + link in one call
+  - HSplitView layout: context panel | chat panel
+  - 24 new tests (353 total, 0 failures)
+
+### 2026-02-06
+- **Thread Workspace Phase 1 Complete** - Read-Only View
+  - `ThreadWorkspaceView` with thread context, tasks, notes
+  - `ThreadTask` model + `Migration009_ThreadTasks`
+  - `getTasksForThread`, `linkTaskToThread`, `getThreadById` on DatabaseService
+  - Navigation from Today view "Heating Up" column
+  - 35 tests for Phase 1
 
 ### 2026-02-05
 - **Thinking Partner Phase 2 Complete** - Context Builder
@@ -340,5 +370,6 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 
 ## Questions for Next Session
 
-1. Which track to pursue next? (A: Thread Advanced, B: UI Redesign, C: Contextual Surfacing, D: Thread Interfaces, E: LanceDB)
-2. Monitor the living system over the next few days - are thread summaries updating correctly?
+1. Which track to pursue next? (A: Workspace Phase 3, B: Voice Phase 2, C: UI Redesign, D: Thread Advanced, E: Cloud AI, F: LanceDB)
+2. Manual test: Open app, navigate to thread workspace, send a chat message, verify actions appear in confirmation card
+3. Does confirming actions successfully create tasks in Things and link them to the thread?
