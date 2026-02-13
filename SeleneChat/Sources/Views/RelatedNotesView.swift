@@ -170,9 +170,13 @@ struct RelatedNoteRow: View {
     }
 }
 
-#Preview {
-    RelatedNotesView(noteId: 1)
-        .environmentObject(DatabaseService.shared)
-        .frame(width: 300)
-        .padding()
+#if DEBUG
+struct RelatedNotesView_Previews: PreviewProvider {
+    static var previews: some View {
+        RelatedNotesView(noteId: 1)
+            .environmentObject(DatabaseService.shared)
+            .frame(width: 300)
+            .padding()
+    }
 }
+#endif
