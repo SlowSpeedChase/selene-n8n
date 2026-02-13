@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, copyFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { createWorkflowLogger, config } from '../lib';
 import type { ProcessedManifest, ProcessedFileEntry, VoiceMemoWorkflowResult } from '../types';
 
@@ -202,15 +202,15 @@ function parseMemoFilename(filename: string): ParsedMemoName {
 // ---------------------------------------------------------------------------
 
 function convertToWav(inputPath: string, outputPath: string): void {
-  execSync(
-    `ffmpeg -i "${inputPath}" -ar 16000 -ac 1 -c:a pcm_s16le "${outputPath}" -y`,
-    { stdio: 'pipe' }
-  );
+  execFileSync('ffmpeg', ['-i', inputPath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', outputPath, '-y'], {
+    stdio: 'pipe',
+  });
 }
 
 function transcribeWav(wavPath: string): string {
-  const output = execSync(
-    `"${config.whisperBinary}" -m "${config.whisperModel}" -f "${wavPath}" --no-timestamps -t ${config.whisperThreads} -l en`,
+  const output = execFileSync(
+    config.whisperBinary,
+    ['-m', config.whisperModel, '-f', wavPath, '--no-timestamps', '-t', String(config.whisperThreads), '-l', 'en'],
     { stdio: 'pipe', timeout: WHISPER_TIMEOUT_MS }
   );
   return output.toString().trim();
@@ -218,8 +218,9 @@ function transcribeWav(wavPath: string): string {
 
 function getAudioDuration(filePath: string): string {
   try {
-    const output = execSync(
-      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${filePath}"`,
+    const output = execFileSync(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', filePath],
       { stdio: 'pipe' }
     );
     const totalSeconds = Math.round(parseFloat(output.toString().trim()));
@@ -270,7 +271,7 @@ async function ingestToSelene(title: string, content: string): Promise<boolean> 
 async function processMemo(
   memo: NewMemoFile,
   manifest: ProcessedManifest
-): Promise<{ success: boolean; error?: string }> {
+): Promise<void> {
   const { filename, fullPath } = memo;
   log.info({ filename }, 'Processing voice memo');
 
@@ -344,8 +345,7 @@ ${transcription}
       log.warn({ wavPath }, 'Failed to clean up temp WAV');
     }
 
-    log.info({ filename, ingested }, 'Voice memo processed successfully');
-    return { success: true };
+    log.info({ filename, ingested, transcriptionLength: transcription.length }, 'Voice memo processed successfully');
   } catch (err) {
     const error = err as Error;
 
@@ -435,9 +435,9 @@ export async function transcribeVoiceMemos(): Promise<VoiceMemoWorkflowResult> {
   // Process each new file
   for (const memo of newFiles) {
     try {
-      const fileResult = await processMemo(memo, manifest);
+      await processMemo(memo, manifest);
       result.processed++;
-      result.details.push({ filename: memo.filename, success: fileResult.success });
+      result.details.push({ filename: memo.filename, success: true });
     } catch (err) {
       const error = err as Error;
       log.error({ filename: memo.filename, err: error }, 'Failed to process voice memo');
