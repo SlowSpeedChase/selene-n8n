@@ -5,9 +5,18 @@ import { createWorkflowLogger, config } from '../lib';
 
 const log = createWorkflowLogger('send-digest');
 
+const DIGEST_NOTE_NAME = 'Selene Daily';
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function digestToHtml(digestText: string, date: string): string {
   const lines = digestText.split('\n').filter((l) => l.trim());
-  const bodyHtml = lines.map((line) => `<p>${line}</p>`).join('\n');
+  const bodyHtml = lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('\n');
 
   return `<h1>Selene Daily</h1>
 <p style="color: #888; font-size: 14px;">Updated: ${date}</p>
@@ -15,15 +24,16 @@ function digestToHtml(digestText: string, date: string): string {
 ${bodyHtml}`;
 }
 
-function updateAppleNote(noteName: string, htmlBody: string): void {
-  // Escape for AppleScript: backslashes, double quotes, backslash-n for newlines
+function updateAppleNote(htmlBody: string): void {
+  // Escape for AppleScript: backslashes, double quotes, single quotes, newlines
   const escaped = htmlBody
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
+    .replace(/'/g, "'\"'\"'")
     .replace(/\n/g, '\\n');
 
   const script = `osascript -e 'tell application "Notes"' \
-    -e 'set noteName to "Selene Daily"' \
+    -e 'set noteName to "${DIGEST_NOTE_NAME}"' \
     -e 'set noteBody to "${escaped}"' \
     -e 'try' \
     -e 'set targetNote to first note whose name is noteName' \
@@ -42,6 +52,11 @@ export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: str
   // In test mode, write to file instead of posting to Apple Notes
   if (config.isTestEnv) {
     return sendDigestToFile();
+  }
+
+  if (!config.appleNotesDigestEnabled) {
+    log.info('Apple Notes digest disabled');
+    return { sent: false };
   }
 
   // Look for today's digest, fall back to yesterday's
@@ -72,7 +87,7 @@ export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: str
       day: 'numeric',
     });
     const html = digestToHtml(message, dateStr);
-    updateAppleNote('Selene Daily', html);
+    updateAppleNote(html);
     log.info('Digest posted to Apple Notes');
     return { sent: true };
   } catch (err) {
