@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 @main
 struct SeleneChatApp: App {
@@ -17,6 +18,11 @@ struct SeleneChatApp: App {
 
         // Configure services with database connection
         configureServices()
+
+        // Register as login item (user can manage in System Settings > General > Login Items)
+        if #available(macOS 13.0, *) {
+            try? SMAppService.mainApp.register()
+        }
 
         #if DEBUG
         setupDebugSystem()
