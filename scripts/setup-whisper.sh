@@ -86,16 +86,18 @@ else
 
     if [ -d "$WHISPER_DIR" ]; then
         echo "  Updating existing clone..."
-        cd "$WHISPER_DIR" && git pull
+        (cd "$WHISPER_DIR" && git pull)
     else
         echo "  Cloning whisper.cpp..."
         git clone https://github.com/ggerganov/whisper.cpp.git "$WHISPER_DIR"
     fi
 
     echo "  Building with Metal acceleration..."
-    cd "$WHISPER_DIR"
-    cmake -B build -DWHISPER_METAL=ON
-    cmake --build build -j$(sysctl -n hw.ncpu) --config Release
+    (
+        cd "$WHISPER_DIR"
+        cmake -B build -DWHISPER_METAL=ON
+        cmake --build build -j$(sysctl -n hw.ncpu) --config Release
+    )
 
     if [ -f "$WHISPER_DIR/build/bin/whisper-cli" ]; then
         echo -e "  ${GREEN}OK${NC} whisper.cpp built successfully"
@@ -117,8 +119,11 @@ if [ -f "$MODEL_DIR/$MODEL_NAME" ]; then
     echo -e "  ${GREEN}OK${NC} Model already downloaded"
 else
     echo "  Downloading medium model (~1.5GB)..."
-    cd "$WHISPER_DIR"
-    bash models/download-ggml-model.sh medium
+    (cd "$WHISPER_DIR" && bash models/download-ggml-model.sh medium)
+    if [ ! -f "$MODEL_DIR/$MODEL_NAME" ]; then
+        echo -e "  ${RED}ERROR: Model download failed. File not found at $MODEL_DIR/$MODEL_NAME${NC}"
+        exit 1
+    fi
     echo -e "  ${GREEN}OK${NC} Model downloaded"
 fi
 echo ""
@@ -129,6 +134,7 @@ echo "----------------------------------------"
 
 mkdir -p "$VOICE_MEMOS_DIR/archive"
 mkdir -p "$VOICE_MEMOS_DIR/transcripts"
+mkdir -p "$PROJECT_DIR/logs"
 
 if [ ! -f "$VOICE_MEMOS_DIR/.processed.json" ]; then
     echo '{"files":{}}' > "$VOICE_MEMOS_DIR/.processed.json"
@@ -172,6 +178,7 @@ echo "Step 6: Smoke test..."
 echo "----------------------------------------"
 
 TEMP_WAV=$(mktemp /tmp/whisper-test-XXXXXX.wav)
+trap 'rm -f "$TEMP_WAV"' EXIT
 
 # Generate a 1-second silent WAV file
 ffmpeg -f lavfi -i anullsrc=r=16000:cl=mono -t 1 -c:a pcm_s16le "$TEMP_WAV" -y 2>/dev/null
@@ -185,11 +192,8 @@ if "$WHISPER_DIR/build/bin/whisper-cli" \
     echo -e "  ${GREEN}OK${NC} Whisper transcription works"
 else
     echo -e "  ${RED}ERROR: Whisper smoke test failed${NC}"
-    rm -f "$TEMP_WAV"
     exit 1
 fi
-
-rm -f "$TEMP_WAV"
 echo ""
 
 echo "========================================"
