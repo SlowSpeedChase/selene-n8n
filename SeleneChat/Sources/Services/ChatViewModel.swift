@@ -21,6 +21,7 @@ class ChatViewModel: ObservableObject {
     private let synthesisPromptBuilder = SynthesisPromptBuilder()
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
+    private let briefingContextBuilder = BriefingContextBuilder()
 
     /// Currently active deep-dive thread (if in deep-dive mode)
     @Published var activeDeepDiveThread: Thread?
@@ -383,6 +384,145 @@ class ChatViewModel: ObservableObject {
             let fallbackResponse = try await handleLocalQuery(context: context, notes: notes)
             return (fallbackResponse, notes, notes, "error-fallback")
         }
+    }
+
+    // MARK: - Briefing Discussion
+
+    /// Start a discussion about a briefing card.
+    /// Assembles deep context via BriefingContextBuilder, sends to Ollama,
+    /// and adds the response as Selene's opening message.
+    func startBriefingDiscussion(card: BriefingCard) async {
+        isProcessing = true
+        defer { isProcessing = false }
+
+        do {
+            // Fetch memories (shared across all card types)
+            let memories = (try? await databaseService.getAllMemories(limit: 10)) ?? []
+
+            // Build context and determine context type based on card type
+            let context: String
+            let contextType: BriefingContextBuilder.ContextType
+
+            switch card.cardType {
+            case .whatChanged:
+                contextType = .whatChanged
+                guard let noteId = card.noteId,
+                      let note = try await databaseService.getNote(byId: noteId) else {
+                    addErrorMessage("Could not load the note for this briefing card.")
+                    return
+                }
+                let thread: Thread? = if let threadId = card.threadId {
+                    try await databaseService.getThreadById(threadId)
+                } else {
+                    nil
+                }
+                let relatedTuples = await databaseService.getRelatedNotes(for: noteId)
+                let relatedNotes = relatedTuples.map { $0.note }
+                let tasks: [ThreadTask] = if let threadId = card.threadId {
+                    (try? await databaseService.getTasksForThread(threadId)) ?? []
+                } else {
+                    []
+                }
+                context = briefingContextBuilder.buildWhatChangedContext(
+                    note: note, thread: thread, relatedNotes: relatedNotes,
+                    tasks: tasks, memories: memories
+                )
+
+            case .needsAttention:
+                contextType = .needsAttention
+                guard let threadId = card.threadId,
+                      let thread = try await databaseService.getThreadById(threadId) else {
+                    addErrorMessage("Could not load the thread for this briefing card.")
+                    return
+                }
+                // Get recent notes for the thread
+                let threadNotes: [Note]
+                if let name = card.threadName,
+                   let result = try await databaseService.getThreadByName(name) {
+                    threadNotes = result.1
+                } else {
+                    threadNotes = []
+                }
+                let tasks = (try? await databaseService.getTasksForThread(threadId)) ?? []
+                context = briefingContextBuilder.buildNeedsAttentionContext(
+                    thread: thread, recentNotes: threadNotes,
+                    tasks: tasks, memories: memories
+                )
+
+            case .connection:
+                contextType = .connection
+                guard let noteAId = card.noteAId,
+                      let noteBId = card.noteBId,
+                      let noteA = try await databaseService.getNote(byId: noteAId),
+                      let noteB = try await databaseService.getNote(byId: noteBId) else {
+                    addErrorMessage("Could not load the notes for this connection card.")
+                    return
+                }
+                // Look up threads by name
+                let threadA: Thread? = if let name = card.threadAName,
+                      let result = try? await databaseService.getThreadByName(name) {
+                    result.0
+                } else {
+                    nil
+                }
+                let threadB: Thread? = if let name = card.threadBName,
+                      let result = try? await databaseService.getThreadByName(name) {
+                    result.0
+                } else {
+                    nil
+                }
+                let relatedToA = await databaseService.getRelatedNotes(for: noteAId).map { $0.note }
+                let relatedToB = await databaseService.getRelatedNotes(for: noteBId).map { $0.note }
+                // Gather tasks from both threads
+                var allTasks: [ThreadTask] = []
+                if let threadA = threadA {
+                    allTasks += (try? await databaseService.getTasksForThread(threadA.id)) ?? []
+                }
+                if let threadB = threadB {
+                    allTasks += (try? await databaseService.getTasksForThread(threadB.id)) ?? []
+                }
+                context = briefingContextBuilder.buildConnectionContext(
+                    noteA: noteA, threadA: threadA,
+                    noteB: noteB, threadB: threadB,
+                    relatedToA: relatedToA, relatedToB: relatedToB,
+                    tasks: allTasks, memories: memories
+                )
+            }
+
+            // Build system prompt and full LLM prompt
+            let systemPrompt = briefingContextBuilder.buildSystemPrompt(for: contextType)
+            let fullPrompt = "\(systemPrompt)\n\n\(context)"
+
+            // Send to Ollama
+            let response = try await ollamaService.generate(
+                prompt: fullPrompt,
+                model: "mistral:7b"
+            )
+
+            // Add as assistant message
+            let assistantMessage = Message(
+                role: .assistant,
+                content: response,
+                llmTier: .local,
+                queryType: "briefing-\(contextType)"
+            )
+            currentSession.addMessage(assistantMessage)
+            await saveSession()
+
+        } catch {
+            addErrorMessage("I had trouble preparing the discussion: \(error.localizedDescription)")
+        }
+    }
+
+    /// Add an error message to the current chat session
+    private func addErrorMessage(_ text: String) {
+        self.error = text
+        let errorMessage = Message(
+            role: .assistant,
+            content: text,
+            llmTier: .onDevice
+        )
+        currentSession.addMessage(errorMessage)
     }
 
     // MARK: - Thread Query Handling
