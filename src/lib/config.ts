@@ -5,8 +5,11 @@ import { config as loadEnv } from 'dotenv';
 // Load environment variables from .env file
 loadEnv();
 
-// Load .env.development if it exists - override: true so test settings take precedence
-loadEnv({ path: join(__dirname, '../..', '.env.development'), override: true });
+// Load .env.development only when not explicitly set to production
+// (SeleneChat sets SELENE_ENV=production when launching workflows)
+if (process.env.SELENE_ENV !== 'production') {
+  loadEnv({ path: join(__dirname, '../..', '.env.development'), override: true });
+}
 
 const projectRoot = join(__dirname, '../..');
 

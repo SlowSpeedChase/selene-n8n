@@ -3,6 +3,7 @@ import SwiftUI
 /// Minimal status dropdown view for the menu bar popover.
 ///
 /// Displays the current workflow scheduler status (active/idle),
+/// a list of all scheduled workflows with their run state,
 /// an "Open Selene" button to bring the main window to front,
 /// and a "Quit" button to terminate the app.
 struct MenuBarStatusView: View {
@@ -16,6 +17,19 @@ struct MenuBarStatusView: View {
 
             Divider()
 
+            workflowList
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+
+            if let error = scheduler.lastError {
+                Divider()
+                errorLine(error)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+            }
+
+            Divider()
+
             openSeleneButton
                 .padding(.horizontal, 4)
                 .padding(.top, 4)
@@ -24,7 +38,7 @@ struct MenuBarStatusView: View {
                 .padding(.horizontal, 4)
                 .padding(.bottom, 4)
         }
-        .frame(width: 200)
+        .frame(width: 240)
     }
 
     // MARK: - Status Line
@@ -51,6 +65,68 @@ struct MenuBarStatusView: View {
                 .font(.callout)
                 .lineLimit(1)
                 .truncationMode(.tail)
+        }
+    }
+
+    // MARK: - Workflow List
+
+    private var workflowList: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(scheduler.workflowSnapshots) { snapshot in
+                workflowRow(snapshot)
+            }
+        }
+    }
+
+    private func workflowRow(_ snapshot: WorkflowScheduler.WorkflowSnapshot) -> some View {
+        HStack(spacing: 6) {
+            if snapshot.isRunning {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(width: 12, height: 12)
+            } else {
+                Image(systemName: snapshot.usesOllama ? "brain" : "gearshape")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(width: 12, height: 12)
+            }
+
+            Text(snapshot.name)
+                .font(.caption)
+                .foregroundColor(snapshot.isRunning ? .primary : .secondary)
+                .lineLimit(1)
+
+            Spacer()
+
+            if snapshot.isRunning {
+                Text("running")
+                    .font(.caption2)
+                    .foregroundColor(.green)
+            } else if let lastRun = snapshot.lastRunAt {
+                Text(relativeTime(lastRun))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("pending")
+                    .font(.caption2)
+                    .foregroundColor(.secondary.opacity(0.6))
+            }
+        }
+        .padding(.vertical, 1)
+    }
+
+    // MARK: - Error Line
+
+    private func errorLine(_ error: WorkflowScheduler.WorkflowError) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 9))
+                .foregroundColor(.orange)
+
+            Text("\(error.workflowName): \(error.message)")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
         }
     }
 
@@ -97,6 +173,17 @@ struct MenuBarStatusView: View {
 
     private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+
+    // MARK: - Helpers
+
+    private func relativeTime(_ date: Date) -> String {
+        let seconds = Int(-date.timeIntervalSinceNow)
+        if seconds < 60 { return "\(seconds)s ago" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes)m ago" }
+        let hours = minutes / 60
+        return "\(hours)h ago"
     }
 }
 

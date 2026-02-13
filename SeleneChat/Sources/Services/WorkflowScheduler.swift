@@ -53,6 +53,29 @@ class WorkflowScheduler: ObservableObject {
         }
     }
 
+    /// Snapshot of each workflow's current state, for display in the menu bar dropdown.
+    var workflowSnapshots: [WorkflowSnapshot] {
+        workflows.compactMap { wf in
+            // Skip the persistent server entry — it's shown separately as the status line
+            guard wf.schedule != .persistent else { return nil }
+            return WorkflowSnapshot(
+                name: wf.name,
+                isRunning: activeWorkflows.contains(wf.name),
+                lastRunAt: wf.lastRunAt,
+                usesOllama: wf.usesOllama
+            )
+        }
+    }
+
+    /// Read-only snapshot of a workflow for UI display.
+    struct WorkflowSnapshot: Identifiable {
+        var id: String { name }
+        let name: String
+        let isRunning: Bool
+        let lastRunAt: Date?
+        let usesOllama: Bool
+    }
+
     // MARK: - Private State
 
     /// Mutable copies of workflow definitions with `lastRunAt` tracking.
@@ -188,10 +211,11 @@ class WorkflowScheduler: ObservableObject {
         process.executableURL = URL(fileURLWithPath: command)
         process.arguments = arguments
         process.currentDirectoryURL = URL(fileURLWithPath: runner.projectRoot)
-        process.environment = [
-            "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-            "SELENE_DB_PATH": "\(runner.projectRoot)/data/selene.db"
-        ]
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        env["SELENE_DB_PATH"] = "\(runner.projectRoot)/data/selene.db"
+        env["SELENE_ENV"] = "production"
+        process.environment = env
 
         // Discard output (server logs to its own file)
         process.standardOutput = FileHandle.nullDevice

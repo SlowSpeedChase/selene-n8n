@@ -65,10 +65,11 @@ final class WorkflowRunner {
             process.executableURL = URL(fileURLWithPath: command)
             process.arguments = arguments
             process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
-            process.environment = [
-                "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-                "SELENE_DB_PATH": "\(projectRoot)/data/selene.db"
-            ]
+            var env = ProcessInfo.processInfo.environment
+            env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            env["SELENE_DB_PATH"] = "\(projectRoot)/data/selene.db"
+            env["SELENE_ENV"] = "production"
+            process.environment = env
 
             let stdoutPipe = Pipe()
             let stderrPipe = Pipe()
