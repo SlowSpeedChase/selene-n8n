@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, copyFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { execSync, execFileSync } from 'child_process';
-import { createWorkflowLogger, config } from '../lib';
+import { createWorkflowLogger } from '../lib/logger';
+import { config } from '../lib/config';
 import type { ProcessedManifest, ProcessedFileEntry, VoiceMemoWorkflowResult } from '../types';
 
 const log = createWorkflowLogger('transcribe-voice-memos');
