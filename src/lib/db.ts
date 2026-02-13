@@ -440,6 +440,120 @@ export function saveConversationMessage(message: {
   return result.lastInsertRowid as number;
 }
 
+// Type for conversation_memories table
+export type MemoryType = 'preference' | 'fact' | 'pattern' | 'context';
+
+export interface ConversationMemory {
+  id: number;
+  content: string;
+  source_session_id: string | null;
+  embedding: Buffer | null;
+  memory_type: MemoryType | null;
+  confidence: number;
+  last_accessed: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Helper: List memories ordered by confidence desc, last_accessed desc
+export function listMemories(limit = 50): ConversationMemory[] {
+  const stmt = db.prepare(`
+    SELECT * FROM conversation_memories
+    ORDER BY confidence DESC, last_accessed DESC NULLS LAST
+    LIMIT ?
+  `);
+  return stmt.all(limit) as ConversationMemory[];
+}
+
+// Helper: Get a memory by ID
+export function getMemoryById(id: number): ConversationMemory | undefined {
+  const stmt = db.prepare('SELECT * FROM conversation_memories WHERE id = ?');
+  return stmt.get(id) as ConversationMemory | undefined;
+}
+
+// Helper: Create a new memory
+export function createMemory(memory: {
+  content: string;
+  memory_type: MemoryType;
+  confidence?: number;
+  source_session_id?: string | null;
+  embedding?: string | null;
+}): number {
+  const stmt = db.prepare(`
+    INSERT INTO conversation_memories
+      (content, memory_type, confidence, source_session_id, embedding, last_accessed, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const now = new Date().toISOString();
+  const embeddingBlob = memory.embedding ? Buffer.from(memory.embedding, 'utf-8') : null;
+  const result = stmt.run(
+    memory.content,
+    memory.memory_type,
+    memory.confidence ?? 1.0,
+    memory.source_session_id ?? null,
+    embeddingBlob,
+    now,
+    now,
+    now
+  );
+  return result.lastInsertRowid as number;
+}
+
+// Helper: Update an existing memory (only provided fields)
+export function updateMemory(
+  id: number,
+  updates: {
+    content?: string;
+    confidence?: number;
+    embedding?: string | null;
+  }
+): boolean {
+  const fields: string[] = [];
+  const values: (string | number | Buffer | null)[] = [];
+
+  if (updates.content !== undefined) {
+    fields.push('content = ?');
+    values.push(updates.content);
+  }
+  if (updates.confidence !== undefined) {
+    fields.push('confidence = ?');
+    values.push(updates.confidence);
+  }
+  if (updates.embedding !== undefined) {
+    fields.push('embedding = ?');
+    values.push(updates.embedding ? Buffer.from(updates.embedding, 'utf-8') : null);
+  }
+
+  if (fields.length === 0) return false;
+
+  fields.push('updated_at = ?');
+  values.push(new Date().toISOString());
+  values.push(id);
+
+  const stmt = db.prepare(`UPDATE conversation_memories SET ${fields.join(', ')} WHERE id = ?`);
+  const result = stmt.run(...values);
+  return result.changes > 0;
+}
+
+// Helper: Delete a memory by ID
+export function deleteMemory(id: number): boolean {
+  const stmt = db.prepare('DELETE FROM conversation_memories WHERE id = ?');
+  const result = stmt.run(id);
+  return result.changes > 0;
+}
+
+// Helper: Touch memories to update last_accessed for multiple IDs
+export function touchMemories(ids: number[]): number {
+  if (ids.length === 0) return 0;
+  const placeholders = ids.map(() => '?').join(',');
+  const now = new Date().toISOString();
+  const stmt = db.prepare(
+    `UPDATE conversation_memories SET last_accessed = ? WHERE id IN (${placeholders})`
+  );
+  const result = stmt.run(now, ...ids);
+  return result.changes;
+}
+
 // Cleanup on process exit
 process.on('exit', () => {
   db.close();

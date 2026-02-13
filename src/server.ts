@@ -7,6 +7,7 @@ import { getRelatedNotes, searchNotes } from './queries/related-notes';
 import { notesRoutes } from './routes/notes';
 import { threadsRoutes } from './routes/threads';
 import { sessionsRoutes } from './routes/sessions';
+import { memoriesRoutes } from './routes/memories';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -130,6 +131,9 @@ threadsRoutes(server);
 
 // Sessions API routes
 sessionsRoutes(server);
+
+// Memories API routes
+memoriesRoutes(server);
 
 // Start server
 async function start() {
