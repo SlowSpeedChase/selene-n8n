@@ -44,7 +44,9 @@ Ideas captured but not yet ready for implementation.
 
 These have acceptance criteria, ADHD check, and scope check. Ready to create a branch.
 
-*No designs currently in Ready status.*
+| Date | Document | Topic | Notes |
+|------|----------|-------|-------|
+| 2026-02-13 | 2026-02-13-thread-workspace-phase3-design.md | selenechat | Feedback loop: on-demand Things sync, momentum boost, LLM "what's next" |
 
 ---
 
