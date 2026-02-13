@@ -92,6 +92,9 @@ export const config = {
   trmnlWebhookUrl: process.env.TRMNL_WEBHOOK_URL || '',
   trmnlDigestEnabled: !isTestEnv && !!process.env.TRMNL_WEBHOOK_URL && process.env.TRMNL_DIGEST_ENABLED !== 'false',
 
+  // API authentication
+  apiToken: process.env.SELENE_API_TOKEN || '',
+
   // Voice Memos transcription
   voiceMemosRecordingsDir:
     process.env.VOICE_MEMOS_RECORDINGS_DIR ||

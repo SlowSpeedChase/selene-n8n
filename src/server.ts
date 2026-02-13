@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { config, logger } from './lib';
+import { requireAuth } from './lib/auth';
 import { ingest } from './workflows/ingest';
 import { exportObsidian } from './workflows/export-obsidian';
 import { getRelatedNotes, searchNotes } from './queries/related-notes';
@@ -7,6 +8,13 @@ import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
   logger: false, // We use our own logger
+});
+
+// Auth middleware for all /api/* routes
+server.addHook('onRequest', async (request, reply) => {
+  if (request.url.startsWith('/api/')) {
+    await requireAuth(request, reply);
+  }
 });
 
 // Health check endpoint
