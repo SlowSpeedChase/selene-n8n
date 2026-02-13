@@ -4,9 +4,11 @@ struct ChatView: View {
     @EnvironmentObject var chatViewModel: ChatViewModel
     @EnvironmentObject var databaseService: DatabaseService
     @EnvironmentObject var speechService: SpeechRecognitionService
+    @EnvironmentObject var speechSynthesisService: SpeechSynthesisService
     @State private var messageText = ""
     @State private var showingSessionHistory = false
     @State private var isAPIAvailable = false
+    @State private var wasVoiceInput = false
     @FocusState private var isInputFocused: Bool
     @Namespace private var focusNamespace
 
@@ -157,11 +159,16 @@ struct ChatView: View {
                     sendMessage()
                 }
                 .onChange(of: speechService.state) { _, newState in
+                    if newState == .listening {
+                        // Stop any in-progress TTS when user starts speaking
+                        speechSynthesisService.stop()
+                    }
                     // When listening stops, transfer liveText to messageText for editing
                     if newState == .idle && !speechService.liveText.isEmpty {
                         messageText = speechService.liveText
                         speechService.liveText = ""
                         isInputFocused = true
+                        wasVoiceInput = true
                     }
                 }
                 .onKeyPress(.escape) {
@@ -193,10 +200,12 @@ struct ChatView: View {
         guard !messageText.isEmpty else { return }
 
         let message = messageText
+        let voiceOriginated = wasVoiceInput
         messageText = ""
+        wasVoiceInput = false
 
         Task {
-            await chatViewModel.sendMessage(message)
+            await chatViewModel.sendMessage(message, voiceOriginated: voiceOriginated)
         }
     }
 }
