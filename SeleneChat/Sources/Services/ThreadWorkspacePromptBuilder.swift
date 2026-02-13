@@ -105,4 +105,64 @@ class ThreadWorkspacePromptBuilder {
 
         return context
     }
+
+    // MARK: - What's Next
+
+    /// Patterns that indicate a "what's next" query
+    private let whatsNextPatterns: [String] = [
+        "what's next",
+        "whats next",
+        "what should i do",
+        "what should i work on",
+        "what do i do",
+        "what to do next",
+        "what now",
+        "next step",
+        "next steps",
+    ]
+
+    /// Detect if a query is asking "what's next"
+    func isWhatsNextQuery(_ query: String) -> Bool {
+        let lowered = query.lowercased()
+            .replacingOccurrences(of: "?", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        return whatsNextPatterns.contains { lowered.contains($0) }
+    }
+
+    /// Build a specialized prompt for "what's next" recommendations
+    func buildWhatsNextPrompt(thread: Thread, notes: [Note], tasks: [ThreadTask]) -> String {
+        let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
+        let openTasks = tasks.filter { !$0.isCompleted }
+        let completedTasks = tasks.filter { $0.isCompleted }
+
+        var taskList = ""
+        if !openTasks.isEmpty {
+            taskList += "Open tasks:\n"
+            for task in openTasks {
+                let title = task.title ?? task.thingsTaskId
+                let age = Calendar.current.dateComponents([.day], from: task.createdAt, to: Date()).day ?? 0
+                taskList += "- \(title) (created \(age) days ago)\n"
+            }
+        }
+        if !completedTasks.isEmpty {
+            taskList += "\nRecently completed:\n"
+            for task in completedTasks.prefix(5) {
+                let title = task.title ?? task.thingsTaskId
+                taskList += "- \(title) (done)\n"
+            }
+        }
+
+        return """
+        You are helping someone with ADHD decide what to work on next in their "\(thread.name)" thread.
+
+        \(threadContext)
+
+        ## Task State
+        \(taskList.isEmpty ? "No tasks linked to this thread yet." : taskList)
+
+        Based on the thread context, open tasks, and what's been completed, recommend ONE specific task to tackle next. Explain briefly why (consider energy level, dependencies, and momentum). Keep it under 100 words.
+
+        If there are no open tasks, suggest what the logical next action would be based on the thread's current state.
+        """
+    }
 }

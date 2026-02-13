@@ -136,10 +136,17 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
 
     /// Build the appropriate prompt for the current conversation state.
     func buildPrompt(for query: String) -> String {
+        // Check for "what's next" query first
+        if promptBuilder.isWhatsNextQuery(query) {
+            return promptBuilder.buildWhatsNextPrompt(
+                thread: thread,
+                notes: notes,
+                tasks: tasks
+            )
+        }
+
         // If no prior conversation, use initial prompt
         let priorMessages = messages.filter { $0.role != .system }
-        // Only user+assistant messages before the current user message count as history
-        // The current user message was just added, so check for prior assistant messages
         let hasHistory = priorMessages.contains { $0.role == .assistant }
 
         if hasHistory {

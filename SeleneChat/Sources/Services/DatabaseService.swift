@@ -626,6 +626,87 @@ class DatabaseService: ObservableObject {
         try db.run(task.update(threadTasksCompletedAt <- dateStr))
     }
 
+    // MARK: - Thread Activity
+
+    private let threadActivityTable = Table("thread_activity")
+    private let activityId = SQLite.Expression<Int64>("id")
+    private let activityThreadId = SQLite.Expression<Int64>("thread_id")
+    private let activityType = SQLite.Expression<String>("activity_type")
+    private let activityOccurredAt = SQLite.Expression<String>("occurred_at")
+
+    /// Ensure thread_activity table exists (auto-migration safety net)
+    private func ensureThreadActivityTable() throws {
+        guard let db = db else { return }
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='thread_activity'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            try db.execute("""
+                CREATE TABLE IF NOT EXISTS thread_activity (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    thread_id INTEGER NOT NULL,
+                    activity_type TEXT NOT NULL CHECK(activity_type IN ('note_added', 'task_completed')),
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_thread_activity_thread ON thread_activity(thread_id);
+                CREATE INDEX IF NOT EXISTS idx_thread_activity_recent ON thread_activity(occurred_at);
+            """)
+        }
+    }
+
+    /// Record a thread activity event (e.g., task_completed, note_added)
+    func recordThreadActivity(threadId: Int64, type: String, timestamp: Date = Date()) async throws {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        try ensureThreadActivityTable()
+
+        let dateStr = iso8601Formatter.string(from: timestamp)
+        try db.run(threadActivityTable.insert(
+            activityThreadId <- threadId,
+            activityType <- type,
+            activityOccurredAt <- dateStr
+        ))
+    }
+
+    /// A simple struct for activity records
+    struct ThreadActivityRecord {
+        let id: Int64
+        let threadId: Int64
+        let activityType: String
+        let occurredAt: Date
+    }
+
+    /// Get recent thread activity within a number of days
+    func getRecentThreadActivity(threadId: Int64, days: Int) async throws -> [ThreadActivityRecord] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        try ensureThreadActivityTable()
+
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+        let cutoffStr = iso8601Formatter.string(from: cutoff)
+
+        let query = threadActivityTable
+            .filter(activityThreadId == threadId && activityOccurredAt >= cutoffStr)
+            .order(activityOccurredAt.desc)
+
+        var activities: [ThreadActivityRecord] = []
+        for row in try db.prepare(query) {
+            activities.append(ThreadActivityRecord(
+                id: row[activityId],
+                threadId: row[activityThreadId],
+                activityType: row[activityType],
+                occurredAt: parseDateString(row[activityOccurredAt]) ?? Date()
+            ))
+        }
+        return activities
+    }
+
     /// Get thread by ID with full details
     func getThreadById(_ threadId: Int64) async throws -> Thread? {
         guard let db = db else {
