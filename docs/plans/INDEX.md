@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-13
 
 Design docs are the planning unit for Selene development. Each doc captures an idea, architecture, and implementation plan.
 
@@ -29,6 +29,7 @@ Ideas captured but not yet ready for implementation.
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
+| 2026-02-13 | 2026-02-13-database-architecture-evaluation.md | architecture, infra | Vector/graph DB evaluation — keep LanceDB + SQLite, skip graph DB |
 | 2026-02-13 | 2026-02-13-morning-briefing-redesign.md | selenechat | Redesign briefing with data-driven cards, deep context chat, cross-thread connections |
 | 2026-02-04 | 2026-02-04-conversation-memory-design.md | selenechat | Persistent conversation memory with mem0-inspired patterns |
 | 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
@@ -49,7 +50,6 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 | 2026-02-12 | 2026-02-12-menu-bar-orchestrator-design.md | selenechat, infra | Menu bar app with Silver Crystal icon + workflow orchestration |
 | 2026-02-12 | 2026-02-12-apple-notes-daily-digest-design.md | automation | Replace iMessage digest with pinned Apple Notes daily note |
 | 2026-02-12 | 2026-02-12-voice-memo-transcription-design.md | automation | Whisper.cpp transcription + Selene pipeline integration |
-| 2026-02-13 | 2026-02-13-thread-lifecycle-design.md | thread-system | Auto split, merge, archive threads — full lifecycle management |
 
 ---
 
@@ -81,6 +81,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
+| 2026-02-13 | 2026-02-13-thread-lifecycle-design.md | 2026-02-13 | Auto archive, split, merge threads — full lifecycle |
 | 2026-02-06 | 2026-02-06-test-environment-isolation-design.md | 2026-02-06 | Complete test isolation with anonymized data |
 | 2026-02-06 | 2026-02-06-memory-embedding-retrieval-design.md | 2026-02-06 | Embedding-based memory retrieval and consolidation |
 | 2026-01-26 | today-view-design.md | 2026-01-26 | ADHD landing page with new captures and heating threads |

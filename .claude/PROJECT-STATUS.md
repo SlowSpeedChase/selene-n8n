@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-02-07
-**Status:** Thread Workspace Phase 2 Complete | Voice Input Phase 1 | Thinking Partner | Living System Active
+**Last Updated:** 2026-02-13
+**Status:** Thread Lifecycle Complete | Thread Workspace Phase 2 | Voice Input Phase 1 | Living System Active
 
 ---
 
@@ -15,13 +15,14 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 **Location:** `/Users/chaseeasterling/selene-n8n`
 
 ---
-## Current Focus: Thread Workspace Phase 2 Complete
+## Current Focus: Thread Lifecycle Complete
 
 **Branch:** `main` (all work merged)
 
-Thread Workspace now provides **thread-scoped chat with task creation**. Users can plan and break down work inside the thread context, with tasks flowing directly to Things.
+Threads now have a full automatic lifecycle: stale threads archive after 60 days of inactivity, divergent threads split into focused sub-threads, and converging threads merge with LLM confirmation. Archived threads reactivate automatically when new related notes appear.
 
 ### Recent Completions
+- **Thread Lifecycle** (2026-02-13) - Auto archive, split, merge with daily launchd schedule
 - **Thread Workspace Phase 2** (2026-02-07) - Chat + task creation via confirmation banner
 - **Thread Workspace Phase 1** (2026-02-06) - Read-only workspace view
 - **Voice Input Phase 1** (2026-02-05) - SpeechRecognitionService, VoiceMicButton, URL scheme
@@ -34,6 +35,7 @@ The thread system runs automatically via launchd:
 - Association computation (every 5 min)
 - Thread detection (every 30 min)
 - Thread reconsolidation (hourly) - updates summaries + calculates momentum
+- Thread lifecycle (daily 2am) - archive stale, split divergent, merge converging
 
 ### Completed Components
 
@@ -218,6 +220,7 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Next Steps
 
 **Completed:**
+- ✅ Thread Lifecycle (auto archive, split, merge — daily launchd schedule)
 - ✅ Thread Workspace Phase 1-2 (read-only view + chat with task creation)
 - ✅ Voice Input Phase 1 (Apple Speech, push-to-talk, URL scheme)
 - ✅ Thinking Partner (conversation memory, context builder, deep-dive, synthesis)
@@ -243,22 +246,35 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Forest Study visual redesign (design docs ready)
 - Interface improvements (command palette, focus mode)
 
-**Track D: Thread System Advanced**
-- Thread splitting (sub-clusters emerge)
-- Thread merging (related threads combine)
-- Stale thread archiving (60+ days inactive)
+**Track D: Menu Bar Orchestrator** (design ready)
+- Menu bar app with Silver Crystal icon
+- Workflow orchestration from system tray
 
-**Track E: Phase 7.3 (Cloud AI Integration)**
+**Track E: Apple Notes Daily Digest** (design ready)
+- Replace iMessage digest with pinned Apple Notes daily note
+
+**Track F: Voice Memo Transcription** (design ready)
+- Whisper.cpp transcription + Selene pipeline integration
+
+**Track G: Phase 7.3 (Cloud AI Integration)**
 - Privacy-preserving cloud AI with sanitization
 - Bundled with Things Checklist Generation
-
-**Track F: LanceDB Migration**
-- Vector database for better embedding storage/queries
-- Design doc ready in `docs/plans/`
 
 ---
 
 ## Recent Achievements
+
+### 2026-02-13
+- **Thread Lifecycle Complete** - Auto Archive, Split, Merge
+  - `thread-lifecycle.ts` — single workflow with 3 phases (archive → split → merge)
+  - Archive: threads inactive 60+ days set to `archived` status
+  - Split: BFS on intra-thread associations detects divergent sub-clusters, LLM names new threads
+  - Merge: centroid comparison + LLM confirmation prevents false positives
+  - Reactivation: archived threads come back to life when new notes are assigned (`detect-threads.ts`)
+  - Obsidian: archived/merged threads routed to `Threads/Archive/` subfolder
+  - Migration 017: expanded CHECK constraints for `archived`/`merged`/`reactivated` statuses
+  - `com.selene.thread-lifecycle.plist` — daily at 2am via launchd
+  - 5 files changed, 935 lines
 
 ### 2026-02-07
 - **Thread Workspace Phase 2 Complete** - Chat with Task Creation
