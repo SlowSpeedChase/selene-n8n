@@ -48,9 +48,8 @@ struct ScheduledWorkflow: Identifiable {
 
     /// The root directory of the selene-n8n project.
     ///
-    /// When running from an .app bundle, uses the canonical production path.
-    /// When running from CLI (development), uses the canonical path as well
-    /// since workflows always run against the main project directory.
+    /// Always returns the canonical path (`~/selene-n8n`), even when running
+    /// from a worktree. Workflows execute against the main project directory.
     static var projectRoot: String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return "\(home)/selene-n8n"
