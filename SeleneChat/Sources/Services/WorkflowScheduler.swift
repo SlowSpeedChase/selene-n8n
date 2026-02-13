@@ -185,7 +185,10 @@ class WorkflowScheduler: ObservableObject {
         // Back on MainActor (method is implicitly @MainActor via class)
         activeWorkflows.remove(workflow.name)
 
-        if !result.success {
+        if result.success {
+            // Clear any previous error on successful run
+            if lastError != nil { lastError = nil }
+        } else {
             lastError = WorkflowError(
                 id: UUID(),
                 workflowName: workflow.name,
@@ -248,6 +251,7 @@ class WorkflowScheduler: ObservableObject {
         do {
             try process.run()
             serverProcess = process
+            lastError = nil
         } catch {
             lastError = WorkflowError(
                 id: UUID(),
