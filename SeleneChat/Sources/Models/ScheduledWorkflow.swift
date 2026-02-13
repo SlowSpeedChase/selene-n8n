@@ -62,7 +62,7 @@ struct ScheduledWorkflow: Identifiable {
         ScheduledWorkflow(
             id: "server",
             name: "Selene Server",
-            scriptPath: "npm start",
+            scriptPath: "src/server.ts",
             schedule: .persistent,
             usesOllama: false
         ),

@@ -204,6 +204,9 @@ class WorkflowScheduler: ObservableObject {
 
     /// Launches the Selene server as a long-running child process.
     private func startServer() {
+        // Don't launch if already running
+        if let existing = serverProcess, existing.isRunning { return }
+
         guard let serverWorkflow = workflows.first(where: { $0.schedule == .persistent }) else {
             return
         }
@@ -242,6 +245,7 @@ class WorkflowScheduler: ObservableObject {
                     try? await Task.sleep(nanoseconds: UInt64(Self.serverRestartDelay * 1_000_000_000))
                     self.serverRestartPending = false
                     if self.isEnabled {
+                        self.stopServer()
                         self.startServer()
                     }
                 }

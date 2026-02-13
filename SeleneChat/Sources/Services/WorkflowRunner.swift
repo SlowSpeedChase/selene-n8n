@@ -40,9 +40,6 @@ final class WorkflowRunner {
     /// - Parameter workflow: The workflow to build a command for.
     /// - Returns: A tuple of the executable path and its arguments.
     func buildCommand(for workflow: ScheduledWorkflow) -> (command: String, arguments: [String]) {
-        if workflow.scriptPath == "npm start" {
-            return (command: "/usr/local/bin/npm", arguments: ["run", "start"])
-        }
         return (command: "/usr/local/bin/npx", arguments: ["ts-node", workflow.scriptPath])
     }
 
