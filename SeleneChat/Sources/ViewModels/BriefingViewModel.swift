@@ -47,8 +47,17 @@ class BriefingViewModel: ObservableObject {
             // Generate briefing via Ollama
             let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
 
-            // Parse the response into a Briefing struct
-            let briefing = generator.parseBriefingResponse(response, threads: threads)
+            // Parse the response into a Briefing struct (legacy - will be replaced in Task 4)
+            let legacyBriefing = generator.parseBriefingResponse(response, threads: threads)
+
+            // Convert legacy Briefing to StructuredBriefing for new status enum
+            let briefing = StructuredBriefing(
+                intro: legacyBriefing.content,
+                whatChanged: [],
+                needsAttention: [],
+                connections: [],
+                generatedAt: legacyBriefing.generatedAt
+            )
 
             // Update state to loaded
             state.status = .loaded(briefing)
@@ -66,8 +75,10 @@ class BriefingViewModel: ObservableObject {
     /// Get a query to dig into the suggested thread
     /// - Returns: A query string to start exploring the suggested thread
     func digIn() async -> String {
+        // TODO: Task 4 will replace this with StructuredBriefing card-based navigation
         if case .loaded(let briefing) = state.status,
-           let thread = briefing.suggestedThread {
+           let firstCard = briefing.whatChanged.first,
+           let thread = firstCard.threadName {
             return "Let's dig into \(thread)"
         }
         return "What should I focus on?"

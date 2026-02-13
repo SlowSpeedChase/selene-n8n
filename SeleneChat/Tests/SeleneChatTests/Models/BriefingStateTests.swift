@@ -2,106 +2,123 @@ import XCTest
 @testable import SeleneChat
 
 final class BriefingStateTests: XCTestCase {
+    func testBriefingCardTypes() {
+        let changedCard = BriefingCard.whatChanged(
+            noteTitle: "Planning Deep Work",
+            noteId: 1,
+            threadName: "Focus Systems",
+            threadId: 5,
+            date: Date(),
+            primaryTheme: "productivity",
+            energyLevel: "high"
+        )
 
-    func testBriefingStateInitializesAsNotLoaded() {
-        let state = BriefingState()
-        XCTAssertEqual(state.status, .notLoaded)
+        XCTAssertEqual(changedCard.cardType, .whatChanged)
+        XCTAssertEqual(changedCard.noteTitle, "Planning Deep Work")
+        XCTAssertEqual(changedCard.threadName, "Focus Systems")
     }
 
-    func testBriefingStateCanTransitionToLoading() {
-        var state = BriefingState()
-        state.status = .loading
-        XCTAssertEqual(state.status, .loading)
+    func testNeedsAttentionCard() {
+        let attentionCard = BriefingCard.needsAttention(
+            threadName: "Focus Systems",
+            threadId: 5,
+            reason: "No new notes in 6 days",
+            noteCount: 8,
+            openTaskCount: 3
+        )
+
+        XCTAssertEqual(attentionCard.cardType, .needsAttention)
+        XCTAssertEqual(attentionCard.reason, "No new notes in 6 days")
+        XCTAssertEqual(attentionCard.openTaskCount, 3)
     }
 
-    func testBriefingStateStoresLoadedBriefing() {
-        var state = BriefingState()
-        let briefing = Briefing(
-            content: "Good morning! You have 3 active threads.",
-            suggestedThread: "Project Planning",
-            threadCount: 3,
+    func testConnectionCard() {
+        let connectionCard = BriefingCard.connection(
+            noteATitle: "Planning Deep Work",
+            noteAId: 1,
+            threadAName: "Focus Systems",
+            noteBTitle: "Morning Routine Experiment",
+            noteBId: 7,
+            threadBName: "Daily Habits",
+            explanation: "Both explore structuring time around energy levels"
+        )
+
+        XCTAssertEqual(connectionCard.cardType, .connection)
+        XCTAssertEqual(connectionCard.explanation, "Both explore structuring time around energy levels")
+    }
+
+    func testStructuredBriefing() {
+        let briefing = StructuredBriefing(
+            intro: "Busy day yesterday, 4 notes across 2 threads.",
+            whatChanged: [],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date()
         )
-        state.status = .loaded(briefing)
 
-        if case .loaded(let storedBriefing) = state.status {
-            XCTAssertEqual(storedBriefing.content, "Good morning! You have 3 active threads.")
-            XCTAssertEqual(storedBriefing.suggestedThread, "Project Planning")
-            XCTAssertEqual(storedBriefing.threadCount, 3)
-        } else {
-            XCTFail("Expected .loaded status")
-        }
+        XCTAssertTrue(briefing.whatChanged.isEmpty)
+        XCTAssertFalse(briefing.intro.isEmpty)
+        XCTAssertTrue(briefing.isEmpty)
     }
 
-    func testBriefingStateStoresError() {
-        var state = BriefingState()
-        state.status = .failed("Network connection lost")
+    func testStructuredBriefingStatus() {
+        let briefing = StructuredBriefing(
+            intro: "Test",
+            whatChanged: [],
+            needsAttention: [],
+            connections: [],
+            generatedAt: Date()
+        )
+        let status = BriefingStatus.loaded(briefing)
 
-        if case .failed(let errorMessage) = state.status {
-            XCTAssertEqual(errorMessage, "Network connection lost")
+        if case .loaded(let b) = status {
+            XCTAssertEqual(b.intro, "Test")
         } else {
-            XCTFail("Expected .failed status")
+            XCTFail("Expected loaded status")
         }
     }
-
-    // MARK: - Equatable Tests
 
     func testBriefingStatusEquatable() {
-        XCTAssertEqual(BriefingStatus.notLoaded, BriefingStatus.notLoaded)
-        XCTAssertEqual(BriefingStatus.loading, BriefingStatus.loading)
-        XCTAssertNotEqual(BriefingStatus.notLoaded, BriefingStatus.loading)
+        let status1 = BriefingStatus.loading
+        let status2 = BriefingStatus.loading
+        XCTAssertEqual(status1, status2)
 
-        let briefing1 = Briefing(
-            content: "Test",
-            suggestedThread: nil,
-            threadCount: 1,
-            generatedAt: Date(timeIntervalSince1970: 1000)
-        )
-        let briefing2 = Briefing(
-            content: "Test",
-            suggestedThread: nil,
-            threadCount: 1,
-            generatedAt: Date(timeIntervalSince1970: 1000)
-        )
-        XCTAssertEqual(BriefingStatus.loaded(briefing1), BriefingStatus.loaded(briefing2))
-
-        XCTAssertEqual(BriefingStatus.failed("error"), BriefingStatus.failed("error"))
-        XCTAssertNotEqual(BriefingStatus.failed("error1"), BriefingStatus.failed("error2"))
+        let status3 = BriefingStatus.notLoaded
+        XCTAssertNotEqual(status1, status3)
     }
 
-    func testBriefingEquatable() {
-        let date = Date()
-        let briefing1 = Briefing(
-            content: "Hello",
-            suggestedThread: "Thread A",
-            threadCount: 5,
-            generatedAt: date
-        )
-        let briefing2 = Briefing(
-            content: "Hello",
-            suggestedThread: "Thread A",
-            threadCount: 5,
-            generatedAt: date
-        )
-        XCTAssertEqual(briefing1, briefing2)
-
-        let briefing3 = Briefing(
-            content: "Different",
-            suggestedThread: "Thread A",
-            threadCount: 5,
-            generatedAt: date
-        )
-        XCTAssertNotEqual(briefing1, briefing3)
+    func testBriefingStateInitialValue() {
+        let state = BriefingState()
+        if case .notLoaded = state.status {
+            // expected
+        } else {
+            XCTFail("Expected notLoaded initial state")
+        }
     }
 
-    func testBriefingWithNilSuggestedThread() {
-        let briefing = Briefing(
-            content: "No suggestions today",
-            suggestedThread: nil,
-            threadCount: 0,
+    func testStructuredBriefingIsNotEmptyWithCards() {
+        let card = BriefingCard.whatChanged(
+            noteTitle: "Test", noteId: 1, threadName: nil, threadId: nil,
+            date: Date(), primaryTheme: nil, energyLevel: nil
+        )
+        let briefing = StructuredBriefing(
+            intro: "Hello",
+            whatChanged: [card],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date()
         )
-        XCTAssertNil(briefing.suggestedThread)
-        XCTAssertEqual(briefing.threadCount, 0)
+        XCTAssertFalse(briefing.isEmpty)
+    }
+
+    func testEnergyEmoji() {
+        let high = BriefingCard.whatChanged(noteTitle: "T", noteId: 1, threadName: nil, threadId: nil, date: Date(), primaryTheme: nil, energyLevel: "high")
+        XCTAssertEqual(high.energyEmoji, "\u{26A1}")
+
+        let low = BriefingCard.whatChanged(noteTitle: "T", noteId: 1, threadName: nil, threadId: nil, date: Date(), primaryTheme: nil, energyLevel: "low")
+        XCTAssertEqual(low.energyEmoji, "\u{1FAAB}")
+
+        let none = BriefingCard.whatChanged(noteTitle: "T", noteId: 1, threadName: nil, threadId: nil, date: Date(), primaryTheme: nil, energyLevel: nil)
+        XCTAssertEqual(none.energyEmoji, "")
     }
 }

@@ -32,11 +32,21 @@ final class BriefingViewModelTests: XCTestCase {
     func testDigInReturnsSuggestedThreadQuery() async {
         let viewModel = BriefingViewModel()
 
-        // Manually set state to loaded with a suggested thread
-        let briefing = Briefing(
-            content: "Test briefing content",
-            suggestedThread: "Event-Driven Architecture",
-            threadCount: 2,
+        // Manually set state to loaded with a whatChanged card containing a thread
+        let card = BriefingCard.whatChanged(
+            noteTitle: "Test Note",
+            noteId: 1,
+            threadName: "Event-Driven Architecture",
+            threadId: 1,
+            date: Date(),
+            primaryTheme: nil,
+            energyLevel: nil
+        )
+        let briefing = StructuredBriefing(
+            intro: "Test briefing content",
+            whatChanged: [card],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date()
         )
         viewModel.state.status = .loaded(briefing)
@@ -52,11 +62,12 @@ final class BriefingViewModelTests: XCTestCase {
     func testDigInWithNoThreadReturnsGenericQuery() async {
         let viewModel = BriefingViewModel()
 
-        // Manually set state to loaded without a suggested thread
-        let briefing = Briefing(
-            content: "Test briefing content",
-            suggestedThread: nil,
-            threadCount: 0,
+        // Manually set state to loaded without any whatChanged cards
+        let briefing = StructuredBriefing(
+            intro: "Test briefing content",
+            whatChanged: [],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date()
         )
         viewModel.state.status = .loaded(briefing)

@@ -55,13 +55,13 @@ struct BriefingView: View {
 
     // MARK: - Loaded State
 
-    private func loadedView(_ briefing: Briefing) -> some View {
+    private func loadedView(_ briefing: StructuredBriefing) -> some View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Briefing content card
+            // Briefing content card (legacy - will be replaced in Task 6)
             VStack(alignment: .leading, spacing: 16) {
-                Text(briefing.content)
+                Text(briefing.intro)
                     .font(.body)
                     .lineSpacing(6)
                     .fixedSize(horizontal: false, vertical: true)

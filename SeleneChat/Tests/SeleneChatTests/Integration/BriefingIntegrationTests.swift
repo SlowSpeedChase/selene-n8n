@@ -123,20 +123,20 @@ final class BriefingIntegrationTests: XCTestCase {
         state.status = .loading
         XCTAssertEqual(state.status, .loading, "Status should transition to .loading")
 
-        // Transition to loaded with briefing data
-        let briefing = Briefing(
-            content: "Good morning! Your highest momentum thread is Project Architecture. Consider focusing there today.",
-            suggestedThread: "Project Architecture",
-            threadCount: 3,
+        // Transition to loaded with structured briefing data
+        let briefing = StructuredBriefing(
+            intro: "Good morning! Your highest momentum thread is Project Architecture. Consider focusing there today.",
+            whatChanged: [],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date()
         )
         state.status = .loaded(briefing)
 
         // Verify loaded state
         if case .loaded(let loadedBriefing) = state.status {
-            XCTAssertEqual(loadedBriefing.content, briefing.content, "Briefing content should match")
-            XCTAssertEqual(loadedBriefing.suggestedThread, "Project Architecture", "Suggested thread should match")
-            XCTAssertEqual(loadedBriefing.threadCount, 3, "Thread count should match")
+            XCTAssertEqual(loadedBriefing.intro, briefing.intro, "Briefing intro should match")
+            XCTAssertTrue(loadedBriefing.isEmpty, "Briefing should have no cards yet")
         } else {
             XCTFail("Status should be .loaded with briefing data")
         }
@@ -300,16 +300,18 @@ final class BriefingIntegrationTests: XCTestCase {
 
     /// Test BriefingStatus equality for state comparisons
     func testBriefingStatusEquality() {
-        let briefing1 = Briefing(
-            content: "Test content",
-            suggestedThread: "Thread A",
-            threadCount: 2,
+        let briefing1 = StructuredBriefing(
+            intro: "Test content",
+            whatChanged: [],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date(timeIntervalSince1970: 0)
         )
-        let briefing2 = Briefing(
-            content: "Test content",
-            suggestedThread: "Thread A",
-            threadCount: 2,
+        let briefing2 = StructuredBriefing(
+            intro: "Test content",
+            whatChanged: [],
+            needsAttention: [],
+            connections: [],
             generatedAt: Date(timeIntervalSince1970: 0)
         )
 
