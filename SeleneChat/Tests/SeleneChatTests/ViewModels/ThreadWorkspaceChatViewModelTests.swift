@@ -241,4 +241,23 @@ final class ThreadWorkspaceChatViewModelTests: XCTestCase {
         XCTAssertEqual(vm.tasks.count, 1)
         XCTAssertEqual(vm.tasks[0].title, "New task")
     }
+
+    // MARK: - What's Next Routing
+
+    func testBuildPromptUsesWhatsNextForMatchingQuery() {
+        let thread = Thread.mock(name: "Test Thread")
+        let vm = ThreadWorkspaceChatViewModel(thread: thread, notes: [], tasks: [])
+
+        let prompt = vm.buildPrompt(for: "what's next?")
+        XCTAssertTrue(prompt.contains("recommend"), "Should use what's next prompt")
+    }
+
+    func testBuildPromptUsesRegularForNonMatchingQuery() {
+        let thread = Thread.mock(name: "Test Thread")
+        let vm = ThreadWorkspaceChatViewModel(thread: thread, notes: [], tasks: [])
+
+        let prompt = vm.buildPrompt(for: "break down the auth task")
+        XCTAssertFalse(prompt.contains("recommend ONE specific task"),
+                       "Should NOT use what's next prompt for regular queries")
+    }
 }
