@@ -144,16 +144,3 @@ enum BriefingStatus: Equatable {
 struct BriefingState {
     var status: BriefingStatus = .notLoaded
 }
-
-// MARK: - Deprecated (remove after briefing redesign migration)
-
-/// Legacy briefing struct - kept for backward compatibility during migration.
-/// Will be removed when BriefingGenerator, BriefingViewModel, and BriefingView
-/// are updated to use StructuredBriefing (Tasks 4, 6, 9).
-@available(*, deprecated, message: "Use StructuredBriefing instead")
-struct Briefing: Equatable {
-    let content: String
-    let suggestedThread: String?
-    let threadCount: Int
-    let generatedAt: Date
-}
