@@ -45,6 +45,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
+| 2026-02-12 | 2026-02-12-menu-bar-orchestrator-design.md | selenechat, infra | Menu bar app with Silver Crystal icon + workflow orchestration |
 | 2026-02-12 | 2026-02-12-apple-notes-daily-digest-design.md | automation | Replace iMessage digest with pinned Apple Notes daily note |
 | 2026-02-12 | 2026-02-12-voice-memo-transcription-design.md | automation | Whisper.cpp transcription + Selene pipeline integration |
 
