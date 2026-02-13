@@ -11,6 +11,7 @@ struct SeleneChatApp: App {
     @StateObject private var compressionService = CompressionService(databaseService: DatabaseService.shared)
     @StateObject private var speechService = SpeechRecognitionService()
     @StateObject private var scheduler = WorkflowScheduler()
+    @StateObject private var speechSynthesisService = SpeechSynthesisService()
 
     init() {
         // Start as menu bar accessory — no dock icon until window opens
@@ -63,6 +64,7 @@ struct SeleneChatApp: App {
                 .environmentObject(chatViewModel)
                 .environmentObject(speechService)
                 .environmentObject(scheduler)
+                .environmentObject(speechSynthesisService)
                 .frame(minWidth: 800, minHeight: 600)
                 .task {
                     // Show dock icon when window opens
@@ -80,6 +82,8 @@ struct SeleneChatApp: App {
                     if !scheduler.isEnabled {
                         scheduler.enable()
                     }
+
+                    chatViewModel.speechSynthesisService = speechSynthesisService
 
                     // Run compression check asynchronously on launch
                     await compressionService.checkAndCompressSessions()
@@ -110,6 +114,7 @@ struct SeleneChatApp: App {
                 .onOpenURL { url in
                     let action = VoiceInputManager.parseURL(url)
                     if action == .activateVoice {
+                        speechSynthesisService.stop()
                         NSApplication.shared.activate(ignoringOtherApps: true)
                         Task {
                             try? await Task.sleep(for: .milliseconds(200))
