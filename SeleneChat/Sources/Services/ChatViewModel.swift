@@ -22,6 +22,7 @@ class ChatViewModel: ObservableObject {
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
     private let briefingContextBuilder = BriefingContextBuilder()
+    var speechSynthesisService: SpeechSynthesizing?
 
     /// Currently active deep-dive thread (if in deep-dive mode)
     @Published var activeDeepDiveThread: Thread?
@@ -33,7 +34,7 @@ class ChatViewModel: ObservableObject {
         }
     }
 
-    func sendMessage(_ content: String) async {
+    func sendMessage(_ content: String, voiceOriginated: Bool = false) async {
         isProcessing = true
         defer { isProcessing = false }
 
@@ -41,7 +42,8 @@ class ChatViewModel: ObservableObject {
         let userMessage = Message(
             role: .user,
             content: content,
-            llmTier: .onDevice
+            llmTier: .onDevice,
+            voiceOriginated: voiceOriginated
         )
         currentSession.addMessage(userMessage)
 
@@ -56,6 +58,7 @@ class ChatViewModel: ObservableObject {
                     queryType: "thread"
                 )
                 currentSession.addMessage(assistantMessage)
+                speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
                 await saveSession()
                 return
             }
@@ -72,6 +75,7 @@ class ChatViewModel: ObservableObject {
                     queryType: queryType
                 )
                 currentSession.addMessage(assistantMessage)
+                speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
                 await saveSession()
                 return
             }
@@ -91,6 +95,7 @@ class ChatViewModel: ObservableObject {
                     queryType: queryType
                 )
                 currentSession.addMessage(assistantMessage)
+                speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
                 await saveSession()
                 return
             }
@@ -129,6 +134,7 @@ class ChatViewModel: ObservableObject {
                     queryType: queryType
                 )
                 currentSession.addMessage(assistantMessage)
+                speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
 
                 // Save session
                 await saveSession()
@@ -148,6 +154,7 @@ class ChatViewModel: ObservableObject {
                 relatedNotes: relatedNotes.map(\.id)
             )
             currentSession.addMessage(assistantMessage)
+            speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
 
             // Save session
             await saveSession()
@@ -934,6 +941,13 @@ class ChatViewModel: ObservableObject {
                 #endif
             }
         }
+    }
+    // MARK: - Voice Response
+
+    /// Speak the response aloud if the user's message was voice-originated.
+    private func speakIfVoiceOriginated(_ response: String, voiceOriginated: Bool) {
+        guard voiceOriginated, let tts = speechSynthesisService else { return }
+        tts.speak(text: response)
     }
 }
 
