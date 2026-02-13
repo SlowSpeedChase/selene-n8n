@@ -30,7 +30,6 @@ Ideas captured but not yet ready for implementation.
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
 | 2026-02-13 | 2026-02-13-database-architecture-evaluation.md | architecture, infra | Vector/graph DB evaluation — keep LanceDB + SQLite, skip graph DB |
-| 2026-02-13 | 2026-02-13-morning-briefing-redesign.md | selenechat | Redesign briefing with data-driven cards, deep context chat, cross-thread connections |
 | 2026-02-04 | 2026-02-04-conversation-memory-design.md | selenechat | Persistent conversation memory with mem0-inspired patterns |
 | 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
 | 2026-01-11 | selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop server |
@@ -81,6 +80,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
+| 2026-02-13 | 2026-02-13-morning-briefing-redesign.md | 2026-02-13 | Structured cards, deep context chat, cross-thread connections |
 | 2026-02-13 | 2026-02-13-thread-lifecycle-design.md | 2026-02-13 | Auto archive, split, merge threads — full lifecycle |
 | 2026-02-06 | 2026-02-06-test-environment-isolation-design.md | 2026-02-06 | Complete test isolation with anonymized data |
 | 2026-02-06 | 2026-02-06-memory-embedding-retrieval-design.md | 2026-02-06 | Embedding-based memory retrieval and consolidation |
