@@ -9,6 +9,7 @@ const MIN_SPLIT_NOTES = 6;
 const MIN_COMPONENT_SIZE = 3;
 const SPLIT_SIMILARITY_THRESHOLD = 0.65;
 const MAX_NOTES_PER_SYNTHESIS = 15;
+const MERGE_DISTANCE_THRESHOLD = 200; // L2 distance between thread centroids
 
 // Types
 interface AssociationRecord {
@@ -210,6 +211,52 @@ Respond ONLY with valid JSON:
   "summary": "...",
   "why": "..."
 }`;
+}
+
+/**
+ * Compute centroid (average embedding vector) for a thread's notes.
+ * Reads from note_embeddings table (768-dim vectors stored as JSON BLOB).
+ */
+function computeThreadCentroid(threadId: number): number[] | null {
+  const embeddings = db
+    .prepare(
+      `SELECT ne.embedding
+       FROM note_embeddings ne
+       JOIN thread_notes tn ON ne.raw_note_id = tn.raw_note_id
+       WHERE tn.thread_id = ?`
+    )
+    .all(threadId) as { embedding: Buffer }[];
+
+  if (embeddings.length === 0) return null;
+
+  // Parse JSON vectors and average them
+  const vectors = embeddings.map((e) => JSON.parse(e.embedding.toString()) as number[]);
+  const dims = vectors[0].length;
+  const centroid = new Array(dims).fill(0) as number[];
+
+  for (const vec of vectors) {
+    for (let i = 0; i < dims; i++) {
+      centroid[i] += vec[i];
+    }
+  }
+
+  for (let i = 0; i < dims; i++) {
+    centroid[i] /= vectors.length;
+  }
+
+  return centroid;
+}
+
+/**
+ * L2 (Euclidean) distance between two vectors.
+ */
+function l2Distance(a: number[], b: number[]): number {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    const diff = a[i] - b[i];
+    sum += diff * diff;
+  }
+  return Math.sqrt(sum);
 }
 
 /**
@@ -419,11 +466,236 @@ async function splitDivergentThreads(): Promise<{ splits: number; errors: number
 }
 
 /**
+ * Detect pairs of active threads with high semantic overlap
+ * and merge them into a single thread.
+ */
+async function mergeConvergingThreads(): Promise<{ merges: number; errors: number }> {
+  let merges = 0;
+  let errors = 0;
+
+  // Get all active threads
+  const threads = db
+    .prepare(
+      `SELECT id, name, why, summary, status, note_count, last_activity_at
+       FROM threads
+       WHERE status = 'active'
+       ORDER BY note_count DESC`
+    )
+    .all() as ThreadRecord[];
+
+  if (threads.length < 2) {
+    log.info({ count: threads.length }, 'Fewer than 2 active threads, skipping merge detection');
+    return { merges, errors };
+  }
+
+  // Compute centroids for each thread
+  const centroids = new Map<number, number[]>();
+  for (const thread of threads) {
+    const centroid = computeThreadCentroid(thread.id);
+    if (centroid) {
+      centroids.set(thread.id, centroid);
+    } else {
+      log.debug({ threadId: thread.id, name: thread.name }, 'No embeddings for thread, skipping');
+    }
+  }
+
+  const threadIds = Array.from(centroids.keys());
+  if (threadIds.length < 2) {
+    log.info('Fewer than 2 threads with embeddings, skipping merge detection');
+    return { merges, errors };
+  }
+
+  // Build a lookup for thread records
+  const threadMap = new Map<number, ThreadRecord>();
+  for (const thread of threads) {
+    threadMap.set(thread.id, thread);
+  }
+
+  // Compare all pairs and find candidates below the distance threshold
+  interface MergeCandidate {
+    threadA: number;
+    threadB: number;
+    distance: number;
+  }
+
+  const candidates: MergeCandidate[] = [];
+  for (let i = 0; i < threadIds.length; i++) {
+    for (let j = i + 1; j < threadIds.length; j++) {
+      const idA = threadIds[i];
+      const idB = threadIds[j];
+      const dist = l2Distance(centroids.get(idA)!, centroids.get(idB)!);
+      if (dist < MERGE_DISTANCE_THRESHOLD) {
+        candidates.push({ threadA: idA, threadB: idB, distance: dist });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    log.info({ threadsChecked: threadIds.length }, 'No merge candidates found');
+    return { merges, errors };
+  }
+
+  // Sort by distance ASC (closest first)
+  candidates.sort((a, b) => a.distance - b.distance);
+
+  log.info({ candidates: candidates.length }, 'Found merge candidates');
+
+  const mergedThisRun = new Set<number>();
+
+  for (const candidate of candidates) {
+    // Skip if either thread already merged this cycle
+    if (mergedThisRun.has(candidate.threadA) || mergedThisRun.has(candidate.threadB)) {
+      continue;
+    }
+
+    const threadA = threadMap.get(candidate.threadA)!;
+    const threadB = threadMap.get(candidate.threadB)!;
+
+    try {
+      // Ask LLM to confirm the merge
+      const mergePrompt = `Thread A: "${threadA.name}" — ${threadA.summary || '(no summary)'}
+Thread B: "${threadB.name}" — ${threadB.summary || '(no summary)'}
+
+Are these fundamentally about the same line of thinking? Would combining them make sense, or are they distinct topics that happen to be related?
+
+Respond ONLY with valid JSON:
+{ "should_merge": true or false, "reason": "Brief explanation" }`;
+
+      const response = await generate(mergePrompt);
+
+      // Parse LLM response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        log.warn(
+          { threadA: threadA.id, threadB: threadB.id },
+          'Failed to parse merge LLM response'
+        );
+        errors++;
+        continue;
+      }
+
+      let mergeDecision: { should_merge: boolean; reason: string };
+      try {
+        mergeDecision = JSON.parse(jsonMatch[0]);
+      } catch {
+        log.warn(
+          { threadA: threadA.id, threadB: threadB.id, response },
+          'Invalid JSON in merge LLM response'
+        );
+        errors++;
+        continue;
+      }
+
+      if (!mergeDecision.should_merge) {
+        log.info(
+          {
+            threadA: threadA.id,
+            threadB: threadB.id,
+            nameA: threadA.name,
+            nameB: threadB.name,
+            reason: mergeDecision.reason,
+          },
+          'LLM rejected merge'
+        );
+        continue;
+      }
+
+      // Determine keeper (larger by note_count) and absorbed
+      const keeper = threadA.note_count >= threadB.note_count ? threadA : threadB;
+      const absorbed = keeper.id === threadA.id ? threadB : threadA;
+
+      const nowIso = new Date().toISOString();
+
+      // Move notes from absorbed thread to keeper
+      db.prepare(
+        `UPDATE thread_notes SET thread_id = ? WHERE thread_id = ?`
+      ).run(keeper.id, absorbed.id);
+
+      // Update keeper's note_count
+      const countRow = db
+        .prepare(`SELECT COUNT(*) as cnt FROM thread_notes WHERE thread_id = ?`)
+        .get(keeper.id) as { cnt: number };
+
+      db.prepare(
+        `UPDATE threads SET note_count = ?, updated_at = ? WHERE id = ?`
+      ).run(countRow.cnt, nowIso, keeper.id);
+
+      // Set absorbed thread status to 'merged'
+      db.prepare(
+        `UPDATE threads SET status = 'merged', updated_at = ? WHERE id = ?`
+      ).run(nowIso, absorbed.id);
+
+      // Record history on both threads
+      db.prepare(
+        `INSERT INTO thread_history (thread_id, summary_before, summary_after, change_type, created_at)
+         VALUES (?, ?, ?, 'merged', ?)`
+      ).run(keeper.id, keeper.summary, keeper.summary, nowIso);
+
+      db.prepare(
+        `INSERT INTO thread_history (thread_id, summary_before, summary_after, change_type, created_at)
+         VALUES (?, ?, ?, 'merged', ?)`
+      ).run(absorbed.id, absorbed.summary, absorbed.summary, nowIso);
+
+      // Re-synthesize keeper with combined notes
+      const keeperNotes = db
+        .prepare(
+          `SELECT id, title, content, created_at
+           FROM raw_notes
+           WHERE id IN (SELECT raw_note_id FROM thread_notes WHERE thread_id = ?)
+           ORDER BY created_at DESC`
+        )
+        .all(keeper.id) as NoteRecord[];
+
+      const resynthPrompt = buildResynthesisPrompt(keeper, keeperNotes);
+      const resynthResponse = await generate(resynthPrompt);
+      const resynth = parseSynthesis(resynthResponse);
+
+      if (resynth) {
+        db.prepare(
+          `UPDATE threads SET name = ?, summary = ?, why = ?, updated_at = ? WHERE id = ?`
+        ).run(resynth.name, resynth.summary, resynth.why, nowIso, keeper.id);
+      }
+
+      // Mark both as merged this run
+      mergedThisRun.add(keeper.id);
+      mergedThisRun.add(absorbed.id);
+
+      merges++;
+
+      log.info(
+        {
+          keeperId: keeper.id,
+          keeperName: keeper.name,
+          absorbedId: absorbed.id,
+          absorbedName: absorbed.name,
+          distance: candidate.distance,
+          reason: mergeDecision.reason,
+          newNoteCount: countRow.cnt,
+        },
+        'Merged threads'
+      );
+    } catch (err) {
+      const error = err as Error;
+      log.error(
+        { err: error, threadA: threadA.id, threadB: threadB.id },
+        'Error merging threads'
+      );
+      errors++;
+      mergedThisRun.add(candidate.threadA);
+      mergedThisRun.add(candidate.threadB);
+    }
+  }
+
+  log.info({ merges, errors }, 'Merge detection complete');
+  return { merges, errors };
+}
+
+/**
  * Main workflow: thread lifecycle management
  *
  * Phase 1: Archive stale threads (inactive > 60 days)
  * Phase 2: Split divergent threads (notes drifted into distinct sub-clusters)
- * Phase 3: Merge convergent threads (TODO)
+ * Phase 3: Merge convergent threads (semantically similar thread pairs)
  */
 export async function threadLifecycle(): Promise<WorkflowResult> {
   log.info('Starting thread lifecycle');
@@ -461,9 +733,18 @@ export async function threadLifecycle(): Promise<WorkflowResult> {
     result.details.push({ id: 0, success: false, error: error.message });
   }
 
-  // Phase 3: Merge convergent threads
-  // TODO: Detect pairs of threads with high semantic overlap
-  // and merge them into a single thread
+  // Phase 3: Merge converging threads
+  try {
+    const mergeResult = await mergeConvergingThreads();
+    result.processed += mergeResult.merges;
+    result.errors += mergeResult.errors;
+    result.details.push({ id: 0, success: true, error: `Merged ${mergeResult.merges} thread pairs` });
+  } catch (err) {
+    const error = err as Error;
+    log.error({ err: error }, 'Error in merge phase');
+    result.errors++;
+    result.details.push({ id: 0, success: false, error: error.message });
+  }
 
   log.info(
     { processed: result.processed, errors: result.errors },
