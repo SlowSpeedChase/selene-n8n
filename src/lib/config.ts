@@ -84,4 +84,17 @@ export const config = {
 
   // Apple Notes digest - disabled in test mode
   appleNotesDigestEnabled: !isTestEnv && process.env.APPLE_NOTES_DIGEST_ENABLED !== 'false',
+
+  // Voice Memos transcription
+  voiceMemosRecordingsDir:
+    process.env.VOICE_MEMOS_RECORDINGS_DIR ||
+    join(homedir(), 'Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings'),
+  voiceMemosOutputDir: process.env.VOICE_MEMOS_OUTPUT_DIR || join(homedir(), 'VoiceMemos'),
+  whisperBinary:
+    process.env.WHISPER_BINARY || join(homedir(), '.local/whisper.cpp/build/bin/whisper-cli'),
+  whisperModel:
+    process.env.WHISPER_MODEL || join(homedir(), '.local/whisper.cpp/models/ggml-medium.bin'),
+  whisperThreads: parseInt(process.env.WHISPER_THREADS || '6', 10),
+  seleneWebhookUrl:
+    process.env.SELENE_WEBHOOK_URL || 'http://localhost:5678/webhook/api/drafts',
 };
