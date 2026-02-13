@@ -32,7 +32,7 @@ Ideas captured but not yet ready for implementation.
 | 2026-02-13 | 2026-02-13-database-architecture-evaluation.md | architecture, infra | Vector/graph DB evaluation — keep LanceDB + SQLite, skip graph DB |
 | 2026-02-04 | 2026-02-04-conversation-memory-design.md | selenechat | Persistent conversation memory with mem0-inspired patterns |
 | 2026-01-26 | selenechat-contextual-evolution.md | selenechat | Project-scoped chats, connected info, lab notes - needs breakdown |
-| 2026-01-11 | selenechat-remote-access-design.md | selenechat | Run SeleneChat on laptop with desktop server |
+| 2026-01-11 | selenechat-remote-access-design.md | selenechat | Superseded by 2026-02-13-selene-mobile-ios-design.md |
 | 2026-01-05 | weekly-review-react-flow-design.md | ux-core | "Present -> React -> File" paradigm |
 | 2026-01-05 | selenechat-interface-inspiration-design.md | selenechat | Design patterns research - reference doc |
 | 2026-01-05 | selenechat-redesign-design.md | selenechat | Forest Study design system |
@@ -49,6 +49,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 | 2026-02-13 | 2026-02-13-trmnl-daily-digest-design.md | integrations | Push morning digest to TRMNL e-ink display |
 | 2026-02-13 | 2026-02-13-thread-workspace-phase3-design.md | selenechat | Feedback loop: on-demand Things sync, momentum boost, LLM "what's next" |
 | 2026-02-13 | 2026-02-13-voice-conversation-design.md | selenechat | Voice Phase 2: TTS responses, voice-in = voice-out conversation mode |
+| 2026-02-13 | 2026-02-13-selene-mobile-ios-design.md | selenechat, mobile | Native iOS app with full parity, Tailscale networking, push + live activities |
 
 ---
 
