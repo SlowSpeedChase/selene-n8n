@@ -316,6 +316,130 @@ export function getTasksForThread(threadId: number): ThreadTask[] {
   return stmt.all(threadId) as ThreadTask[];
 }
 
+// Type for chat_sessions table
+export interface ChatSession {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  is_pinned: number;
+  compression_state: 'full' | 'processing' | 'compressed';
+  compressed_at: string | null;
+  full_messages_json: string | null;
+  summary_text: string | null;
+}
+
+// Type for conversations table
+export interface ConversationMessage {
+  id: number;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+// Helper: List all sessions ordered by updated_at desc
+export function listSessions(): ChatSession[] {
+  const stmt = db.prepare(`
+    SELECT * FROM chat_sessions
+    ORDER BY updated_at DESC
+  `);
+  return stmt.all() as ChatSession[];
+}
+
+// Helper: Get a session by ID
+export function getSessionById(id: string): ChatSession | undefined {
+  const stmt = db.prepare('SELECT * FROM chat_sessions WHERE id = ?');
+  return stmt.get(id) as ChatSession | undefined;
+}
+
+// Helper: Upsert a session (INSERT OR REPLACE)
+export function upsertSession(session: {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  is_pinned: number;
+  compression_state: string;
+  compressed_at: string | null;
+  full_messages_json: string | null;
+  summary_text: string | null;
+}): void {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO chat_sessions
+      (id, title, created_at, updated_at, message_count, is_pinned,
+       compression_state, compressed_at, full_messages_json, summary_text)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    session.id,
+    session.title,
+    session.created_at,
+    session.updated_at,
+    session.message_count,
+    session.is_pinned,
+    session.compression_state,
+    session.compressed_at,
+    session.full_messages_json,
+    session.summary_text
+  );
+}
+
+// Helper: Delete a session and its conversation messages
+export function deleteSession(id: string): boolean {
+  const deleteConversations = db.prepare('DELETE FROM conversations WHERE session_id = ?');
+  const deleteSession = db.prepare('DELETE FROM chat_sessions WHERE id = ?');
+
+  const transaction = db.transaction(() => {
+    deleteConversations.run(id);
+    const result = deleteSession.run(id);
+    return result.changes > 0;
+  });
+
+  return transaction();
+}
+
+// Helper: Toggle pin state for a session
+export function updateSessionPin(id: string, isPinned: boolean): boolean {
+  const stmt = db.prepare(`
+    UPDATE chat_sessions SET is_pinned = ?, updated_at = ? WHERE id = ?
+  `);
+  const result = stmt.run(isPinned ? 1 : 0, new Date().toISOString(), id);
+  return result.changes > 0;
+}
+
+// Helper: Get conversation messages for a session
+export function getSessionMessages(sessionId: string, limit = 100): ConversationMessage[] {
+  const stmt = db.prepare(`
+    SELECT * FROM conversations
+    WHERE session_id = ?
+    ORDER BY created_at ASC
+    LIMIT ?
+  `);
+  return stmt.all(sessionId, limit) as ConversationMessage[];
+}
+
+// Helper: Save a conversation message
+export function saveConversationMessage(message: {
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}): number {
+  const stmt = db.prepare(`
+    INSERT INTO conversations (session_id, role, content, created_at)
+    VALUES (?, ?, ?, ?)
+  `);
+  const result = stmt.run(
+    message.session_id,
+    message.role,
+    message.content,
+    new Date().toISOString()
+  );
+  return result.lastInsertRowid as number;
+}
+
 // Cleanup on process exit
 process.on('exit', () => {
   db.close();
