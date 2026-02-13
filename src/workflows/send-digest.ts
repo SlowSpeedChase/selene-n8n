@@ -24,6 +24,48 @@ function digestToHtml(digestText: string, date: string): string {
 ${bodyHtml}`;
 }
 
+export function buildTrmnlPayload(digestText: string): {
+  merge_variables: { title: string; date: string; bullets: string[] };
+} {
+  const bullets = digestText.split('\n').filter((l) => l.trim());
+  const date = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  return {
+    merge_variables: {
+      title: 'Selene Daily',
+      date,
+      bullets,
+    },
+  };
+}
+
+async function pushToTrmnl(digestText: string): Promise<void> {
+  if (!config.trmnlDigestEnabled) {
+    return;
+  }
+
+  try {
+    const payload = buildTrmnlPayload(digestText);
+    const response = await fetch(config.trmnlWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      log.error({ status: response.status, statusText: response.statusText }, 'TRMNL webhook failed');
+    } else {
+      log.info('Digest pushed to TRMNL');
+    }
+  } catch (err) {
+    log.error({ err }, 'Failed to push digest to TRMNL');
+  }
+}
+
 function updateAppleNote(htmlBody: string): void {
   // Escape for AppleScript: backslashes, double quotes, single quotes, newlines
   const escaped = htmlBody
@@ -54,11 +96,6 @@ export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: str
     return sendDigestToFile();
   }
 
-  if (!config.appleNotesDigestEnabled) {
-    log.info('Apple Notes digest disabled');
-    return { sent: false };
-  }
-
   // Look for today's digest, fall back to yesterday's
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -79,21 +116,35 @@ export async function sendDigest(): Promise<{ sent: boolean; writtenToFile?: str
     return { sent: false };
   }
 
-  try {
-    const dateStr = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    const html = digestToHtml(message, dateStr);
-    updateAppleNote(html);
-    log.info('Digest posted to Apple Notes');
-    return { sent: true };
-  } catch (err) {
-    log.error({ err }, 'Failed to post digest to Apple Notes');
-    return { sent: false };
+  let anySent = false;
+
+  // Push to Apple Notes if enabled
+  if (config.appleNotesDigestEnabled) {
+    try {
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      const html = digestToHtml(message, dateStr);
+      updateAppleNote(html);
+      log.info('Digest posted to Apple Notes');
+      anySent = true;
+    } catch (err) {
+      log.error({ err }, 'Failed to post digest to Apple Notes');
+    }
+  } else {
+    log.info('Apple Notes digest disabled');
   }
+
+  // Push to TRMNL if enabled (independent of Apple Notes)
+  await pushToTrmnl(message);
+  if (config.trmnlDigestEnabled) {
+    anySent = true;
+  }
+
+  return { sent: anySent };
 }
 
 /**
