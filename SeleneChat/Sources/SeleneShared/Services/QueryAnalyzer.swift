@@ -14,6 +14,7 @@ public class QueryAnalyzer {
         case semantic     // Conceptual/meaning-based query
         case deepDive     // Thread deep-dive: "dig into X", "explore X thread"
         case synthesis    // Cross-thread synthesis: "what should I focus on?"
+        case mealPlanning // Meal planning: "what should I cook", "meal prep", "grocery list"
     }
 
     public enum TimeScope {
@@ -98,6 +99,14 @@ public class QueryAnalyzer {
         "dive into", "deep dive into", "deep dive on"
     ]
 
+    private let mealPlanningIndicators = [
+        "meal plan", "what should i cook", "what should i eat",
+        "dinner ideas", "lunch ideas", "breakfast ideas",
+        "plan next week", "plan this week", "meal prep",
+        "grocery list", "shopping list", "what to cook",
+        "recipe ideas", "what's for dinner", "what's for lunch"
+    ]
+
     private let synthesisIndicators = [
         "what should i focus on",
         "what should i work on",
@@ -173,6 +182,13 @@ public class QueryAnalyzer {
         // Check thread queries next
         if detectThreadIntent(query) != nil {
             return .thread
+        }
+
+        // Check meal planning indicators (before pattern/knowledge/search)
+        for indicator in mealPlanningIndicators {
+            if query.contains(indicator) {
+                return .mealPlanning
+            }
         }
 
         // Check pattern indicators
@@ -376,6 +392,7 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
         case .semantic: return "semantic"
         case .deepDive: return "deep-dive"
         case .synthesis: return "synthesis"
+        case .mealPlanning: return "meal-planning"
         }
     }
 }

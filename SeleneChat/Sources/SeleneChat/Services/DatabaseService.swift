@@ -1046,6 +1046,10 @@ class DatabaseService: ObservableObject {
         case .synthesis:
             // Synthesis queries: get recent notes across all threads for prioritization
             return try await getRecentProcessedNotes(limit: limit, timeScope: .recent)
+
+        case .mealPlanning:
+            // Meal planning queries: keyword search for food/meal related notes
+            return try await searchNotesByKeywords(keywords: keywords, limit: limit)
         }
     }
 
