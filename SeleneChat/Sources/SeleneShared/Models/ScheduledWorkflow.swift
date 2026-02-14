@@ -111,6 +111,13 @@ public struct ScheduledWorkflow: Identifiable {
             usesOllama: true
         ),
         ScheduledWorkflow(
+            id: "index-recipes",
+            name: "Index Recipes",
+            scriptPath: "src/workflows/index-recipes.ts",
+            schedule: .interval(1800),
+            usesOllama: false
+        ),
+        ScheduledWorkflow(
             id: "detect-threads",
             name: "Detect Threads",
             scriptPath: "src/workflows/detect-threads.ts",
