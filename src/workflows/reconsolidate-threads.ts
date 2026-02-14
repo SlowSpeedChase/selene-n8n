@@ -180,13 +180,18 @@ function updateThread(thread: ThreadRecord, synthesis: ThreadSynthesis): void {
 }
 
 /**
- * Calculate momentum scores for all active threads
- * Formula: (notes_7_days * 2) + (notes_30_days * 1) + (sentiment_intensity * 0.5)
+ * Calculate momentum scores for all active threads.
+ * Formula: (notes_7_days * 2) + (notes_30_days * 1) + (tasks_completed_7_days * 3)
  */
 function calculateMomentum(): number {
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Check if thread_activity table exists
+  const activityTableExists = db
+    .prepare("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='thread_activity'")
+    .get() as { count: number };
 
   // Get note counts per thread for 7-day and 30-day windows
   const momentumData = db
@@ -202,6 +207,24 @@ function calculateMomentum(): number {
     )
     .all(sevenDaysAgo, thirtyDaysAgo) as MomentumData[];
 
+  // Get task completion counts if table exists
+  let taskCompletions: Record<number, number> = {};
+  if (activityTableExists.count > 0) {
+    const activityData = db
+      .prepare(
+        `SELECT thread_id, COUNT(*) as completed_count
+         FROM thread_activity
+         WHERE activity_type = 'task_completed'
+           AND occurred_at >= ?
+         GROUP BY thread_id`
+      )
+      .all(sevenDaysAgo) as { thread_id: number; completed_count: number }[];
+
+    for (const row of activityData) {
+      taskCompletions[row.thread_id] = row.completed_count;
+    }
+  }
+
   // Update momentum scores
   const updateStmt = db.prepare(
     `UPDATE threads SET momentum_score = ? WHERE id = ?`
@@ -209,11 +232,10 @@ function calculateMomentum(): number {
 
   let updated = 0;
   for (const data of momentumData) {
-    // Calculate momentum: (notes_7_days * 2) + (notes_30_days * 1)
-    // Note: sentiment_intensity not yet available, using 0.5 as neutral baseline
-    const sentimentIntensity = 0.5;
+    const tasksCompleted = taskCompletions[data.thread_id] || 0;
+    // Task completions weighted highest (3x) — progress feels good
     const momentum =
-      (data.notes_7_days * 2) + (data.notes_30_days * 1) + (sentimentIntensity * 0.5);
+      (data.notes_7_days * 2) + (data.notes_30_days * 1) + (tasksCompleted * 3);
 
     updateStmt.run(momentum, data.thread_id);
     updated++;

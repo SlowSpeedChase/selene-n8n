@@ -47,7 +47,6 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
 | 2026-02-13 | 2026-02-13-trmnl-daily-digest-design.md | integrations | Push morning digest to TRMNL e-ink display |
-| 2026-02-13 | 2026-02-13-thread-workspace-phase3-design.md | selenechat | Feedback loop: on-demand Things sync, momentum boost, LLM "what's next" |
 | 2026-02-13 | 2026-02-13-voice-conversation-design.md | selenechat | Voice Phase 2: TTS responses, voice-in = voice-out conversation mode |
 | 2026-02-13 | 2026-02-13-selene-mobile-ios-design.md | selenechat, mobile | Native iOS app with full parity, Tailscale networking, push + live activities |
 
@@ -73,7 +72,6 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
-| 2026-02-06 | 2026-02-06-thread-workspace-design.md | `main` (Phase 1-2 merged) | Phase 3 (feedback loop) remaining |
 
 ---
 
@@ -84,6 +82,8 @@ Branch exists, actively being worked on.
 | 2026-02-12 | 2026-02-12-menu-bar-orchestrator-design.md | 2026-02-13 | Menu bar app with Silver Crystal icon + workflow orchestration |
 | 2026-02-12 | 2026-02-12-voice-memo-transcription-design.md | 2026-02-13 | Whisper.cpp transcription + Selene pipeline integration |
 | 2026-02-12 | 2026-02-12-apple-notes-daily-digest-design.md | 2026-02-13 | Replace iMessage digest with pinned Apple Notes daily note |
+| 2026-02-06 | 2026-02-06-thread-workspace-design.md | 2026-02-13 | Thread workspace: all 3 phases complete (context, actions, feedback loop) |
+| 2026-02-13 | 2026-02-13-thread-workspace-phase3-design.md | 2026-02-13 | Feedback loop: on-demand Things sync, momentum boost, LLM "what's next" |
 | 2026-02-13 | 2026-02-13-morning-briefing-redesign.md | 2026-02-13 | Structured cards, deep context chat, cross-thread connections |
 | 2026-02-13 | 2026-02-13-thread-lifecycle-design.md | 2026-02-13 | Auto archive, split, merge threads — full lifecycle |
 | 2026-02-06 | 2026-02-06-test-environment-isolation-design.md | 2026-02-06 | Complete test isolation with anonymized data |

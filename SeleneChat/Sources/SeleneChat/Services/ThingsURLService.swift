@@ -235,4 +235,119 @@ class ThingsURLService {
         let url = URL(string: "things:///")!
         return NSWorkspace.shared.urlForApplication(toOpen: url) != nil
     }
+
+    // MARK: - Task Status Sync
+
+    /// Parsed response from get-task-status.scpt
+    struct TaskStatusResult {
+        let id: String
+        let status: String  // "open", "completed", "canceled"
+        let name: String
+        let completionDate: String?  // "YYYY-MM-DD" or nil
+    }
+
+    /// Path to the get-task-status AppleScript
+    private var getTaskStatusScriptPath: String {
+        "/Users/chaseeasterling/selene-n8n/scripts/things-bridge/get-task-status.scpt"
+    }
+
+    /// Parse JSON response from get-task-status.scpt
+    static func parseTaskStatusResponse(_ jsonString: String) -> TaskStatusResult? {
+        guard let data = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+
+        // Check for error response
+        if json["error"] != nil {
+            return nil
+        }
+
+        guard let id = json["id"] as? String,
+              let status = json["status"] as? String,
+              let name = json["name"] as? String else {
+            return nil
+        }
+
+        let completionDate = json["completion_date"] as? String
+
+        return TaskStatusResult(
+            id: id,
+            status: status,
+            name: name,
+            completionDate: completionDate
+        )
+    }
+
+    /// Query Things for a single task's status via AppleScript
+    func getTaskStatus(thingsTaskId: String) async throws -> TaskStatusResult? {
+        guard FileManager.default.fileExists(atPath: getTaskStatusScriptPath) else {
+            print("[ThingsURLService] get-task-status.scpt not found")
+            return nil
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = [getTaskStatusScriptPath, thingsTaskId]
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard process.terminationStatus == 0, !output.isEmpty else {
+            return nil
+        }
+
+        return Self.parseTaskStatusResponse(output)
+    }
+
+    /// Sync task statuses for a list of incomplete tasks.
+    /// Returns the Things IDs of tasks that were newly marked as completed.
+    func syncTaskStatuses(for tasks: [ThreadTask], databaseService: DatabaseService) async -> [String] {
+        var newlyCompleted: [String] = []
+
+        for task in tasks where !task.isCompleted {
+            do {
+                guard let status = try await getTaskStatus(thingsTaskId: task.thingsTaskId) else {
+                    continue
+                }
+
+                if status.status == "completed" || status.status == "canceled" {
+                    let completionDate: Date
+                    if let dateStr = status.completionDate {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "yyyy-MM-dd"
+                        completionDate = formatter.date(from: dateStr) ?? Date()
+                    } else {
+                        completionDate = Date()
+                    }
+
+                    try await databaseService.markThreadTaskCompleted(
+                        thingsTaskId: task.thingsTaskId,
+                        completedAt: completionDate
+                    )
+
+                    try await databaseService.recordThreadActivity(
+                        threadId: task.threadId,
+                        type: "task_completed",
+                        timestamp: completionDate
+                    )
+
+                    newlyCompleted.append(task.thingsTaskId)
+                    print("[ThingsURLService] Task \(task.thingsTaskId) synced as completed")
+                }
+            } catch {
+                print("[ThingsURLService] Failed to sync task \(task.thingsTaskId): \(error)")
+            }
+        }
+
+        return newlyCompleted
+    }
 }

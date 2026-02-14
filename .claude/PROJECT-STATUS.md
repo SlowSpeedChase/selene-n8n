@@ -31,6 +31,7 @@ All three "Ready" designs from 2026-02-12 are now implemented and merged. The sy
 - **Server REST API** (2026-02-14) - Expanded Fastify with ~30 endpoints
   - Bearer token auth middleware, Ollama proxy, device registration
   - APNs push notifications for briefing and thread activity
+- **Thread Workspace Phase 3** (2026-02-13) - On-demand Things sync, task completion momentum boost, LLM "what's next" recommendation
 - **Morning Briefing Redesign** (2026-02-13) - Structured cards, deep context chat, cross-thread connections
 - **Menu Bar Orchestrator** (2026-02-13) - Silver Crystal icon, WorkflowScheduler replaces launchd, animated processing state
 - **Voice Memo Transcription** (2026-02-13) - whisper.cpp pipeline, auto-detect new recordings, Selene ingestion

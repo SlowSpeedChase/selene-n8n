@@ -360,6 +360,17 @@ struct ThreadWorkspaceView: View {
             // Load tasks for thread
             tasks = try await databaseService.getTasksForThread(threadId)
 
+            // Sync incomplete tasks with Things (on-demand)
+            let newlyCompleted = await ThingsURLService.shared.syncTaskStatuses(
+                for: tasks,
+                databaseService: databaseService
+            )
+
+            // Reload tasks if any were completed
+            if !newlyCompleted.isEmpty {
+                tasks = try await databaseService.getTasksForThread(threadId)
+            }
+
             // Load notes for thread
             if let result = try await databaseService.getThreadByName(loadedThread.name) {
                 notes = result.1

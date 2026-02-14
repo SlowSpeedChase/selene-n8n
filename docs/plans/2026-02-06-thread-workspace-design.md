@@ -1,7 +1,7 @@
 # Thread Workspace Design
 
 **Date:** 2026-02-06
-**Status:** In Progress
+**Status:** Done
 **Topic:** selenechat
 **Branch:** `feature/thread-workspace`
 

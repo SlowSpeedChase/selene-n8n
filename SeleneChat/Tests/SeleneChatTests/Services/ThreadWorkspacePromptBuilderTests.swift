@@ -197,4 +197,40 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
 
         XCTAssertTrue(prompt.contains("Architecture Decisions"), "Follow-up should include thread name")
     }
+
+    // MARK: - What's Next Tests
+
+    func testIsWhatsNextQueryDetectsVariations() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        XCTAssertTrue(builder.isWhatsNextQuery("what's next"))
+        XCTAssertTrue(builder.isWhatsNextQuery("What's next?"))
+        XCTAssertTrue(builder.isWhatsNextQuery("what should I do next"))
+        XCTAssertTrue(builder.isWhatsNextQuery("What should I work on?"))
+        XCTAssertTrue(builder.isWhatsNextQuery("what do I do now"))
+        XCTAssertFalse(builder.isWhatsNextQuery("break down the auth task"))
+        XCTAssertFalse(builder.isWhatsNextQuery("tell me about this thread"))
+    }
+
+    func testBuildWhatsNextPromptIncludesTaskState() {
+        let thread = Thread.mock(
+            name: "ADHD System",
+            why: "Build tools for executive function",
+            summary: "Phase 1 complete"
+        )
+
+        let openTask = ThreadTask.mock(thingsTaskId: "T1", title: "Research time-blocking")
+        let completedTask = ThreadTask.mock(thingsTaskId: "T2", title: "Write principles doc", completedAt: Date())
+
+        let notes = [
+            Note.mock(id: 1, title: "ADHD Research", content: "Focus on externalization")
+        ]
+
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildWhatsNextPrompt(thread: thread, notes: notes, tasks: [openTask, completedTask])
+
+        XCTAssertTrue(prompt.contains("Research time-blocking"), "Should include open task")
+        XCTAssertTrue(prompt.contains("Write principles doc"), "Should include completed task")
+        XCTAssertTrue(prompt.contains("recommend"), "Should ask LLM to recommend")
+    }
 }
