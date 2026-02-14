@@ -130,7 +130,9 @@ function parseSimpleYaml(yaml: string): Record<string, string | string[]> {
         result[key] = [];
         currentArrayKey = key;
       } else {
-        result[key] = value;
+        // Strip surrounding quotes (single or double) from YAML values
+        const unquoted = value.replace(/^(["'])(.+)\1$/, '$2');
+        result[key] = unquoted;
         currentArrayKey = null;
       }
     } else {
