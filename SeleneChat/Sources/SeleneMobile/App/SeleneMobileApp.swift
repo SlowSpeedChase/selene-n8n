@@ -1,18 +1,41 @@
 import SwiftUI
 import SeleneShared
+import UserNotifications
 
 @main
 struct SeleneMobileApp: App {
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(MobileAppDelegate.self) var appDelegate
+    #endif
     @StateObject private var connectionManager = ConnectionManager()
+    @StateObject private var pushService = PushNotificationService()
 
     var body: some Scene {
         WindowGroup {
-            if connectionManager.isConfigured {
-                TabRootView()
-                    .environmentObject(connectionManager)
-            } else {
-                ServerSetupView()
-                    .environmentObject(connectionManager)
+            Group {
+                if connectionManager.isConfigured {
+                    TabRootView()
+                        .environmentObject(connectionManager)
+                        .environmentObject(pushService)
+                } else {
+                    ServerSetupView()
+                        .environmentObject(connectionManager)
+                }
+            }
+            .onAppear {
+                #if os(iOS)
+                appDelegate.pushService = pushService
+                UNUserNotificationCenter.current().delegate = appDelegate
+                #endif
+            }
+            .onChange(of: connectionManager.isConnected) { _, isConnected in
+                if isConnected {
+                    pushService.configure(
+                        serverURL: connectionManager.serverURL,
+                        apiToken: connectionManager.apiToken
+                    )
+                    pushService.requestPermission()
+                }
             }
         }
     }
