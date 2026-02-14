@@ -6,8 +6,14 @@ struct TabRootView: View {
 
     var body: some View {
         TabView {
-            Text("Chat -- Coming Soon")
-                .tabItem { Label("Chat", systemImage: "message") }
+            if let dp = connectionManager.dataProvider, let llm = connectionManager.llmProvider {
+                MobileChatView(dataProvider: dp, llmProvider: llm)
+                    .tabItem { Label("Chat", systemImage: "message") }
+            } else {
+                Text("Connecting...")
+                    .tabItem { Label("Chat", systemImage: "message") }
+            }
+
             Text("Threads -- Coming Soon")
                 .tabItem { Label("Threads", systemImage: "circle.hexagongrid") }
             Text("Briefing -- Coming Soon")
