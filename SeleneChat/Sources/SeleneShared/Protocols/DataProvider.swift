@@ -14,6 +14,7 @@ public protocol DataProvider: AnyObject {
     func getNotesSince(_ date: Date, limit: Int) async throws -> [Note]
     func getRelatedNotes(for noteId: Int, limit: Int) async -> [(note: Note, relationshipType: String, strength: Double?)]
     func getThreadAssignmentsForNotes(_ noteIds: [Int]) async throws -> [Int: (threadName: String, threadId: Int64)]
+    func retrieveNotesFor(queryType: QueryAnalyzer.QueryType, keywords: [String], timeScope: QueryAnalyzer.TimeScope, limit: Int) async throws -> [Note]
 
     // MARK: - Threads
 

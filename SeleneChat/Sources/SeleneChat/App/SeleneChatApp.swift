@@ -8,7 +8,10 @@ struct SeleneChatApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @StateObject private var databaseService = DatabaseService.shared
-    @StateObject private var chatViewModel = ChatViewModel()
+    @StateObject private var chatViewModel = ChatViewModel(
+        dataProvider: DatabaseService.shared,
+        llmProvider: OllamaService.shared
+    )
     @StateObject private var compressionService = CompressionService(databaseService: DatabaseService.shared)
     @StateObject private var speechService = SpeechRecognitionService()
     @StateObject private var scheduler = WorkflowScheduler()

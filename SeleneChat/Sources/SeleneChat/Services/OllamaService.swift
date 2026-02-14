@@ -103,14 +103,16 @@ actor OllamaService {
     ///   - prompt: The full prompt including system instructions and context
     ///   - model: The model to use (default: mistral:7b)
     /// - Returns: Generated text response
-    func generate(prompt: String, model: String = "mistral:7b") async throws -> String {
+    func generate(prompt: String, model: String? = nil) async throws -> String {
+        let resolvedModel = model ?? "mistral:7b"
+
         guard let url = URL(string: "\(baseURL)/api/generate") else {
             throw OllamaError.invalidResponse
         }
 
         // Build request body
         let requestBody = GenerateRequest(
-            model: model,
+            model: resolvedModel,
             prompt: prompt,
             stream: false
         )
@@ -162,14 +164,16 @@ actor OllamaService {
     ///   - text: The text to embed
     ///   - model: The embedding model to use (default: nomic-embed-text)
     /// - Returns: Embedding vector as array of floats
-    func embed(text: String, model: String = "nomic-embed-text") async throws -> [Float] {
+    func embed(text: String, model: String? = nil) async throws -> [Float] {
+        let resolvedModel = model ?? "nomic-embed-text"
+
         guard let url = URL(string: "\(baseURL)/api/embeddings") else {
             throw OllamaError.invalidResponse
         }
 
         // Build request body
         let requestBody = EmbedRequest(
-            model: model,
+            model: resolvedModel,
             prompt: text
         )
 
@@ -215,3 +219,5 @@ actor OllamaService {
         }
     }
 }
+
+extension OllamaService: LLMProvider {}

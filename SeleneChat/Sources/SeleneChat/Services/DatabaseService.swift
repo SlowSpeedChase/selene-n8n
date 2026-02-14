@@ -1963,3 +1963,5 @@ class DatabaseService: ObservableObject {
         }
     }
 }
+
+extension DatabaseService: DataProvider {}

@@ -11,10 +11,10 @@ class ChatViewModel: ObservableObject {
     /// Whether to include conversation history in prompts
     @Published var useConversationHistory = true
 
-    private let databaseService = DatabaseService.shared
+    private let dataProvider: DataProvider
+    private let llmProvider: LLMProvider
     private let privacyRouter = PrivacyRouter.shared
     private let searchService = SearchService()
-    private let ollamaService = OllamaService.shared
     private let queryAnalyzer = QueryAnalyzer()
     private let contextBuilder = ContextBuilder()
     private let memoryService = MemoryService.shared
@@ -28,7 +28,10 @@ class ChatViewModel: ObservableObject {
     /// Currently active deep-dive thread (if in deep-dive mode)
     @Published var activeDeepDiveThread: Thread?
 
-    init() {
+    init(dataProvider: DataProvider = DatabaseService.shared,
+         llmProvider: LLMProvider = OllamaService.shared) {
+        self.dataProvider = dataProvider
+        self.llmProvider = llmProvider
         self.currentSession = ChatSession()
         Task {
             await loadSessions()
@@ -179,7 +182,7 @@ class ChatViewModel: ObservableObject {
 
         // Search by keywords
         for keyword in keywords.prefix(3) { // Limit to top 3 keywords
-            let notes = try await databaseService.searchNotes(query: keyword, limit: 5)
+            let notes = try await dataProvider.searchNotes(query: keyword, limit: 5)
             allNotes.append(contentsOf: notes)
         }
 
@@ -307,7 +310,7 @@ class ChatViewModel: ObservableObject {
 
     private func handleOllamaQuery(query: String, context: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
         // Check Ollama availability
-        let isAvailable = await ollamaService.isAvailable()
+        let isAvailable = await llmProvider.isAvailable()
 
         guard isAvailable else {
             // Fallback to local query if Ollama not available
@@ -327,12 +330,12 @@ class ChatViewModel: ObservableObject {
         // Retrieve notes - semantic or traditional based on query type
         let notes: [Note]
         if useSemantic {
-            notes = await databaseService.searchNotesSemantically(
+            notes = await dataProvider.searchNotesSemantically(
                 query: query,
                 limit: limit
             )
         } else {
-            notes = try await databaseService.retrieveNotesFor(
+            notes = try await dataProvider.retrieveNotesFor(
                 queryType: analysis.queryType,
                 keywords: analysis.keywords,
                 timeScope: analysis.timeScope,
@@ -381,7 +384,7 @@ class ChatViewModel: ObservableObject {
         """
 
         do {
-            let response = try await ollamaService.generate(
+            let response = try await llmProvider.generate(
                 prompt: fullPrompt,
                 model: "mistral:7b"
             )
@@ -405,7 +408,7 @@ class ChatViewModel: ObservableObject {
 
         do {
             // Fetch memories (shared across all card types)
-            let memories = (try? await databaseService.getAllMemories(limit: 10)) ?? []
+            let memories = (try? await dataProvider.getAllMemories(limit: 10)) ?? []
 
             // Build context and determine context type based on card type
             let context: String
@@ -415,19 +418,19 @@ class ChatViewModel: ObservableObject {
             case .whatChanged:
                 contextType = .whatChanged
                 guard let noteId = card.noteId,
-                      let note = try await databaseService.getNote(byId: noteId) else {
+                      let note = try await dataProvider.getNote(byId: noteId) else {
                     addErrorMessage("Could not load the note for this briefing card.")
                     return
                 }
                 let thread: Thread? = if let threadId = card.threadId {
-                    try await databaseService.getThreadById(threadId)
+                    try await dataProvider.getThreadById(threadId)
                 } else {
                     nil
                 }
-                let relatedTuples = await databaseService.getRelatedNotes(for: noteId)
+                let relatedTuples = await dataProvider.getRelatedNotes(for: noteId, limit: 10)
                 let relatedNotes = relatedTuples.map { $0.note }
                 let tasks: [ThreadTask] = if let threadId = card.threadId {
-                    (try? await databaseService.getTasksForThread(threadId)) ?? []
+                    (try? await dataProvider.getTasksForThread(threadId)) ?? []
                 } else {
                     []
                 }
@@ -439,19 +442,19 @@ class ChatViewModel: ObservableObject {
             case .needsAttention:
                 contextType = .needsAttention
                 guard let threadId = card.threadId,
-                      let thread = try await databaseService.getThreadById(threadId) else {
+                      let thread = try await dataProvider.getThreadById(threadId) else {
                     addErrorMessage("Could not load the thread for this briefing card.")
                     return
                 }
                 // Get recent notes for the thread
                 let threadNotes: [Note]
                 if let name = card.threadName,
-                   let result = try await databaseService.getThreadByName(name) {
+                   let result = try await dataProvider.getThreadByName(name) {
                     threadNotes = result.1
                 } else {
                     threadNotes = []
                 }
-                let tasks = (try? await databaseService.getTasksForThread(threadId)) ?? []
+                let tasks = (try? await dataProvider.getTasksForThread(threadId)) ?? []
                 context = briefingContextBuilder.buildNeedsAttentionContext(
                     thread: thread, recentNotes: threadNotes,
                     tasks: tasks, memories: memories
@@ -461,33 +464,33 @@ class ChatViewModel: ObservableObject {
                 contextType = .connection
                 guard let noteAId = card.noteAId,
                       let noteBId = card.noteBId,
-                      let noteA = try await databaseService.getNote(byId: noteAId),
-                      let noteB = try await databaseService.getNote(byId: noteBId) else {
+                      let noteA = try await dataProvider.getNote(byId: noteAId),
+                      let noteB = try await dataProvider.getNote(byId: noteBId) else {
                     addErrorMessage("Could not load the notes for this connection card.")
                     return
                 }
                 // Look up threads by name
                 let threadA: Thread? = if let name = card.threadAName,
-                      let result = try? await databaseService.getThreadByName(name) {
+                      let result = try? await dataProvider.getThreadByName(name) {
                     result.0
                 } else {
                     nil
                 }
                 let threadB: Thread? = if let name = card.threadBName,
-                      let result = try? await databaseService.getThreadByName(name) {
+                      let result = try? await dataProvider.getThreadByName(name) {
                     result.0
                 } else {
                     nil
                 }
-                let relatedToA = await databaseService.getRelatedNotes(for: noteAId).map { $0.note }
-                let relatedToB = await databaseService.getRelatedNotes(for: noteBId).map { $0.note }
+                let relatedToA = await dataProvider.getRelatedNotes(for: noteAId, limit: 10).map { $0.note }
+                let relatedToB = await dataProvider.getRelatedNotes(for: noteBId, limit: 10).map { $0.note }
                 // Gather tasks from both threads
                 var allTasks: [ThreadTask] = []
                 if let threadA = threadA {
-                    allTasks += (try? await databaseService.getTasksForThread(threadA.id)) ?? []
+                    allTasks += (try? await dataProvider.getTasksForThread(threadA.id)) ?? []
                 }
                 if let threadB = threadB {
-                    allTasks += (try? await databaseService.getTasksForThread(threadB.id)) ?? []
+                    allTasks += (try? await dataProvider.getTasksForThread(threadB.id)) ?? []
                 }
                 context = briefingContextBuilder.buildConnectionContext(
                     noteA: noteA, threadA: threadA,
@@ -502,7 +505,7 @@ class ChatViewModel: ObservableObject {
             let fullPrompt = "\(systemPrompt)\n\n\(context)"
 
             // Send to Ollama
-            let response = try await ollamaService.generate(
+            let response = try await llmProvider.generate(
                 prompt: fullPrompt,
                 model: "mistral:7b"
             )
@@ -546,7 +549,7 @@ class ChatViewModel: ObservableObject {
     }
 
     private func formatActiveThreads() async throws -> String {
-        let threads = try await databaseService.getActiveThreads(limit: 10)
+        let threads = try await dataProvider.getActiveThreads(limit: 10)
 
         guard !threads.isEmpty else {
             return """
@@ -575,7 +578,7 @@ class ChatViewModel: ObservableObject {
     }
 
     private func formatThreadDetails(name: String) async throws -> String {
-        guard let (thread, notes) = try await databaseService.getThreadByName(name) else {
+        guard let (thread, notes) = try await dataProvider.getThreadByName(name) else {
             return """
             I couldn't find a thread matching "\(name)".
 
@@ -621,7 +624,7 @@ class ChatViewModel: ObservableObject {
     /// Handle deep-dive queries into specific threads
     private func handleDeepDiveQuery(threadName: String, query: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
         // 1. Find thread by name
-        guard let (thread, notes) = try await databaseService.getThreadByName(threadName) else {
+        guard let (thread, notes) = try await dataProvider.getThreadByName(threadName) else {
             let notFound = "I couldn't find a thread matching \"\(threadName)\". Try \"what's emerging\" to see your active threads."
             return (notFound, [], [], "deep-dive-not-found")
         }
@@ -650,7 +653,7 @@ class ChatViewModel: ObservableObject {
         }
 
         // 4. Generate response
-        let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+        let response = try await llmProvider.generate(prompt: prompt, model: "mistral:7b")
 
         // 5. Extract and capture actions
         let actions = actionExtractor.extractActions(from: response)
@@ -669,7 +672,7 @@ class ChatViewModel: ObservableObject {
     /// Handle synthesis queries (cross-thread prioritization)
     private func handleSynthesisQuery(query: String) async throws -> (response: String, citedNotes: [Note], contextNotes: [Note], queryType: String) {
         // 1. Get all active threads
-        let threads = try await databaseService.getActiveThreads(limit: 10)
+        let threads = try await dataProvider.getActiveThreads(limit: 10)
 
         guard !threads.isEmpty else {
             let noThreads = "You don't have any active threads yet. Keep capturing notes and threads will emerge as related ideas cluster together."
@@ -679,7 +682,7 @@ class ChatViewModel: ObservableObject {
         // 2. Get recent notes for each thread (3 notes each)
         var notesPerThread: [Int64: [Note]] = [:]
         for thread in threads {
-            if let (_, notes) = try await databaseService.getThreadByName(thread.name) {
+            if let (_, notes) = try await dataProvider.getThreadByName(thread.name) {
                 notesPerThread[thread.id] = Array(notes.prefix(3))
             }
         }
@@ -705,7 +708,7 @@ class ChatViewModel: ObservableObject {
         }
 
         // 4. Generate response
-        let response = try await ollamaService.generate(prompt: prompt, model: "mistral:7b")
+        let response = try await llmProvider.generate(prompt: prompt, model: "mistral:7b")
 
         // 5. Collect all notes for citation
         let allNotes = notesPerThread.values.flatMap { $0 }
@@ -826,7 +829,7 @@ class ChatViewModel: ObservableObject {
         sessions.removeAll { $0.id == session.id }
 
         Task {
-            try? await databaseService.deleteSession(session)
+            try? await dataProvider.deleteSession(session)
         }
 
         if currentSession.id == session.id {
@@ -846,7 +849,7 @@ class ChatViewModel: ObservableObject {
 
             Task {
                 do {
-                    try await databaseService.updateSessionPin(sessionId: session.id, isPinned: sessions[index].isPinned)
+                    try await dataProvider.updateSessionPin(sessionId: session.id, isPinned: sessions[index].isPinned)
                 } catch {
                     print("⚠️ Failed to update pin status: \(error.localizedDescription)")
                 }
@@ -867,7 +870,7 @@ class ChatViewModel: ObservableObject {
 
         // Persist to database
         do {
-            try await databaseService.saveSession(currentSession)
+            try await dataProvider.saveSession(currentSession)
         } catch {
             print("⚠️ Failed to save session: \(error.localizedDescription)")
             // Don't crash - graceful degradation
@@ -876,7 +879,7 @@ class ChatViewModel: ObservableObject {
 
     private func loadSessions() async {
         do {
-            sessions = try await databaseService.loadSessions()
+            sessions = try await dataProvider.loadSessions()
         } catch {
             print("⚠️ Failed to load sessions: \(error.localizedDescription)")
             // Fall back to empty list - graceful degradation
@@ -890,12 +893,12 @@ class ChatViewModel: ObservableObject {
     private func saveConversationMessages(userMessage: String, assistantResponse: String) {
         Task {
             do {
-                try await databaseService.saveConversationMessage(
+                try await dataProvider.saveConversationMessage(
                     sessionId: currentSession.id,
                     role: "user",
                     content: userMessage
                 )
-                try await databaseService.saveConversationMessage(
+                try await dataProvider.saveConversationMessage(
                     sessionId: currentSession.id,
                     role: "assistant",
                     content: assistantResponse
@@ -913,7 +916,7 @@ class ChatViewModel: ObservableObject {
         Task {
             do {
                 // Get recent messages for context
-                let recentMessages = try await databaseService.getRecentMessages(
+                let recentMessages = try await dataProvider.getRecentMessages(
                     sessionId: currentSession.id,
                     limit: 10
                 )
