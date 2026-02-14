@@ -12,6 +12,10 @@ let package = Package(
             name: "SeleneChat",
             targets: ["SeleneChat"]
         ),
+        .executable(
+            name: "SeleneMobile",
+            targets: ["SeleneMobile"]
+        ),
         .library(
             name: "SeleneShared",
             targets: ["SeleneShared"]
@@ -39,6 +43,11 @@ let package = Package(
             resources: [
                 .process("Resources")
             ]
+        ),
+        .executableTarget(
+            name: "SeleneMobile",
+            dependencies: ["SeleneShared"],
+            path: "Sources/SeleneMobile"
         ),
         .testTarget(
             name: "SeleneChatTests",
