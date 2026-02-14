@@ -17,19 +17,29 @@ const server = Fastify({
   logger: false, // We use our own logger
 });
 
-// Auth middleware for all /api/* routes
+// ---------------------------------------------------------------------------
+// Health check
+// ---------------------------------------------------------------------------
+
+server.get('/health', async () => {
+  return { status: 'ok', timestamp: new Date().toISOString() };
+});
+
+// ---------------------------------------------------------------------------
+// Auth hook - protects all /api/* routes
+// ---------------------------------------------------------------------------
+
 server.addHook('onRequest', async (request, reply) => {
   if (request.url.startsWith('/api/')) {
     await requireAuth(request, reply);
   }
 });
 
-// Health check endpoint
-server.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+// ---------------------------------------------------------------------------
+// Webhook handlers (no auth required)
+// ---------------------------------------------------------------------------
 
-// Main webhook endpoint - same URL as n8n
+// POST /webhook/api/drafts - Note ingestion (called by Drafts app)
 server.post<{ Body: IngestInput }>('/webhook/api/drafts', async (request, reply) => {
   const { title, content, created_at, test_run } = request.body;
 
@@ -60,7 +70,7 @@ server.post<{ Body: IngestInput }>('/webhook/api/drafts', async (request, reply)
   }
 });
 
-// Manual export trigger endpoint
+// POST /webhook/api/export-obsidian - Manual Obsidian export trigger
 server.post<{ Body: { noteId?: number } }>('/webhook/api/export-obsidian', async (request, reply) => {
   const { noteId } = request.body || {};
 
@@ -77,29 +87,12 @@ server.post<{ Body: { noteId?: number } }>('/webhook/api/export-obsidian', async
   }
 });
 
-// Related notes API - for SeleneChat vector search
-server.post<{
-  Body: { noteId: number; limit?: number; includeLive?: boolean };
-}>('/api/related-notes', async (request, reply) => {
-  const { noteId, limit = 10, includeLive = true } = request.body || {};
+// ---------------------------------------------------------------------------
+// Original API endpoints (backward compat for SeleneChat macOS app)
+// These are inline handlers that pre-date the route module pattern.
+// ---------------------------------------------------------------------------
 
-  if (!noteId || typeof noteId !== 'number') {
-    reply.status(400);
-    return { error: 'noteId is required and must be a number' };
-  }
-
-  try {
-    const results = await getRelatedNotes(noteId, { limit, includeLive });
-    return { noteId, count: results.length, results };
-  } catch (err) {
-    const error = err as Error;
-    logger.error({ err: error, noteId }, 'Related notes query failed');
-    reply.status(500);
-    return { error: error.message };
-  }
-});
-
-// Semantic search API - for SeleneChat
+// POST /api/search - Semantic search via LanceDB vectors
 server.post<{
   Body: {
     query: string;
@@ -126,28 +119,45 @@ server.post<{
   }
 });
 
-// Notes API routes
-notesRoutes(server);
+// POST /api/related-notes - Vector similarity for a given note
+server.post<{
+  Body: { noteId: number; limit?: number; includeLive?: boolean };
+}>('/api/related-notes', async (request, reply) => {
+  const { noteId, limit = 10, includeLive = true } = request.body || {};
 
-// Threads API routes
-threadsRoutes(server);
+  if (!noteId || typeof noteId !== 'number') {
+    reply.status(400);
+    return { error: 'noteId is required and must be a number' };
+  }
 
-// Sessions API routes
-sessionsRoutes(server);
+  try {
+    const results = await getRelatedNotes(noteId, { limit, includeLive });
+    return { noteId, count: results.length, results };
+  } catch (err) {
+    const error = err as Error;
+    logger.error({ err: error, noteId }, 'Related notes query failed');
+    reply.status(500);
+    return { error: error.message };
+  }
+});
 
-// Memories API routes
-memoriesRoutes(server);
+// ---------------------------------------------------------------------------
+// Route modules (new modular API - Phase 1: Mobile API)
+// Each module registers its own routes under /api/*.
+// ---------------------------------------------------------------------------
 
-// LLM proxy routes
-llmRoutes(server);
+notesRoutes(server);       // /api/notes, /api/notes/:id
+threadsRoutes(server);     // /api/threads, /api/threads/:id, /api/threads/:id/notes
+sessionsRoutes(server);    // /api/sessions, /api/sessions/:id, /api/sessions/:id/messages
+memoriesRoutes(server);    // /api/memories, /api/memories/:id
+llmRoutes(server);         // /api/llm/health, /api/llm/chat, /api/llm/context
+briefingRoutes(server);    // /api/briefing
+devicesRoutes(server);     // /api/devices, /api/devices/:id
 
-// Briefing routes
-briefingRoutes(server);
-
-// Device registration routes
-devicesRoutes(server);
-
+// ---------------------------------------------------------------------------
 // Start server
+// ---------------------------------------------------------------------------
+
 async function start() {
   try {
     await server.listen({ port: config.port, host: config.host });
