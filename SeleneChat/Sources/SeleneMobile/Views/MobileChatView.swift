@@ -10,6 +10,7 @@ struct MobileChatView: View {
             dataProvider: dataProvider, llmProvider: llmProvider))
     }
 
+    @StateObject private var speechService = MobileSpeechService()
     @State private var inputText = ""
     @FocusState private var isInputFocused: Bool
 
@@ -63,6 +64,12 @@ struct MobileChatView: View {
                         .background(Color(.windowBackgroundColor), in: RoundedRectangle(cornerRadius: 20))
                         #endif
 
+                    Button(action: toggleVoice) {
+                        Image(systemName: speechService.isListening ? "mic.fill" : "mic")
+                            .font(.title3)
+                            .foregroundStyle(speechService.isListening ? .red : .secondary)
+                    }
+
                     Button(action: sendMessage) {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.title2)
@@ -72,6 +79,14 @@ struct MobileChatView: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
+                .onChange(of: speechService.transcribedText) { _, newValue in
+                    if !newValue.isEmpty {
+                        inputText = newValue
+                    }
+                }
+                .onAppear {
+                    speechService.requestAuthorization()
+                }
             }
             .navigationTitle("Selene")
             #if os(iOS)
@@ -118,6 +133,14 @@ struct MobileChatView: View {
             }
         } label: {
             Image(systemName: "ellipsis.circle")
+        }
+    }
+
+    private func toggleVoice() {
+        if speechService.isListening {
+            speechService.stopListening()
+        } else {
+            speechService.startListening()
         }
     }
 
