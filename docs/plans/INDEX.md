@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-02-13
+**Last Updated:** 2026-02-14
 
 Design docs are the planning unit for Selene development. Each doc captures an idea, architecture, and implementation plan.
 
@@ -46,6 +46,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
+| 2026-02-14 | 2026-02-14-context-blocks-apple-intelligence-design.md | selenechat, ai | Context blocks + Apple Intelligence: chunk-based retrieval, multi-model routing |
 | 2026-02-13 | 2026-02-13-kitchenos-selene-integration-design.md | integrations, meal-planning | KitchenOS recipe indexing + conversational meal planning in SeleneChat |
 | 2026-02-13 | 2026-02-13-trmnl-daily-digest-design.md | integrations | Push morning digest to TRMNL e-ink display |
 | 2026-02-13 | 2026-02-13-voice-conversation-design.md | selenechat | Voice Phase 2: TTS responses, voice-in = voice-out conversation mode |
