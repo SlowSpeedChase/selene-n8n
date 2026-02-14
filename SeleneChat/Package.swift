@@ -47,7 +47,10 @@ let package = Package(
         .executableTarget(
             name: "SeleneMobile",
             dependencies: ["SeleneShared"],
-            path: "Sources/SeleneMobile"
+            path: "Sources/SeleneMobile",
+            exclude: [
+                "Info.plist"
+            ]
         ),
         .testTarget(
             name: "SeleneChatTests",

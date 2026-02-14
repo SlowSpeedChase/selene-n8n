@@ -1,5 +1,8 @@
 import Foundation
 import SeleneShared
+#if os(iOS)
+import ActivityKit
+#endif
 
 @MainActor
 class MobileChatViewModel: ObservableObject {
@@ -19,6 +22,10 @@ class MobileChatViewModel: ObservableObject {
     private let actionExtractor = ActionExtractor()
     private let privacyRouter = PrivacyRouter.shared
 
+    #if os(iOS)
+    private let liveActivityManager = LiveActivityManager()
+    #endif
+
     init(dataProvider: DataProvider, llmProvider: LLMProvider) {
         self.dataProvider = dataProvider
         self.llmProvider = llmProvider
@@ -32,7 +39,15 @@ class MobileChatViewModel: ObservableObject {
 
     func sendMessage(_ content: String) async {
         isProcessing = true
-        defer { isProcessing = false }
+        #if os(iOS)
+        liveActivityManager.startActivity(query: content)
+        #endif
+        defer {
+            isProcessing = false
+            #if os(iOS)
+            liveActivityManager.endActivity()
+            #endif
+        }
 
         let userMessage = Message(
             role: .user,
@@ -44,6 +59,9 @@ class MobileChatViewModel: ObservableObject {
         do {
             // Check for thread queries first
             if let threadIntent = queryAnalyzer.detectThreadIntent(content) {
+                #if os(iOS)
+                liveActivityManager.updateActivity(status: "Loading threads...", progress: 0.5)
+                #endif
                 let response = try await handleThreadQuery(intent: threadIntent)
                 let assistantMessage = Message(role: .assistant, content: response, llmTier: .onDevice, queryType: "thread")
                 currentSession.addMessage(assistantMessage)
@@ -53,6 +71,9 @@ class MobileChatViewModel: ObservableObject {
 
             // Check for synthesis queries
             if queryAnalyzer.detectSynthesisIntent(content) {
+                #if os(iOS)
+                liveActivityManager.updateActivity(status: "Synthesizing threads...", progress: 0.4)
+                #endif
                 let (response, citedNotes, contextNotes, queryType) = try await handleSynthesisQuery(query: content)
                 let assistantMessage = Message(role: .assistant, content: response, llmTier: .local,
                                               citedNotes: citedNotes, contextNotes: contextNotes, queryType: queryType)
@@ -63,6 +84,9 @@ class MobileChatViewModel: ObservableObject {
 
             // Check for deep-dive queries
             if let deepDiveIntent = queryAnalyzer.detectDeepDiveIntent(content) {
+                #if os(iOS)
+                liveActivityManager.updateActivity(status: "Deep-diving...", progress: 0.4)
+                #endif
                 let (response, citedNotes, contextNotes, queryType) = try await handleDeepDiveQuery(
                     threadName: deepDiveIntent.threadName, query: content)
                 let assistantMessage = Message(role: .assistant, content: response, llmTier: .local,
@@ -73,6 +97,9 @@ class MobileChatViewModel: ObservableObject {
             }
 
             // Standard query with LLM
+            #if os(iOS)
+            liveActivityManager.updateActivity(status: "Thinking...", progress: 0.6)
+            #endif
             let (response, citedNotes, contextNotes, queryType) = try await handleOllamaQuery(query: content)
             let assistantMessage = Message(role: .assistant, content: response, llmTier: .local,
                                           citedNotes: citedNotes, contextNotes: contextNotes, queryType: queryType)
