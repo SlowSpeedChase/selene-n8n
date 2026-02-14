@@ -1,3 +1,4 @@
+import SeleneShared
 // InboxService.swift
 // SeleneChat
 //

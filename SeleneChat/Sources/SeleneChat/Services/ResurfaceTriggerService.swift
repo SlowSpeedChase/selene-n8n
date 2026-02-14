@@ -1,3 +1,4 @@
+import SeleneShared
 // ResurfaceTriggerService.swift
 // SeleneChat
 //

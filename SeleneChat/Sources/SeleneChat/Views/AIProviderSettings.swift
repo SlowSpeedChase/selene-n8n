@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Sources/Views/AIProviderSettings.swift
 import SwiftUI
 

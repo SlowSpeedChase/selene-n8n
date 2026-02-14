@@ -1,3 +1,4 @@
+import SeleneShared
 // ActionService.swift
 // SeleneChat
 //

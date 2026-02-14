@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Builds optimal context strings for Ollama based on query type and available notes

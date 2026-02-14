@@ -1,24 +1,24 @@
 import Foundation
 
 /// A memory extracted from conversations
-struct ConversationMemory: Identifiable, Codable, Hashable {
-    let id: Int64
-    let content: String
-    let sourceSessionId: String?
-    let memoryType: MemoryType
-    var confidence: Double
-    var lastAccessed: Date?
-    let createdAt: Date
-    var updatedAt: Date
+public struct ConversationMemory: Identifiable, Codable, Hashable {
+    public let id: Int64
+    public let content: String
+    public let sourceSessionId: String?
+    public let memoryType: MemoryType
+    public var confidence: Double
+    public var lastAccessed: Date?
+    public let createdAt: Date
+    public var updatedAt: Date
 
-    enum MemoryType: String, Codable, CaseIterable {
+    public enum MemoryType: String, Codable, CaseIterable {
         case preference
         case fact
         case pattern
         case context
     }
 
-    init(
+    public init(
         id: Int64,
         content: String,
         sourceSessionId: String? = nil,

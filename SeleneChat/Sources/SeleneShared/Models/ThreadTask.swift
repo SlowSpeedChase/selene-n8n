@@ -1,22 +1,38 @@
 import Foundation
 
 /// A task linked to a semantic thread
-struct ThreadTask: Identifiable, Hashable {
-    let id: Int64
-    let threadId: Int64
-    let thingsTaskId: String
-    let createdAt: Date
-    let completedAt: Date?
+public struct ThreadTask: Identifiable, Hashable {
+    public let id: Int64
+    public let threadId: Int64
+    public let thingsTaskId: String
+    public let createdAt: Date
+    public let completedAt: Date?
 
     /// Title fetched from Things (not stored in Selene)
-    var title: String?
+    public var title: String?
+
+    public init(
+        id: Int64,
+        threadId: Int64,
+        thingsTaskId: String,
+        createdAt: Date,
+        completedAt: Date? = nil,
+        title: String? = nil
+    ) {
+        self.id = id
+        self.threadId = threadId
+        self.thingsTaskId = thingsTaskId
+        self.createdAt = createdAt
+        self.completedAt = completedAt
+        self.title = title
+    }
 
     /// Whether the task is completed
-    var isCompleted: Bool {
+    public var isCompleted: Bool {
         completedAt != nil
     }
 
-    var completedDisplay: String {
+    public var completedDisplay: String {
         guard let date = completedAt else { return "" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
@@ -26,7 +42,7 @@ struct ThreadTask: Identifiable, Hashable {
 
 #if DEBUG
 extension ThreadTask {
-    static func mock(
+    public static func mock(
         id: Int64 = 1,
         threadId: Int64 = 1,
         thingsTaskId: String = "ABC123",
@@ -34,15 +50,14 @@ extension ThreadTask {
         createdAt: Date = Date(),
         completedAt: Date? = nil
     ) -> ThreadTask {
-        var task = ThreadTask(
+        ThreadTask(
             id: id,
             threadId: threadId,
             thingsTaskId: thingsTaskId,
             createdAt: createdAt,
-            completedAt: completedAt
+            completedAt: completedAt,
+            title: title
         )
-        task.title = title
-        return task
     }
 }
 #endif

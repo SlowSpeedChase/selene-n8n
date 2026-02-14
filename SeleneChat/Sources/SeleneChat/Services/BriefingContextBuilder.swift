@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Assembles deep context for "Discuss this" chat sessions from briefing cards.

@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Builds context for Thinking Partner queries (briefing, synthesis, deep-dive)

@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Schedules and runs Selene background TypeScript workflows, replacing launchd plists.

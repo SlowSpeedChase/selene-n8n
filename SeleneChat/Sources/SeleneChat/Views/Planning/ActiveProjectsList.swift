@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Sources/Views/Planning/ActiveProjectsList.swift
 import SwiftUI
 

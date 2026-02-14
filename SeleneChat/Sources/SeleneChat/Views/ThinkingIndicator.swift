@@ -1,3 +1,4 @@
+import SeleneShared
 import SwiftUI
 
 /// Fun, animated indicator showing Selene is thinking/processing with Ollama

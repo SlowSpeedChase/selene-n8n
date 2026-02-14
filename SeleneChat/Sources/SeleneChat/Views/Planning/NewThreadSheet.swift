@@ -1,3 +1,4 @@
+import SeleneShared
 // NewThreadSheet.swift
 // SeleneChat
 //

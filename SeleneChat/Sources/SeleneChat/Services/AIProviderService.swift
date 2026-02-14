@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Sources/Services/AIProviderService.swift
 import Foundation
 import SwiftUI

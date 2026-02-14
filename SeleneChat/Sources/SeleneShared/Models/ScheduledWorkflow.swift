@@ -5,16 +5,32 @@ import Foundation
 /// Defines each Selene TypeScript workflow that runs in the background,
 /// including how often it should run and whether it depends on Ollama.
 /// Used by `WorkflowScheduler` to determine when to launch each workflow.
-struct ScheduledWorkflow: Identifiable {
-    let id: String
-    let name: String
-    let scriptPath: String
-    let schedule: Schedule
-    let usesOllama: Bool
-    var lastRunAt: Date?
+public struct ScheduledWorkflow: Identifiable {
+    public let id: String
+    public let name: String
+    public let scriptPath: String
+    public let schedule: Schedule
+    public let usesOllama: Bool
+    public var lastRunAt: Date?
+
+    public init(
+        id: String,
+        name: String,
+        scriptPath: String,
+        schedule: Schedule,
+        usesOllama: Bool,
+        lastRunAt: Date? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.scriptPath = scriptPath
+        self.schedule = schedule
+        self.usesOllama = usesOllama
+        self.lastRunAt = lastRunAt
+    }
 
     /// How a workflow is scheduled to run.
-    enum Schedule: Equatable {
+    public enum Schedule: Equatable {
         /// Run at a fixed interval (in seconds) from the last run.
         case interval(TimeInterval)
         /// Run once per day at the specified hour and minute.
@@ -29,7 +45,7 @@ struct ScheduledWorkflow: Identifiable {
     ///
     /// Persistent and watchPath workflows are never "due" because they are
     /// managed separately (kept alive or triggered by filesystem events).
-    var isDue: Bool {
+    public var isDue: Bool {
         switch schedule {
         case .persistent, .watchPath:
             return false
@@ -50,7 +66,7 @@ struct ScheduledWorkflow: Identifiable {
     ///
     /// Always returns the canonical path (`~/selene-n8n`), even when running
     /// from a worktree. Workflows execute against the main project directory.
-    static var projectRoot: String {
+    public static var projectRoot: String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return "\(home)/selene-n8n"
     }
@@ -58,7 +74,7 @@ struct ScheduledWorkflow: Identifiable {
     // MARK: - All Workflows
 
     /// All Selene background workflows, matching the launchd agent configuration.
-    static let allWorkflows: [ScheduledWorkflow] = [
+    public static let allWorkflows: [ScheduledWorkflow] = [
         ScheduledWorkflow(
             id: "server",
             name: "Selene Server",
@@ -143,7 +159,7 @@ struct ScheduledWorkflow: Identifiable {
 
 #if DEBUG
 extension ScheduledWorkflow {
-    static func mock(
+    public static func mock(
         id: String = "test-workflow",
         name: String = "Test Workflow",
         scriptPath: String = "src/workflows/test.ts",

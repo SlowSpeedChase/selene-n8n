@@ -1,3 +1,4 @@
+import SeleneShared
 // SubprojectSuggestionService.swift
 // SeleneChat
 //

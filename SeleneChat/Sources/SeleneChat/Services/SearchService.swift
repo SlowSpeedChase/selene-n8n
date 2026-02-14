@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 class SearchService: ObservableObject {

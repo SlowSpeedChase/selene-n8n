@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Sources/Views/Planning/QuickTaskConfirmation.swift
 import SwiftUI
 

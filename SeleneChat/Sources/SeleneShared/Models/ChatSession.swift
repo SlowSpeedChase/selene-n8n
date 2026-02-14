@@ -1,19 +1,19 @@
 import Foundation
 
-struct ChatSession: Identifiable, Codable {
-    let id: UUID
-    var messages: [Message]
-    var createdAt: Date
-    var updatedAt: Date
-    var title: String
+public struct ChatSession: Identifiable, Codable {
+    public let id: UUID
+    public var messages: [Message]
+    public var createdAt: Date
+    public var updatedAt: Date
+    public var title: String
 
     // Persistence tracking
-    var isPinned: Bool
-    var compressionState: CompressionState
-    var compressedAt: Date?
-    var summaryText: String?
+    public var isPinned: Bool
+    public var compressionState: CompressionState
+    public var compressedAt: Date?
+    public var summaryText: String?
 
-    init(
+    public init(
         id: UUID = UUID(),
         messages: [Message] = [],
         createdAt: Date = Date(),
@@ -35,13 +35,13 @@ struct ChatSession: Identifiable, Codable {
         self.summaryText = summaryText
     }
 
-    enum CompressionState: String, Codable {
+    public enum CompressionState: String, Codable {
         case full          // Full messages available
         case processing    // Compression in progress
         case compressed    // Only summary available
     }
 
-    mutating func addMessage(_ message: Message) {
+    public mutating func addMessage(_ message: Message) {
         messages.append(message)
         updatedAt = Date()
 
@@ -51,11 +51,11 @@ struct ChatSession: Identifiable, Codable {
         }
     }
 
-    var lastMessage: Message? {
+    public var lastMessage: Message? {
         messages.last
     }
 
-    var formattedDate: String {
+    public var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: updatedAt)

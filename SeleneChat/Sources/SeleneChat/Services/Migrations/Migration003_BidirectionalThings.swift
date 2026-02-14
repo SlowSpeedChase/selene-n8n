@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration003_BidirectionalThings.swift
 // SeleneChat
 //

@@ -1,25 +1,25 @@
-// SeleneChat/Sources/Models/AIProvider.swift
+// SeleneChat/Sources/SeleneShared/Models/AIProvider.swift
 import Foundation
 
-enum AIProvider: String, Codable, CaseIterable {
+public enum AIProvider: String, Codable, CaseIterable {
     case local   // Ollama
     case cloud   // Claude API
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .local: return "Local"
         case .cloud: return "Cloud"
         }
     }
 
-    var icon: String {
+    public var icon: String {
         switch self {
-        case .local: return "🏠"
-        case .cloud: return "☁️"
+        case .local: return "\u{1F3E0}"
+        case .cloud: return "\u{2601}\u{FE0F}"
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .local: return "house.fill"
         case .cloud: return "cloud.fill"

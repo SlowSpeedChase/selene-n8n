@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Extracts action items from LLM responses using structured markers

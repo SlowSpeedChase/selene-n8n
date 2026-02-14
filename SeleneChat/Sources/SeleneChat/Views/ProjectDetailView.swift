@@ -1,3 +1,4 @@
+import SeleneShared
 // ProjectDetailView.swift
 // SeleneChat
 //

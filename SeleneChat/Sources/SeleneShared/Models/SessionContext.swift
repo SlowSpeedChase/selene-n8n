@@ -1,17 +1,21 @@
 import Foundation
 
 /// Manages conversation context for LLM prompts
-struct SessionContext {
-    let messages: [Message]
+public struct SessionContext {
+    public let messages: [Message]
 
     /// Maximum tokens to allocate for conversation history
-    static let maxHistoryTokens = 2000
+    public static let maxHistoryTokens = 2000
 
     /// Number of recent turns to keep verbatim (1 turn = user + assistant)
-    static let recentTurnsVerbatim = 4
+    public static let recentTurnsVerbatim = 4
+
+    public init(messages: [Message]) {
+        self.messages = messages
+    }
 
     /// Format messages for inclusion in LLM prompt
-    var formattedHistory: String {
+    public var formattedHistory: String {
         guard !messages.isEmpty else { return "" }
 
         return messages.map { message in
@@ -21,13 +25,13 @@ struct SessionContext {
     }
 
     /// Rough token estimate (4 chars per token)
-    var estimatedTokens: Int {
+    public var estimatedTokens: Int {
         let totalChars = formattedHistory.count
         return totalChars / 4
     }
 
     /// Get history truncated to fit within token limit, preserving recent messages
-    func truncatedHistory(maxTokens: Int) -> String {
+    public func truncatedHistory(maxTokens: Int) -> String {
         guard !messages.isEmpty else { return "" }
 
         var result: [String] = []
@@ -52,7 +56,7 @@ struct SessionContext {
 
     /// Get history with older messages summarized
     /// - Parameter recentTurnCount: Number of recent message pairs to keep verbatim
-    func historyWithSummary(recentTurnCount: Int = SessionContext.recentTurnsVerbatim) -> String {
+    public func historyWithSummary(recentTurnCount: Int = SessionContext.recentTurnsVerbatim) -> String {
         guard !messages.isEmpty else { return "" }
 
         let recentMessageCount = recentTurnCount * 2  // user + assistant per turn

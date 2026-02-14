@@ -1,31 +1,31 @@
 // ThingsTaskStatus.swift
-// SeleneChat
+// SeleneShared
 //
 // Phase 7.2e: Bidirectional Things Flow
 // Model for task status returned from Things 3 via AppleScript
 
 import Foundation
 
-struct ThingsTaskStatus: Codable {
-    let id: String
-    let status: String        // "open", "completed", "canceled"
-    let name: String
-    let completionDate: Date?
-    let modificationDate: Date
-    let creationDate: Date
-    let project: String?
-    let area: String?
-    let tags: [String]
+public struct ThingsTaskStatus: Codable {
+    public let id: String
+    public let status: String        // "open", "completed", "canceled"
+    public let name: String
+    public let completionDate: Date?
+    public let modificationDate: Date
+    public let creationDate: Date
+    public let project: String?
+    public let area: String?
+    public let tags: [String]
 
-    var isCompleted: Bool {
+    public var isCompleted: Bool {
         status == "completed"
     }
 
-    var isOpen: Bool {
+    public var isOpen: Bool {
         status == "open"
     }
 
-    var isCanceled: Bool {
+    public var isCanceled: Bool {
         status == "canceled"
     }
 
@@ -36,7 +36,7 @@ struct ThingsTaskStatus: Codable {
         case creationDate = "creation_date"
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         id = try container.decode(String.self, forKey: .id)
@@ -63,7 +63,7 @@ struct ThingsTaskStatus: Codable {
     }
 
     // For creating test instances
-    init(
+    public init(
         id: String,
         status: String,
         name: String,
@@ -88,25 +88,32 @@ struct ThingsTaskStatus: Codable {
 
 // MARK: - Sync Result
 
-struct SyncResult {
-    let total: Int
-    let synced: Int
-    let newlyCompleted: Int
-    let errors: Int
+public struct SyncResult {
+    public let total: Int
+    public let synced: Int
+    public let newlyCompleted: Int
+    public let errors: Int
 
-    var hasErrors: Bool { errors > 0 }
-    var allSynced: Bool { synced == total }
+    public init(total: Int, synced: Int, newlyCompleted: Int, errors: Int) {
+        self.total = total
+        self.synced = synced
+        self.newlyCompleted = newlyCompleted
+        self.errors = errors
+    }
+
+    public var hasErrors: Bool { errors > 0 }
+    public var allSynced: Bool { synced == total }
 }
 
 // MARK: - Things Status Errors
 
-enum ThingsStatusError: Error, LocalizedError {
+public enum ThingsStatusError: Error, LocalizedError {
     case scriptNotFound
     case executionFailed(String)
     case invalidResponse
     case taskNotFound(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .scriptNotFound:
             return "get-task-status.scpt not found"
@@ -114,8 +121,8 @@ enum ThingsStatusError: Error, LocalizedError {
             return "AppleScript failed: \(msg)"
         case .invalidResponse:
             return "Invalid JSON response from Things"
-        case .taskNotFound(let id):
-            return "Task not found: \(id)"
+        case .taskNotFound(let taskId):
+            return "Task not found: \(taskId)"
         }
     }
 }

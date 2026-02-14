@@ -1,3 +1,4 @@
+import SeleneShared
 // StartConversationSheet.swift
 // SeleneChat
 //

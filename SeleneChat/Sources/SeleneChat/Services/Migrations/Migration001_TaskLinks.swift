@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration001_TaskLinks.swift
 // SeleneChat
 //

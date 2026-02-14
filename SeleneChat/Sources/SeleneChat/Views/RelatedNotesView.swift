@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Sources/Views/RelatedNotesView.swift
 
 import SwiftUI

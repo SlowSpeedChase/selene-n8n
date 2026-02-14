@@ -1,3 +1,4 @@
+import SeleneShared
 import SwiftUI
 
 /// Minimal status dropdown view for the menu bar popover.

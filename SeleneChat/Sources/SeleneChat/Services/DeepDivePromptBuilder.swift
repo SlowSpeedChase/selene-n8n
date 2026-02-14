@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Builds specialized prompts for thread deep-dive conversations.

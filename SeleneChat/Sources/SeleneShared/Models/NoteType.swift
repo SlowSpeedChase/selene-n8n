@@ -1,12 +1,12 @@
 import Foundation
 
-enum NoteType: String, CaseIterable, Codable {
+public enum NoteType: String, CaseIterable, Codable {
     case quickTask = "quick_task"
     case relatesToProject = "relates_to_project"
     case newProject = "new_project"
     case reflection = "reflection"
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .quickTask: return "Quick task"
         case .relatesToProject: return "Relates to project"
@@ -15,7 +15,7 @@ enum NoteType: String, CaseIterable, Codable {
         }
     }
 
-    var icon: String {
+    public var icon: String {
         switch self {
         case .quickTask: return "checklist"
         case .relatesToProject: return "link"
@@ -24,12 +24,12 @@ enum NoteType: String, CaseIterable, Codable {
         }
     }
 
-    var emoji: String {
+    public var emoji: String {
         switch self {
-        case .quickTask: return "📋"
-        case .relatesToProject: return "🔗"
-        case .newProject: return "🆕"
-        case .reflection: return "💭"
+        case .quickTask: return "\u{1F4CB}"
+        case .relatesToProject: return "\u{1F517}"
+        case .newProject: return "\u{1F195}"
+        case .reflection: return "\u{1F4AD}"
         }
     }
 }

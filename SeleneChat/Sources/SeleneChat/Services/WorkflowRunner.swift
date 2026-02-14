@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// The result of executing a workflow or shell command.

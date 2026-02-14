@@ -1,46 +1,46 @@
 import Foundation
 
 /// Types of briefing cards
-enum BriefingCardType: Equatable {
+public enum BriefingCardType: Equatable {
     case whatChanged
     case needsAttention
     case connection
 }
 
 /// A single briefing card with data for one insight
-struct BriefingCard: Identifiable, Equatable {
-    let id = UUID()
-    let cardType: BriefingCardType
+public struct BriefingCard: Identifiable, Equatable {
+    public let id = UUID()
+    public let cardType: BriefingCardType
 
     // What Changed fields
-    var noteTitle: String?
-    var noteId: Int?
-    var threadName: String?
-    var threadId: Int64?
-    var date: Date?
-    var primaryTheme: String?
-    var energyLevel: String?
+    public var noteTitle: String?
+    public var noteId: Int?
+    public var threadName: String?
+    public var threadId: Int64?
+    public var date: Date?
+    public var primaryTheme: String?
+    public var energyLevel: String?
 
     // Needs Attention fields
-    var reason: String?
-    var noteCount: Int?
-    var openTaskCount: Int?
+    public var reason: String?
+    public var noteCount: Int?
+    public var openTaskCount: Int?
 
     // Connection fields
-    var noteATitle: String?
-    var noteAId: Int?
-    var threadAName: String?
-    var noteBTitle: String?
-    var noteBId: Int?
-    var threadBName: String?
-    var explanation: String?
+    public var noteATitle: String?
+    public var noteAId: Int?
+    public var threadAName: String?
+    public var noteBTitle: String?
+    public var noteBId: Int?
+    public var threadBName: String?
+    public var explanation: String?
 
     // Preview content (loaded on expand)
-    var notePreview: String?
-    var threadSummary: String?
-    var threadWhy: String?
+    public var notePreview: String?
+    public var threadSummary: String?
+    public var threadWhy: String?
 
-    var energyEmoji: String {
+    public var energyEmoji: String {
         switch energyLevel?.lowercased() {
         case "high": return "\u{26A1}"
         case "medium": return "\u{1F50B}"
@@ -51,7 +51,7 @@ struct BriefingCard: Identifiable, Equatable {
 
     // MARK: - Factory Methods
 
-    static func whatChanged(
+    public static func whatChanged(
         noteTitle: String,
         noteId: Int,
         threadName: String?,
@@ -72,7 +72,7 @@ struct BriefingCard: Identifiable, Equatable {
         )
     }
 
-    static func needsAttention(
+    public static func needsAttention(
         threadName: String,
         threadId: Int64,
         reason: String,
@@ -89,7 +89,7 @@ struct BriefingCard: Identifiable, Equatable {
         )
     }
 
-    static func connection(
+    public static func connection(
         noteATitle: String,
         noteAId: Int,
         threadAName: String,
@@ -111,7 +111,7 @@ struct BriefingCard: Identifiable, Equatable {
     }
 
     // Equatable (ignore UUID id)
-    static func == (lhs: BriefingCard, rhs: BriefingCard) -> Bool {
+    public static func == (lhs: BriefingCard, rhs: BriefingCard) -> Bool {
         lhs.cardType == rhs.cardType &&
         lhs.noteTitle == rhs.noteTitle &&
         lhs.noteId == rhs.noteId &&
@@ -120,20 +120,28 @@ struct BriefingCard: Identifiable, Equatable {
 }
 
 /// Structured briefing with sections
-struct StructuredBriefing: Equatable {
-    let intro: String
-    let whatChanged: [BriefingCard]
-    let needsAttention: [BriefingCard]
-    let connections: [BriefingCard]
-    let generatedAt: Date
+public struct StructuredBriefing: Equatable {
+    public let intro: String
+    public let whatChanged: [BriefingCard]
+    public let needsAttention: [BriefingCard]
+    public let connections: [BriefingCard]
+    public let generatedAt: Date
 
-    var isEmpty: Bool {
+    public init(intro: String, whatChanged: [BriefingCard], needsAttention: [BriefingCard], connections: [BriefingCard], generatedAt: Date) {
+        self.intro = intro
+        self.whatChanged = whatChanged
+        self.needsAttention = needsAttention
+        self.connections = connections
+        self.generatedAt = generatedAt
+    }
+
+    public var isEmpty: Bool {
         whatChanged.isEmpty && needsAttention.isEmpty && connections.isEmpty
     }
 }
 
 /// Loading status for the morning briefing
-enum BriefingStatus: Equatable {
+public enum BriefingStatus: Equatable {
     case notLoaded
     case loading
     case loaded(StructuredBriefing)
@@ -141,6 +149,10 @@ enum BriefingStatus: Equatable {
 }
 
 /// State container for the morning briefing feature
-struct BriefingState {
-    var status: BriefingStatus = .notLoaded
+public struct BriefingState {
+    public var status: BriefingStatus = .notLoaded
+
+    public init(status: BriefingStatus = .notLoaded) {
+        self.status = status
+    }
 }

@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration007_ThingsHeading.swift
 // SeleneChat
 //

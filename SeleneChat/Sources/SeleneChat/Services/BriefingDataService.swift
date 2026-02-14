@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Pure functions for processing briefing data.

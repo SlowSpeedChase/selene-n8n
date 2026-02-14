@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Compute cosine similarity between two vectors. Returns -1.0 to 1.0.

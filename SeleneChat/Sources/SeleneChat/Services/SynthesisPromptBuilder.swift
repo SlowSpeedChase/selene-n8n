@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Builds specialized prompts for cross-thread synthesis and prioritization queries

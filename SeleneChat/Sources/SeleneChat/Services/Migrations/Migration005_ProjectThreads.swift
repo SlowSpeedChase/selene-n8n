@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration005_ProjectThreads.swift
 // SeleneChat
 //

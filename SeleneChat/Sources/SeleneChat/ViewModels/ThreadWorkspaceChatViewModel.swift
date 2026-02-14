@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Chat view model scoped to a single thread workspace.

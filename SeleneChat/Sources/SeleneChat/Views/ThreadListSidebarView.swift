@@ -1,3 +1,4 @@
+import SeleneShared
 // ThreadListSidebarView.swift
 // SeleneChat
 //

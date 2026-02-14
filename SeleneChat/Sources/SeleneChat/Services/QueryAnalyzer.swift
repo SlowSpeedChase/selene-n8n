@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 
 /// Analyzes user queries to determine query type, extract keywords, and infer time scope

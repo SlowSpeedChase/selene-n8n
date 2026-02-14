@@ -1,3 +1,4 @@
+import SeleneShared
 import SwiftUI
 import AppKit
 import ServiceManagement

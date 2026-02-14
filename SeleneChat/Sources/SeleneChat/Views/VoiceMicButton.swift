@@ -1,3 +1,4 @@
+import SeleneShared
 import SwiftUI
 
 /// Push-to-talk microphone button for voice input.

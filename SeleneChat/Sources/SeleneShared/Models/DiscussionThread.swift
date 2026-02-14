@@ -1,30 +1,64 @@
 import Foundation
 
-struct DiscussionThread: Identifiable, Hashable {
-    let id: Int
-    let rawNoteId: Int?
-    let threadType: ThreadType
-    var projectId: Int?
-    var threadName: String?
-    let prompt: String
-    var status: Status
-    let createdAt: Date
-    var surfacedAt: Date?
-    var completedAt: Date?
-    let relatedConcepts: [String]?
-    var resurfaceReasonCode: String?      // Raw code like "progress_50", "stuck_3d"
-    var lastResurfacedAt: Date?
+public struct DiscussionThread: Identifiable, Hashable {
+    public let id: Int
+    public let rawNoteId: Int?
+    public let threadType: ThreadType
+    public var projectId: Int?
+    public var threadName: String?
+    public let prompt: String
+    public var status: Status
+    public let createdAt: Date
+    public var surfacedAt: Date?
+    public var completedAt: Date?
+    public let relatedConcepts: [String]?
+    public var resurfaceReasonCode: String?      // Raw code like "progress_50", "stuck_3d"
+    public var lastResurfacedAt: Date?
 
     // Associated note content (loaded separately)
-    var noteTitle: String?
-    var noteContent: String?
+    public var noteTitle: String?
+    public var noteContent: String?
 
-    enum ThreadType: String, CaseIterable {
+    public init(
+        id: Int,
+        rawNoteId: Int?,
+        threadType: ThreadType,
+        projectId: Int? = nil,
+        threadName: String? = nil,
+        prompt: String,
+        status: Status,
+        createdAt: Date,
+        surfacedAt: Date? = nil,
+        completedAt: Date? = nil,
+        relatedConcepts: [String]? = nil,
+        resurfaceReasonCode: String? = nil,
+        lastResurfacedAt: Date? = nil,
+        noteTitle: String? = nil,
+        noteContent: String? = nil
+    ) {
+        self.id = id
+        self.rawNoteId = rawNoteId
+        self.threadType = threadType
+        self.projectId = projectId
+        self.threadName = threadName
+        self.prompt = prompt
+        self.status = status
+        self.createdAt = createdAt
+        self.surfacedAt = surfacedAt
+        self.completedAt = completedAt
+        self.relatedConcepts = relatedConcepts
+        self.resurfaceReasonCode = resurfaceReasonCode
+        self.lastResurfacedAt = lastResurfacedAt
+        self.noteTitle = noteTitle
+        self.noteContent = noteContent
+    }
+
+    public enum ThreadType: String, CaseIterable {
         case planning
         case followup
         case question
 
-        var displayName: String {
+        public var displayName: String {
             switch self {
             case .planning: return "Planning"
             case .followup: return "Follow-up"
@@ -32,7 +66,7 @@ struct DiscussionThread: Identifiable, Hashable {
             }
         }
 
-        var icon: String {
+        public var icon: String {
             switch self {
             case .planning: return "list.bullet.clipboard"
             case .followup: return "arrow.uturn.forward"
@@ -41,14 +75,14 @@ struct DiscussionThread: Identifiable, Hashable {
         }
     }
 
-    enum Status: String, CaseIterable {
+    public enum Status: String, CaseIterable {
         case pending
         case active
         case completed
         case dismissed
         case review
 
-        var icon: String {
+        public var icon: String {
             switch self {
             case .pending: return "clock"
             case .active: return "play.circle"
@@ -58,7 +92,7 @@ struct DiscussionThread: Identifiable, Hashable {
             }
         }
 
-        var color: String {
+        public var color: String {
             switch self {
             case .pending: return "gray"
             case .active: return "blue"
@@ -70,23 +104,23 @@ struct DiscussionThread: Identifiable, Hashable {
     }
 
     /// Parsed resurface reason from code
-    var resurfaceReason: ResurfaceReason? {
+    public var resurfaceReason: ResurfaceReason? {
         guard let code = resurfaceReasonCode else { return nil }
         return ResurfaceReason(from: code)
     }
 
-    struct ResurfaceReason {
-        let type: ReasonType
-        let message: String
+    public struct ResurfaceReason {
+        public let type: ReasonType
+        public let message: String
 
-        enum ReasonType {
+        public enum ReasonType {
             case progress(percent: Int)
             case stuck(days: Int)
             case completion
             case deadline(days: Int)
         }
 
-        init?(from code: String) {
+        public init?(from code: String) {
             if code.starts(with: "progress_") {
                 let percentStr = code.replacingOccurrences(of: "progress_", with: "")
                 let percent = Int(percentStr) ?? 50
@@ -111,7 +145,7 @@ struct DiscussionThread: Identifiable, Hashable {
         }
     }
 
-    var timeSinceCreated: String {
+    public var timeSinceCreated: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: createdAt, relativeTo: Date())

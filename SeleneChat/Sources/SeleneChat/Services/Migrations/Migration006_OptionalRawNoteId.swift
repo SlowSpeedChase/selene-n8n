@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration006_OptionalRawNoteId.swift
 // SeleneChat
 //

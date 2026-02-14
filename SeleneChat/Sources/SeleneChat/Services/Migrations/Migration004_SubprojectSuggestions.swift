@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration004_SubprojectSuggestions.swift
 // SeleneChat
 //

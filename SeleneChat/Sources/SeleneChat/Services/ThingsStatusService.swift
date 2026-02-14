@@ -1,3 +1,4 @@
+import SeleneShared
 // ThingsStatusService.swift
 // SeleneChat
 //

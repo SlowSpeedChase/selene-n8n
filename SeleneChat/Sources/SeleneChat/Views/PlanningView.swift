@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Sources/Views/PlanningView.swift
 import SwiftUI
 

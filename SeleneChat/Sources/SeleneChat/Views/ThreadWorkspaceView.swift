@@ -1,3 +1,4 @@
+import SeleneShared
 // ThreadWorkspaceView.swift
 // SeleneChat
 //

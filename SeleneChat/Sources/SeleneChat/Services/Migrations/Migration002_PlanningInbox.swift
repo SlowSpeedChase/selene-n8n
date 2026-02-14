@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration002_PlanningInbox.swift
 // SeleneChat
 //

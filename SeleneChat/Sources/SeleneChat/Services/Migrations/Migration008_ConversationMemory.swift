@@ -1,3 +1,4 @@
+import SeleneShared
 // Migration008_ConversationMemory.swift
 // SeleneChat
 //

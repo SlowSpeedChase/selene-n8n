@@ -1,3 +1,4 @@
+import SeleneShared
 import Foundation
 import Speech
 import AVFoundation
