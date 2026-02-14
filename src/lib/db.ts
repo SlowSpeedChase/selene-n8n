@@ -584,6 +584,44 @@ export function getCrossThreadAssociations(options: {
   return stmt.all(minSimilarity, recentDays, limit) as CrossThreadAssociation[];
 }
 
+// Ensure device_tokens table exists
+db.exec(`
+  CREATE TABLE IF NOT EXISTS device_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    platform TEXT NOT NULL DEFAULT 'ios',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
+// Helper: Register a device token (upsert)
+export function registerDevice(token: string, platform = 'ios'): void {
+  const stmt = db.prepare(`
+    INSERT INTO device_tokens (token, platform, created_at, last_seen_at)
+    VALUES (?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(token) DO UPDATE SET last_seen_at = datetime('now')
+  `);
+  stmt.run(token, platform);
+}
+
+// Helper: Unregister a device token
+export function unregisterDevice(token: string): void {
+  db.prepare('DELETE FROM device_tokens WHERE token = ?').run(token);
+}
+
+// Helper: Get all device tokens, optionally filtered by platform
+export function getDeviceTokens(platform?: string): string[] {
+  if (platform) {
+    const rows = db.prepare('SELECT token FROM device_tokens WHERE platform = ?')
+      .all(platform) as Array<{ token: string }>;
+    return rows.map(r => r.token);
+  }
+  const rows = db.prepare('SELECT token FROM device_tokens')
+    .all() as Array<{ token: string }>;
+  return rows.map(r => r.token);
+}
+
 // Cleanup on process exit
 process.on('exit', () => {
   db.close();

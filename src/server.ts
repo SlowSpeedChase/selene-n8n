@@ -10,6 +10,7 @@ import { sessionsRoutes } from './routes/sessions';
 import { memoriesRoutes } from './routes/memories';
 import { llmRoutes } from './routes/llm';
 import { briefingRoutes } from './routes/briefing';
+import { devicesRoutes } from './routes/devices';
 import type { IngestInput, WebhookResponse } from './types';
 
 const server = Fastify({
@@ -142,6 +143,9 @@ llmRoutes(server);
 
 // Briefing routes
 briefingRoutes(server);
+
+// Device registration routes
+devicesRoutes(server);
 
 // Start server
 async function start() {
