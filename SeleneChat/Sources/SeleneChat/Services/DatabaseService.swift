@@ -139,6 +139,40 @@ class DatabaseService: ObservableObject {
     private let memCreatedAt = Expression<String>("created_at")
     private let memUpdatedAt = Expression<String>("updated_at")
 
+    // recipes table
+    private let recipesTable = Table("recipes")
+    private let recipesId = Expression<Int64>("id")
+    private let recipesTitle = Expression<String>("title")
+    private let recipesFilePath = Expression<String>("file_path")
+    private let recipesServings = Expression<Int64?>("servings")
+    private let recipesPrepTimeMinutes = Expression<Int64?>("prep_time_minutes")
+    private let recipesCookTimeMinutes = Expression<Int64?>("cook_time_minutes")
+    private let recipesDifficulty = Expression<String?>("difficulty")
+    private let recipesCuisine = Expression<String?>("cuisine")
+    private let recipesProtein = Expression<String?>("protein")
+    private let recipesDishType = Expression<String?>("dish_type")
+    private let recipesMealOccasions = Expression<String?>("meal_occasions")
+    private let recipesDietary = Expression<String?>("dietary")
+    private let recipesIngredients = Expression<String>("ingredients")
+    private let recipesCalories = Expression<Int64?>("calories")
+    private let recipesStatus = Expression<String>("status")
+    private let recipesTestRun = Expression<String?>("test_run")
+
+    // meal_plans table
+    private let mealPlansTable = Table("meal_plans")
+    private let mealPlansId = Expression<Int64>("id")
+    private let mealPlansWeek = Expression<String>("week")
+    private let mealPlansStatus = Expression<String>("status")
+    private let mealPlansTestRun = Expression<String?>("test_run")
+
+    // meal_plan_items table
+    private let mealPlanItemsTable = Table("meal_plan_items")
+    private let mealPlanItemsId = Expression<Int64>("id")
+    private let mealPlanItemsMealPlanId = Expression<Int64>("meal_plan_id")
+    private let mealPlanItemsDay = Expression<String>("day")
+    private let mealPlanItemsMeal = Expression<String>("meal")
+    private let mealPlanItemsRecipeTitle = Expression<String>("recipe_title")
+
     // MARK: - Date Formatter (with fractional seconds support)
 
     /// Shared ISO8601 formatter that handles fractional seconds (e.g., "2026-02-01T21:21:52.269Z")
@@ -2026,6 +2060,311 @@ class DatabaseService: ObservableObject {
         #endif
 
         return results
+    }
+
+    // MARK: - Recipe Queries
+
+    /// Get all active recipes, ordered by title
+    func getAllRecipes(limit: Int = 200) async throws -> [Recipe] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if table exists first
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='recipes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = recipesTable
+            .filter(recipesStatus == "active")
+            .filter(recipesTestRun == nil)
+            .order(recipesTitle.asc)
+            .limit(limit)
+
+        var recipes: [Recipe] = []
+
+        for row in try db.prepare(query) {
+            let recipe = parseRecipe(from: row)
+            recipes.append(recipe)
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getAllRecipes: \(recipes.count) recipes")
+        #endif
+
+        return recipes
+    }
+
+    /// Get recipes filtered by protein type
+    func getRecipesByProtein(_ protein: String, limit: Int = 50) async throws -> [Recipe] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='recipes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = recipesTable
+            .filter(recipesProtein == protein)
+            .filter(recipesStatus == "active")
+            .filter(recipesTestRun == nil)
+            .order(recipesTitle.asc)
+            .limit(limit)
+
+        var recipes: [Recipe] = []
+
+        for row in try db.prepare(query) {
+            let recipe = parseRecipe(from: row)
+            recipes.append(recipe)
+        }
+
+        return recipes
+    }
+
+    /// Get recipes filtered by cuisine type
+    func getRecipesByCuisine(_ cuisine: String, limit: Int = 50) async throws -> [Recipe] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='recipes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = recipesTable
+            .filter(recipesCuisine == cuisine)
+            .filter(recipesStatus == "active")
+            .filter(recipesTestRun == nil)
+            .order(recipesTitle.asc)
+            .limit(limit)
+
+        var recipes: [Recipe] = []
+
+        for row in try db.prepare(query) {
+            let recipe = parseRecipe(from: row)
+            recipes.append(recipe)
+        }
+
+        return recipes
+    }
+
+    /// Get a single recipe by ID
+    func getRecipeById(_ id: Int64) async throws -> Recipe? {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='recipes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return nil
+        }
+
+        let query = recipesTable
+            .filter(recipesId == id)
+            .filter(recipesTestRun == nil)
+
+        guard let row = try db.pluck(query) else {
+            return nil
+        }
+
+        return parseRecipe(from: row)
+    }
+
+    /// Search recipes by title or ingredients text
+    func searchRecipes(query searchText: String, limit: Int = 50) async throws -> [Recipe] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='recipes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        let query = recipesTable
+            .filter(recipesTitle.like("%\(searchText)%") || recipesIngredients.like("%\(searchText)%"))
+            .filter(recipesStatus == "active")
+            .filter(recipesTestRun == nil)
+            .order(recipesTitle.asc)
+            .limit(limit)
+
+        var recipes: [Recipe] = []
+
+        for row in try db.prepare(query) {
+            let recipe = parseRecipe(from: row)
+            recipes.append(recipe)
+        }
+
+        return recipes
+    }
+
+    // MARK: - Meal Plan Queries
+
+    /// Get recent meal plans with their items, grouped by week
+    func getRecentMealPlans(weeks: Int = 3) async throws -> [(week: String, items: [(day: String, meal: String, recipeTitle: String)])] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if tables exist
+        let mealPlansExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meal_plans'"
+        ) as? Int64 ?? 0
+
+        let mealPlanItemsExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meal_plan_items'"
+        ) as? Int64 ?? 0
+
+        if mealPlansExists == 0 || mealPlanItemsExists == 0 {
+            return []
+        }
+
+        // Get recent meal plans
+        let plansQuery = mealPlansTable
+            .filter(mealPlansTestRun == nil)
+            .order(mealPlansWeek.desc)
+            .limit(weeks)
+
+        var result: [(week: String, items: [(day: String, meal: String, recipeTitle: String)])] = []
+
+        for planRow in try db.prepare(plansQuery) {
+            let week = planRow[mealPlansWeek]
+            let planId = planRow[mealPlansId]
+
+            // Get items for this plan
+            let itemsQuery = mealPlanItemsTable
+                .filter(mealPlanItemsMealPlanId == planId)
+                .order(mealPlanItemsDay.asc, mealPlanItemsMeal.asc)
+
+            var items: [(day: String, meal: String, recipeTitle: String)] = []
+
+            for itemRow in try db.prepare(itemsQuery) {
+                items.append((
+                    day: itemRow[mealPlanItemsDay],
+                    meal: itemRow[mealPlanItemsMeal],
+                    recipeTitle: itemRow[mealPlanItemsRecipeTitle]
+                ))
+            }
+
+            result.append((week: week, items: items))
+        }
+
+        #if DEBUG
+        DebugLogger.shared.log(.state, "DatabaseService.getRecentMealPlans: \(result.count) weeks")
+        #endif
+
+        return result
+    }
+
+    /// Get meal plan items for a specific week
+    func getMealPlanForWeek(_ week: String) async throws -> [(day: String, meal: String, recipeTitle: String)] {
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if tables exist
+        let mealPlansExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meal_plans'"
+        ) as? Int64 ?? 0
+
+        let mealPlanItemsExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meal_plan_items'"
+        ) as? Int64 ?? 0
+
+        if mealPlansExists == 0 || mealPlanItemsExists == 0 {
+            return []
+        }
+
+        // Find the meal plan for this week
+        let planQuery = mealPlansTable
+            .filter(mealPlansWeek == week)
+            .filter(mealPlansTestRun == nil)
+            .limit(1)
+
+        guard let planRow = try db.pluck(planQuery) else {
+            return []
+        }
+
+        let planId = planRow[mealPlansId]
+
+        // Get items for this plan
+        let itemsQuery = mealPlanItemsTable
+            .filter(mealPlanItemsMealPlanId == planId)
+            .order(mealPlanItemsDay.asc, mealPlanItemsMeal.asc)
+
+        var items: [(day: String, meal: String, recipeTitle: String)] = []
+
+        for itemRow in try db.prepare(itemsQuery) {
+            items.append((
+                day: itemRow[mealPlanItemsDay],
+                meal: itemRow[mealPlanItemsMeal],
+                recipeTitle: itemRow[mealPlanItemsRecipeTitle]
+            ))
+        }
+
+        return items
+    }
+
+    // MARK: - Recipe Parsing
+
+    /// Parse a Recipe model from a database row
+    private func parseRecipe(from row: Row) -> Recipe {
+        // Parse ingredients JSON array
+        var ingredientsList: [Recipe.Ingredient] = []
+        let ingredientsStr = row[recipesIngredients]
+        if let data = ingredientsStr.data(using: .utf8) {
+            ingredientsList = (try? JSONDecoder().decode([Recipe.Ingredient].self, from: data)) ?? []
+        }
+
+        // Parse meal_occasions JSON array of strings
+        var mealOccasionsList: [String] = []
+        if let mealOccasionsStr = row[recipesMealOccasions],
+           let data = mealOccasionsStr.data(using: .utf8) {
+            mealOccasionsList = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        }
+
+        // Parse dietary JSON array of strings
+        var dietaryList: [String] = []
+        if let dietaryStr = row[recipesDietary],
+           let data = dietaryStr.data(using: .utf8) {
+            dietaryList = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        }
+
+        return Recipe(
+            id: row[recipesId],
+            title: row[recipesTitle],
+            filePath: row[recipesFilePath],
+            servings: row[recipesServings].map { Int($0) },
+            prepTimeMinutes: row[recipesPrepTimeMinutes].map { Int($0) },
+            cookTimeMinutes: row[recipesCookTimeMinutes].map { Int($0) },
+            difficulty: row[recipesDifficulty],
+            cuisine: row[recipesCuisine],
+            protein: row[recipesProtein],
+            dishType: row[recipesDishType],
+            mealOccasions: mealOccasionsList,
+            dietary: dietaryList,
+            ingredients: ingredientsList,
+            calories: row[recipesCalories].map { Int($0) }
+        )
     }
 
     // MARK: - Error Types
