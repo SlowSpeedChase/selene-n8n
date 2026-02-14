@@ -1,6 +1,7 @@
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { createWorkflowLogger, db, generate, isAvailable, config } from '../lib';
+import { notifyBriefingReady } from '../lib/apns';
 
 const log = createWorkflowLogger('daily-summary');
 
@@ -158,6 +159,9 @@ ${notes.map((n) => `- [[${n.title}]]`).join('\n')}
   const digestPath = join(digestDir, `${dateStr}-digest.txt`);
   writeFileSync(digestPath, digest);
   log.info({ digestPath }, 'Condensed digest written');
+
+  // Notify iOS devices
+  await notifyBriefingReady();
 
   return { success: true, path: outputPath, digestPath };
 }

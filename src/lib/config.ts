@@ -95,6 +95,13 @@ export const config = {
   // API authentication
   apiToken: process.env.SELENE_API_TOKEN || '',
 
+  // APNs push notifications
+  apnsKeyPath: process.env.APNS_KEY_PATH || '',
+  apnsKeyId: process.env.APNS_KEY_ID || '',
+  apnsTeamId: process.env.APNS_TEAM_ID || '',
+  apnsBundleId: process.env.APNS_BUNDLE_ID || 'com.selene.mobile',
+  apnsProduction: process.env.APNS_PRODUCTION === 'true',
+
   // Voice Memos transcription
   voiceMemosRecordingsDir:
     process.env.VOICE_MEMOS_RECORDINGS_DIR ||
