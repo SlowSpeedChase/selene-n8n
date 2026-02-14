@@ -50,6 +50,16 @@ function getVaultPath(): string {
   return join(projectRoot, 'vault');
 }
 
+function getKitchenOsVaultPath(): string {
+  if (process.env.KITCHENOS_VAULT_PATH) {
+    return process.env.KITCHENOS_VAULT_PATH;
+  }
+  if (isTestEnv) {
+    return join(projectRoot, 'data-test/kitchenos-vault');
+  }
+  return join(homedir(), 'Library/Mobile Documents/iCloud~md~obsidian/Documents/KitchenOS');
+}
+
 function getDigestsPath(): string {
   if (process.env.SELENE_DIGESTS_PATH) {
     return process.env.SELENE_DIGESTS_PATH;
@@ -70,6 +80,7 @@ export const config = {
   vectorsPath: getVectorsPath(),
   vaultPath: getVaultPath(),
   digestsPath: getDigestsPath(),
+  kitchenOsVaultPath: getKitchenOsVaultPath(),
   logsPath: process.env.SELENE_LOGS_PATH || join(projectRoot, 'logs'),
   projectRoot,
 
