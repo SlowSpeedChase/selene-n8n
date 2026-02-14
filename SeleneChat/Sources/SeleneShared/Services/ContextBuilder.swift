@@ -28,6 +28,8 @@ public class ContextBuilder {
             return buildFullContext(notes)  // Deep-dive needs full content for analysis
         case .synthesis:
             return buildSummaryContext(notes)  // Synthesis uses summary context across threads
+        case .mealPlanning:
+            return buildFullContext(notes)  // Meal planning needs full content for recipe/preference context
         }
     }
 

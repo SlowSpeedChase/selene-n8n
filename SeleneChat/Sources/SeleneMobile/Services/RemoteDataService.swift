@@ -155,6 +155,8 @@ actor RemoteDataService: DataProvider {
         case .deepDive, .synthesis:
             let query = keywords.joined(separator: " ")
             return try await searchNotes(query: query, limit: limit)
+        case .mealPlanning:
+            return try await getRecentNotes(days: 7, limit: limit)
         }
     }
 
@@ -285,6 +287,13 @@ actor RemoteDataService: DataProvider {
         let response = try decoder.decode(AssociationsListResponse.self, from: data)
         return response.associations.map { ($0.noteAId, $0.noteBId, $0.similarity) }
     }
+
+    // MARK: - Recipes (TODO: implement REST endpoints)
+
+    func getAllRecipes(limit: Int) async throws -> [Recipe] { [] }
+    func getRecipeById(_ id: Int64) async throws -> Recipe? { nil }
+    func searchRecipes(query: String, limit: Int) async throws -> [Recipe] { [] }
+    func getRecentMealPlans(weeks: Int) async throws -> [(week: String, items: [(day: String, meal: String, recipeTitle: String)])] { [] }
 
     // MARK: - Availability
 

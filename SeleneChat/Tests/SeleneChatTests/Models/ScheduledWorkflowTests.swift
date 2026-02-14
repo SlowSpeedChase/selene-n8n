@@ -255,7 +255,7 @@ final class ScheduledWorkflowTests: XCTestCase {
     // MARK: - allWorkflows
 
     func testAllWorkflowsCount() {
-        XCTAssertEqual(ScheduledWorkflow.allWorkflows.count, 11, "Should define exactly 11 workflows")
+        XCTAssertEqual(ScheduledWorkflow.allWorkflows.count, 12, "Should define exactly 12 workflows")
     }
 
     func testAllWorkflowsHaveUniqueIds() {
@@ -274,7 +274,7 @@ final class ScheduledWorkflowTests: XCTestCase {
         let workflow = ScheduledWorkflow.allWorkflows.first { $0.id == "server" }
         XCTAssertNotNil(workflow)
         XCTAssertEqual(workflow?.name, "Selene Server")
-        XCTAssertEqual(workflow?.scriptPath, "npm start")
+        XCTAssertEqual(workflow?.scriptPath, "src/server.ts")
         XCTAssertFalse(workflow?.usesOllama ?? true)
         if case .persistent = workflow?.schedule {
             // Success
@@ -433,7 +433,8 @@ final class ScheduledWorkflowTests: XCTestCase {
             "compute-relationships",
             "export-obsidian",
             "send-digest",
-            "transcribe-voice-memos"
+            "transcribe-voice-memos",
+            "index-recipes"
         ]
         XCTAssertEqual(nonOllamaIds, expected)
     }

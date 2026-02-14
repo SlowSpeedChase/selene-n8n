@@ -22,6 +22,15 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 All three "Ready" designs from 2026-02-12 are now implemented and merged. The system has grown significantly: menu bar orchestrator manages workflow scheduling, voice memos are auto-transcribed via whisper.cpp, and the morning briefing got a full redesign with structured cards.
 
 ### Recent Completions
+- **KitchenOS Integration** (2026-02-14) - Recipe indexing + conversational meal planning
+  - `index-recipes.ts` workflow scans KitchenOS Obsidian vault, parses recipe files
+  - Recipe parser handles YAML frontmatter and cooking-mode formats
+  - `meal-plan-exporter.ts` generates KitchenOS-format markdown with wiki links
+  - `MealPlanContextBuilder` + `MealPlanPromptBuilder` for ADHD-aware meal chat
+  - `ActionExtractor` parses MEAL/SHOP markers from LLM responses
+  - `ChatViewModel` meal planning route with DB write + Obsidian export
+  - `Migration010_KitchenOSRecipes` auto-creates recipes/meal_plans/shopping_items tables
+  - Status file written to KitchenOS vault for Obsidian dashboard
 - **SeleneMobile iOS App** (2026-02-14) - Full-parity iOS app over Tailscale VPN
   - Three-target SPM: SeleneShared + SeleneChat + SeleneMobile
   - Protocol-based data layer: DataProvider, LLMProvider
@@ -55,6 +64,7 @@ The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat 
 - Apple Notes digest (6am) - post summary to pinned note
 - Thread lifecycle (daily 2am) - archive stale, split divergent, merge converging
 - Voice memo transcription (WatchPaths trigger) - auto-transcribe new recordings
+- Recipe indexing (every 6 hours) - scan KitchenOS vault for new/changed recipes
 
 ### Completed Components
 
@@ -77,6 +87,9 @@ The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat 
 | Daily Summary | `src/workflows/daily-summary.ts` | Done |
 | Apple Notes Digest | `src/workflows/send-digest.ts` | Done |
 | Voice Memo Transcription | `src/workflows/transcribe-voice-memos.ts` | Done |
+| Recipe Indexing | `src/workflows/index-recipes.ts` | Done |
+| Meal Plan Exporter | `src/lib/meal-plan-exporter.ts` | Done |
+| Recipe Parser | `src/lib/recipe-parser.ts` | Done |
 | Auth Middleware | `src/lib/auth.ts` | Done |
 | APNs Client | `src/lib/apns.ts` | Done |
 | REST API Endpoints | `src/server.ts` (~30 routes) | Done |

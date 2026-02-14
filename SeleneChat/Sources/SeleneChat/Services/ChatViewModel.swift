@@ -20,6 +20,8 @@ class ChatViewModel: ObservableObject {
     private let memoryService = MemoryService.shared
     private let deepDivePromptBuilder = DeepDivePromptBuilder()
     private let synthesisPromptBuilder = SynthesisPromptBuilder()
+    private let mealPlanContextBuilder = MealPlanContextBuilder()
+    private let mealPlanPromptBuilder = MealPlanPromptBuilder()
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
     private let briefingContextBuilder = BriefingContextBuilder()
@@ -27,6 +29,10 @@ class ChatViewModel: ObservableObject {
 
     /// Currently active deep-dive thread (if in deep-dive mode)
     @Published var activeDeepDiveThread: Thread?
+
+    /// Pending meal plan actions waiting for user confirmation
+    @Published var pendingMealActions: [ActionExtractor.ExtractedMealAction] = []
+    @Published var pendingShopActions: [ActionExtractor.ExtractedShopAction] = []
 
     init(dataProvider: DataProvider = DatabaseService.shared,
          llmProvider: LLMProvider = OllamaService.shared) {
@@ -101,6 +107,22 @@ class ChatViewModel: ObservableObject {
                 currentSession.addMessage(assistantMessage)
                 speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
                 await saveSession()
+                return
+            }
+
+            // Check for meal planning queries
+            if queryAnalyzer.analyze(content).queryType == .mealPlanning {
+                let response = try await handleMealPlanningQuery(query: content)
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .local,
+                    queryType: "meal-planning"
+                )
+                currentSession.addMessage(assistantMessage)
+                speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
+                await saveSession()
+                saveConversationMessages(userMessage: content, assistantResponse: response)
                 return
             }
 
@@ -716,6 +738,104 @@ class ChatViewModel: ObservableObject {
         return (response, allNotes, allNotes, "synthesis")
     }
 
+    // MARK: - Meal Planning
+
+    private func handleMealPlanningQuery(query: String) async throws -> String {
+        // 1. Fetch recipes from DB
+        let recipes = try await dataProvider.getAllRecipes(limit: 200)
+
+        // 2. Fetch recent meal plans
+        let recentMeals = try await dataProvider.getRecentMealPlans(weeks: 3)
+
+        // 3. Build context
+        let context = mealPlanContextBuilder.buildFullContext(
+            recipes: recipes,
+            recentMeals: recentMeals,
+            nutritionTargets: nil
+        )
+
+        // 4. Build conversation history from current session
+        let history: [(role: String, content: String)]
+        if useConversationHistory {
+            history = currentSession.messages.suffix(6).map { msg in
+                (role: msg.role == .user ? "user" : "assistant", content: msg.content)
+            }
+        } else {
+            history = []
+        }
+
+        // 5. Build prompt
+        let systemPrompt = mealPlanPromptBuilder.buildSystemPrompt()
+        let userPrompt = mealPlanPromptBuilder.buildPlanningPrompt(
+            query: query,
+            context: context,
+            conversationHistory: history
+        )
+
+        let fullPrompt = systemPrompt + "\n\n" + userPrompt
+
+        // 6. Send to Ollama
+        let response = try await llmProvider.generate(prompt: fullPrompt, model: "mistral:7b")
+
+        // 7. Extract meal/shop actions
+        let mealActions = actionExtractor.extractMealActions(from: response)
+        let shopActions = actionExtractor.extractShopActions(from: response)
+
+        // 8. Store pending actions if any
+        if !mealActions.isEmpty || !shopActions.isEmpty {
+            pendingMealActions = mealActions
+            pendingShopActions = shopActions
+        }
+
+        // 9. Clean response for display
+        return actionExtractor.removeMealAndShopMarkers(from: response)
+    }
+
+    /// Confirm a meal plan by writing pending actions to DB and triggering Obsidian export.
+    func confirmMealPlan(week: String) async throws {
+        guard let db = dataProvider as? DatabaseService else { return }
+
+        // 1. Create meal plan row
+        let planId = try await db.createMealPlan(week: week)
+
+        // 2. Insert meal plan items
+        for action in pendingMealActions {
+            try await db.insertMealPlanItem(
+                planId: planId,
+                day: action.day,
+                meal: action.meal,
+                recipeId: action.recipeId,
+                recipeTitle: action.recipeTitle
+            )
+        }
+
+        // 3. Insert shopping items
+        for action in pendingShopActions {
+            try await db.insertShoppingItem(
+                planId: planId,
+                ingredient: action.ingredient,
+                amount: action.amount,
+                unit: action.unit,
+                category: action.category
+            )
+        }
+
+        // 4. Mark as active
+        try await db.updateMealPlanStatus(id: planId, status: "active")
+
+        // 5. Trigger Obsidian export via TypeScript workflow
+        let runner = WorkflowRunner()
+        _ = await runner.run(
+            command: "/usr/local/bin/npx",
+            arguments: ["ts-node", "src/lib/meal-plan-exporter.ts", "--week", week],
+            workingDirectory: runner.projectRoot
+        )
+
+        // 6. Clear pending actions
+        pendingMealActions = []
+        pendingShopActions = []
+    }
+
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
         switch queryType {
         case .pattern: return 100
@@ -726,6 +846,7 @@ class ChatViewModel: ObservableObject {
         case .semantic: return 20  // Semantic queries return focused, conceptually related notes
         case .deepDive: return 50  // Deep-dive needs thread context
         case .synthesis: return 50  // Synthesis needs cross-thread context
+        case .mealPlanning: return 20  // Meal planning needs focused food/meal related notes
         }
     }
 
@@ -778,6 +899,8 @@ class ChatViewModel: ObservableObject {
             querySpecific = "\n\nThis is a deep-dive into a specific thread. Analyze the thread's evolution, key insights, tensions, and suggest next actions. Use [ACTION: description | ENERGY: level | TIMEFRAME: time] markers for actionable items."
         case .synthesis:
             querySpecific = "\n\nThis is a synthesis/prioritization request. Analyze active threads and help prioritize where to focus energy. Consider thread momentum, urgency, and the user's current energy state."
+        case .mealPlanning:
+            querySpecific = "\n\nThis is a meal planning query. Help plan meals, suggest recipes, create grocery lists, or provide cooking ideas based on preferences and dietary notes. Be practical and specific."
         }
 
         return basePrompt + querySpecific
