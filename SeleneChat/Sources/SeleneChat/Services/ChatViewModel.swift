@@ -791,6 +791,51 @@ class ChatViewModel: ObservableObject {
         return actionExtractor.removeMealAndShopMarkers(from: response)
     }
 
+    /// Confirm a meal plan by writing pending actions to DB and triggering Obsidian export.
+    func confirmMealPlan(week: String) async throws {
+        guard let db = dataProvider as? DatabaseService else { return }
+
+        // 1. Create meal plan row
+        let planId = try await db.createMealPlan(week: week)
+
+        // 2. Insert meal plan items
+        for action in pendingMealActions {
+            try await db.insertMealPlanItem(
+                planId: planId,
+                day: action.day,
+                meal: action.meal,
+                recipeId: action.recipeId,
+                recipeTitle: action.recipeTitle
+            )
+        }
+
+        // 3. Insert shopping items
+        for action in pendingShopActions {
+            try await db.insertShoppingItem(
+                planId: planId,
+                ingredient: action.ingredient,
+                amount: action.amount,
+                unit: action.unit,
+                category: action.category
+            )
+        }
+
+        // 4. Mark as active
+        try await db.updateMealPlanStatus(id: planId, status: "active")
+
+        // 5. Trigger Obsidian export via TypeScript workflow
+        let runner = WorkflowRunner()
+        _ = await runner.run(
+            command: "/usr/local/bin/npx",
+            arguments: ["ts-node", "src/lib/meal-plan-exporter.ts", "--week", week],
+            workingDirectory: runner.projectRoot
+        )
+
+        // 6. Clear pending actions
+        pendingMealActions = []
+        pendingShopActions = []
+    }
+
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {
         switch queryType {
         case .pattern: return 100

@@ -5,6 +5,7 @@
 
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import type { Database as DatabaseType } from 'better-sqlite3';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -131,4 +132,64 @@ export function exportToVault(
   writeFileSync(shoppingListPath, generateShoppingListMarkdown(week, shoppingItems), 'utf-8');
 
   return { mealPlanPath, shoppingListPath };
+}
+
+// ── CLI Entry Point ───────────────────────────────────────────────
+
+/**
+ * Export a meal plan from the database to the KitchenOS vault.
+ * Usage: npx ts-node src/lib/meal-plan-exporter.ts --week 2026-W08
+ */
+async function main(): Promise<void> {
+  const weekIdx = process.argv.indexOf('--week');
+  if (weekIdx === -1 || !process.argv[weekIdx + 1]) {
+    console.error('Usage: npx ts-node src/lib/meal-plan-exporter.ts --week <YYYY-Wnn>');
+    process.exit(1);
+  }
+  const week = process.argv[weekIdx + 1];
+
+  // Dynamic imports to avoid requiring these for library-only usage
+  const { db, config } = await import('../lib');
+
+  const vaultPath = config.kitchenOsVaultPath;
+  if (!vaultPath || !existsSync(vaultPath)) {
+    console.error(`KitchenOS vault not found at: ${vaultPath}`);
+    process.exit(1);
+  }
+
+  // Query meal plan items
+  const planRow = (db as DatabaseType).prepare(
+    'SELECT id FROM meal_plans WHERE week = ? AND test_run IS NULL'
+  ).get(week) as { id: number } | undefined;
+
+  if (!planRow) {
+    console.error(`No meal plan found for week: ${week}`);
+    process.exit(1);
+  }
+
+  const items = (db as DatabaseType).prepare(
+    'SELECT day, meal, recipe_title FROM meal_plan_items WHERE meal_plan_id = ? ORDER BY day, meal'
+  ).all(planRow.id) as MealPlanItem[];
+
+  const shoppingItems = (db as DatabaseType).prepare(
+    'SELECT ingredient, amount, unit, category FROM shopping_items WHERE meal_plan_id = ?'
+  ).all(planRow.id) as ShoppingItem[];
+
+  // Export
+  const result = exportToVault(vaultPath, week, items, shoppingItems);
+  console.log(`Exported meal plan to: ${result.mealPlanPath}`);
+  console.log(`Exported shopping list to: ${result.shoppingListPath}`);
+
+  // Update exported_at
+  (db as DatabaseType).prepare(
+    'UPDATE meal_plans SET exported_at = datetime("now") WHERE id = ?'
+  ).run(planRow.id);
+}
+
+// Run if called directly
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Export failed:', err.message);
+    process.exit(1);
+  });
 }
