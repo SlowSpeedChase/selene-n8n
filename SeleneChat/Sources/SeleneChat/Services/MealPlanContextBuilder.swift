@@ -1,4 +1,5 @@
 import Foundation
+import SeleneShared
 
 /// Builds LLM context for meal planning queries by combining recipe library,
 /// recent meal history, and nutrition targets into a structured context string.

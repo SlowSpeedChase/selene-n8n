@@ -155,6 +155,8 @@ actor RemoteDataService: DataProvider {
         case .deepDive, .synthesis:
             let query = keywords.joined(separator: " ")
             return try await searchNotes(query: query, limit: limit)
+        case .mealPlanning:
+            return try await getRecentNotes(days: 7, limit: limit)
         }
     }
 

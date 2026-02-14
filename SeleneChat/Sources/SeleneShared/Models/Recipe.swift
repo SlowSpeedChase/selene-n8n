@@ -1,28 +1,55 @@
 import Foundation
 
-struct Recipe: Identifiable, Hashable {
-    let id: Int64
-    let title: String
-    let filePath: String
-    let servings: Int?
-    let prepTimeMinutes: Int?
-    let cookTimeMinutes: Int?
-    let difficulty: String?
-    let cuisine: String?
-    let protein: String?
-    let dishType: String?
-    let mealOccasions: [String]
-    let dietary: [String]
-    let ingredients: [Ingredient]
-    let calories: Int?
+public struct Recipe: Identifiable, Hashable {
+    public let id: Int64
+    public let title: String
+    public let filePath: String
+    public let servings: Int?
+    public let prepTimeMinutes: Int?
+    public let cookTimeMinutes: Int?
+    public let difficulty: String?
+    public let cuisine: String?
+    public let protein: String?
+    public let dishType: String?
+    public let mealOccasions: [String]
+    public let dietary: [String]
+    public let ingredients: [Ingredient]
+    public let calories: Int?
 
-    struct Ingredient: Hashable, Codable {
-        let amount: String?
-        let unit: String?
-        let item: String
+    public init(id: Int64, title: String, filePath: String, servings: Int?,
+                prepTimeMinutes: Int?, cookTimeMinutes: Int?, difficulty: String?,
+                cuisine: String?, protein: String?, dishType: String?,
+                mealOccasions: [String], dietary: [String],
+                ingredients: [Ingredient], calories: Int?) {
+        self.id = id
+        self.title = title
+        self.filePath = filePath
+        self.servings = servings
+        self.prepTimeMinutes = prepTimeMinutes
+        self.cookTimeMinutes = cookTimeMinutes
+        self.difficulty = difficulty
+        self.cuisine = cuisine
+        self.protein = protein
+        self.dishType = dishType
+        self.mealOccasions = mealOccasions
+        self.dietary = dietary
+        self.ingredients = ingredients
+        self.calories = calories
     }
 
-    var totalTimeMinutes: Int? {
+    public struct Ingredient: Hashable, Codable {
+        public let amount: String?
+        public let unit: String?
+        public let item: String
+
+        public init(amount: String?, unit: String?, item: String) {
+            self.amount = amount
+            self.unit = unit
+            self.item = item
+        }
+    }
+
+    public var totalTimeMinutes: Int? {
         switch (prepTimeMinutes, cookTimeMinutes) {
         case let (prep?, cook?): return prep + cook
         case let (prep?, nil): return prep
@@ -32,7 +59,7 @@ struct Recipe: Identifiable, Hashable {
     }
 
     /// Compact one-line description for LLM context (low token cost)
-    var compactDescription: String {
+    public var compactDescription: String {
         var parts: [String] = [title]
         if let time = totalTimeMinutes { parts.append("\(time) min") }
         if let cuisine = cuisine { parts.append(cuisine) }
@@ -46,7 +73,7 @@ struct Recipe: Identifiable, Hashable {
 
 #if DEBUG
 extension Recipe {
-    static func mock(
+    public static func mock(
         id: Int64 = 1,
         title: String = "Test Recipe",
         filePath: String = "Recipes/Test.md",

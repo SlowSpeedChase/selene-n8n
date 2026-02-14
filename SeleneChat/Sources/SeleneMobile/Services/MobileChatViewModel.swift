@@ -353,6 +353,7 @@ class MobileChatViewModel: ObservableObject {
         case .semantic: return 20
         case .deepDive: return 50
         case .synthesis: return 50
+        case .mealPlanning: return 50
         }
     }
 
@@ -395,6 +396,8 @@ class MobileChatViewModel: ObservableObject {
             prompt += "\n\nAnalyze the thread's evolution, key insights, tensions, and suggest next actions."
         case .synthesis:
             prompt += "\n\nAnalyze active threads and help prioritize where to focus energy."
+        case .mealPlanning:
+            prompt += "\n\nHelp plan meals using the recipe library. Suggest concrete recipes and consider variety."
         }
 
         return prompt
