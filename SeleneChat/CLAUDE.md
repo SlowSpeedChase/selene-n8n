@@ -1,34 +1,56 @@
-# SeleneChat macOS App Context
+# SeleneChat Swift Package Context
 
 ## Purpose
 
-Native macOS app for querying and exploring notes stored in Selene SQLite database. Provides conversational interface with Ollama LLM and clickable citations for source notes. ADHD-optimized for quick note retrieval and visual knowledge exploration.
+Three-target Swift package containing SeleneChat (macOS menu bar app), SeleneMobile (iOS app), and SeleneShared (shared library). Provides conversational interface with Ollama LLM and clickable citations for source notes. ADHD-optimized for quick note retrieval and visual knowledge exploration.
+
+## Three-Target Structure
+
+```
+Package.swift
+├── SeleneShared (library)     # Shared models, protocols, utilities
+│   ├── Models/                # Note, Thread, ChatSession, Message, etc.
+│   ├── Protocols/             # DataProvider, LLMProvider
+│   └── Services/              # QueryAnalyzer, ContextBuilder, PrivacyRouter, etc.
+├── SeleneChat (macOS)         # Menu bar app, direct SQLite + Ollama
+│   ├── Services/              # DatabaseService, OllamaService, ChatViewModel
+│   ├── Views/                 # ChatView, BriefingView, ThreadWorkspaceView
+│   └── depends on: SeleneShared, SQLite.swift
+├── SeleneMobile (iOS)         # iOS app, REST API via Tailscale
+│   ├── Services/              # RemoteDataService, RemoteOllamaService, ConnectionManager
+│   ├── Views/                 # MobileChatView, MobileThreadsView, MobileBriefingView
+│   ├── Activities/            # Live Activities (ActivityKit)
+│   └── depends on: SeleneShared only
+└── SeleneChatTests            # Tests for SeleneChat + SeleneShared
+```
+
+**Key design:** macOS uses `DatabaseService` (direct SQLite) + `OllamaService` (direct HTTP). iOS uses `RemoteDataService` + `RemoteOllamaService` (both via Fastify REST API over Tailscale). Both conform to shared `DataProvider` and `LLMProvider` protocols from SeleneShared.
 
 ## Tech Stack
 
 - **Swift** 5.9+ (SwiftUI framework)
-- **SQLite.swift** - Swift wrapper for SQLite database
+- **SQLite.swift** - Swift wrapper for SQLite database (macOS only)
 - **Ollama** - Local LLM integration (mistral:7b)
 - **Swift Package Manager** - Dependency management
+- **ActivityKit** - Live Activities (iOS only)
 - **XCTest** - Testing framework
 
 ## Key Files
 
-- Package.swift - Swift package manifest with dependencies
-- Sources/App/SeleneChatApp.swift - App entry point
-- Sources/App/ContentView.swift - Main UI container
-- Sources/Models/ - Data models (Note, ChatMessage, Citation)
-- Sources/Services/ - Business logic (DatabaseService, SearchService, OllamaService)
-- Sources/Views/ - UI components (ChatView, CitationView, etc.)
-- Sources/Services/BriefingGenerator.swift - Morning briefing generation
-- Sources/ViewModels/BriefingViewModel.swift - Briefing state management
-- Sources/Views/BriefingView.swift - Morning briefing UI
-- Sources/Services/DeepDivePromptBuilder.swift - Thread deep-dive prompts
-- Sources/Services/ActionExtractor.swift - Parse actions from LLM responses
-- Sources/Services/ActionService.swift - Capture and manage actions
-- Sources/Services/SynthesisPromptBuilder.swift - Cross-thread synthesis prompts
+- Package.swift - Swift package manifest (3 targets)
+- Sources/SeleneShared/Protocols/DataProvider.swift - Data access protocol (29 methods)
+- Sources/SeleneShared/Protocols/LLMProvider.swift - LLM access protocol
+- Sources/SeleneChat/App/SeleneChatApp.swift - macOS app entry point
+- Sources/SeleneChat/Services/DatabaseService.swift - SQLite (implements DataProvider)
+- Sources/SeleneChat/Services/OllamaService.swift - Ollama HTTP (implements LLMProvider)
+- Sources/SeleneChat/Services/ChatViewModel.swift - macOS chat logic
+- Sources/SeleneMobile/App/SeleneMobileApp.swift - iOS app entry point
+- Sources/SeleneMobile/Services/RemoteDataService.swift - REST client (implements DataProvider)
+- Sources/SeleneMobile/Services/RemoteOllamaService.swift - LLM proxy (implements LLMProvider)
+- Sources/SeleneMobile/Services/MobileChatViewModel.swift - iOS chat logic
+- Sources/SeleneMobile/Services/ConnectionManager.swift - Tailscale connection management
 - Tests/ - Unit and integration tests
-- Sources/Debug/ - Debug logging and snapshot system (DEBUG builds only)
+- Sources/SeleneChat/Debug/ - Debug logging and snapshot system (DEBUG builds only)
 
 ## Architecture
 

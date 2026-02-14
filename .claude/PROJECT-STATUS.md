@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-02-13
-**Status:** Menu Bar Orchestrator | Voice Memo Transcription | Morning Briefing Redesign | Living System Active
+**Last Updated:** 2026-02-14
+**Status:** SeleneMobile iOS App | Server REST API | Living System Active
 
 ---
 
@@ -22,6 +22,15 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 All three "Ready" designs from 2026-02-12 are now implemented and merged. The system has grown significantly: menu bar orchestrator manages workflow scheduling, voice memos are auto-transcribed via whisper.cpp, and the morning briefing got a full redesign with structured cards.
 
 ### Recent Completions
+- **SeleneMobile iOS App** (2026-02-14) - Full-parity iOS app over Tailscale VPN
+  - Three-target SPM: SeleneShared + SeleneChat + SeleneMobile
+  - Protocol-based data layer: DataProvider, LLMProvider
+  - RemoteDataService (29 endpoints), RemoteOllamaService (LLM proxy)
+  - Chat, threads, briefing, voice input, push notifications, Live Activities
+  - ATS exception for Tailscale HTTP, APNs push via HTTP/2
+- **Server REST API** (2026-02-14) - Expanded Fastify with ~30 endpoints
+  - Bearer token auth middleware, Ollama proxy, device registration
+  - APNs push notifications for briefing and thread activity
 - **Morning Briefing Redesign** (2026-02-13) - Structured cards, deep context chat, cross-thread connections
 - **Menu Bar Orchestrator** (2026-02-13) - Silver Crystal icon, WorkflowScheduler replaces launchd, animated processing state
 - **Voice Memo Transcription** (2026-02-13) - whisper.cpp pipeline, auto-detect new recordings, Selene ingestion
@@ -67,6 +76,11 @@ The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat 
 | Daily Summary | `src/workflows/daily-summary.ts` | Done |
 | Apple Notes Digest | `src/workflows/send-digest.ts` | Done |
 | Voice Memo Transcription | `src/workflows/transcribe-voice-memos.ts` | Done |
+| Auth Middleware | `src/lib/auth.ts` | Done |
+| APNs Client | `src/lib/apns.ts` | Done |
+| REST API Endpoints | `src/server.ts` (~30 routes) | Done |
+| SeleneShared Library | `SeleneChat/Sources/SeleneShared/` | Done |
+| SeleneMobile iOS App | `SeleneChat/Sources/SeleneMobile/` | Done |
 | Launchd Agents | `launchd/*.plist` | Done |
 | Install Script | `scripts/install-launchd.sh` | Done |
 
@@ -88,10 +102,10 @@ The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat 
 Drafts App / Voice Memos
     |
     v
-Fastify Server (port 5678)
-    |
-    v
-SQLite Database (~/selene-data/selene.db) + LanceDB (~/selene-data/vectors.lance)
+Fastify Server (port 5678, auth middleware, ~30 REST endpoints, Ollama proxy)
+    |                                       ^
+    v                                       |
+SQLite Database + LanceDB        SeleneMobile (iOS via Tailscale)
     ^
     |
 SeleneChat Menu Bar (WorkflowScheduler) + launchd:
@@ -255,6 +269,8 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ## Next Steps
 
 **Completed:**
+- ✅ SeleneMobile iOS App (full parity chat, threads, briefing, voice, push, Live Activities)
+- ✅ Server REST API (~30 endpoints, auth, Ollama proxy, APNs push)
 - ✅ Menu Bar Orchestrator (Silver Crystal icon, WorkflowScheduler, animated states)
 - ✅ Voice Memo Transcription (whisper.cpp, auto-detect, Selene pipeline)
 - ✅ Apple Notes Daily Digest (replaced iMessage with pinned Apple Note)
@@ -291,6 +307,24 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 ---
 
 ## Recent Achievements
+
+### 2026-02-14
+- **SeleneMobile iOS App** - Native iOS app with full SeleneChat feature parity
+  - Three-target SPM: SeleneShared (shared library), SeleneChat (macOS), SeleneMobile (iOS)
+  - Protocol-based data layer: `DataProvider` (29 methods), `LLMProvider` (3 methods)
+  - `RemoteDataService` + `RemoteOllamaService` — REST clients over Tailscale VPN
+  - Chat, threads, briefing, voice input views
+  - `MobileChatViewModel` — simplified ChatViewModel using protocol abstractions
+  - `ConnectionManager` — Tailscale server URL + API token management
+  - `PushNotificationService` + `MobileAppDelegate` — APNs registration and handling
+  - `LiveActivityManager` — ActivityKit Live Activities during chat processing
+  - ATS exception (`NSAllowsLocalNetworking`) for Tailscale HTTP traffic
+- **Server REST API Expansion** - ~30 new Fastify endpoints for iOS access
+  - Bearer token auth middleware (`src/lib/auth.ts`)
+  - Notes, threads, sessions, memories, LLM proxy, briefing, device registration endpoints
+  - APNs HTTP/2 push notifications (`src/lib/apns.ts`) with JWT auth
+  - Notification triggers in `daily-summary.ts` and `detect-threads.ts`
+  - 25 implementation tasks across 5 phases, all completed
 
 ### 2026-02-13
 - **Morning Briefing Redesign** - Structured cards with BriefingCardView, deep context chat integration

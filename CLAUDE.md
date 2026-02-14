@@ -91,6 +91,7 @@ git worktree list
 +-------------------------------------------------------------+
 | TIER 3: RETRIEVE                                            |
 | SeleneChat (macOS menu bar) + Obsidian -> Query & Explore   |
+| SeleneMobile (iOS) -> Query via Tailscale REST API          |
 | Design: Information visible without mental overhead         |
 +-------------------------------------------------------------+
 ```
@@ -105,6 +106,8 @@ src/
     db.ts             # better-sqlite3 database utilities
     logger.ts         # Pino structured logging
     ollama.ts         # Ollama API client
+    auth.ts           # Bearer token auth middleware
+    apns.ts           # APNs push notification client
   workflows/
     ingest.ts                   # Note ingestion (called by webhook)
     process-llm.ts              # LLM concept extraction
@@ -278,6 +281,8 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Morning Briefing - Structured cards with deep context chat
 - Apple Notes Digest - Replaced iMessage with pinned daily note
 - Phase 7.2 - SeleneChat Planning Integration
+- SeleneMobile iOS App - Full parity chat, threads, briefing, voice input over Tailscale
+- Server REST API - Auth middleware, ~30 endpoints, Ollama proxy, APNs push notifications
 
 **Next Up (see `docs/plans/INDEX.md` for status):**
 - Thread Workspace Phase 3 - Feedback loop (Things sync, momentum updates)
@@ -315,7 +320,10 @@ selene-n8n/
 +-- docs/                    # Reference documentation
 |   +-- INDEX.md            # Documentation navigation
 |   +-- plans/              # Design documents
-+-- SeleneChat/              # macOS app
++-- SeleneChat/              # Swift package (3 targets)
+|   +-- Sources/SeleneShared/  # Shared models, protocols, utilities
+|   +-- Sources/SeleneChat/    # macOS menu bar app
+|   +-- Sources/SeleneMobile/  # iOS app (Tailscale REST client)
 +-- data/                    # SQLite database
     +-- selene.db
 ```
