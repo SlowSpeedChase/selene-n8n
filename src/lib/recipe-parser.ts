@@ -54,17 +54,17 @@ export function parseTimeToMinutes(timeStr: string): number | null {
   let totalMinutes = 0;
   let matched = false;
 
-  // Match hours: "2 hours", "2h", "1 hour"
-  const hourMatch = s.match(/(\d+)\s*(?:hours?|h)\b/);
+  // Match hours: "2 hours", "2h", "1 hour", "1.5 hours"
+  const hourMatch = s.match(/(?:^|\s)([\d.]+)\s*(?:hours?|h)\b/);
   if (hourMatch) {
-    totalMinutes += parseInt(hourMatch[1], 10) * 60;
+    totalMinutes += Math.round(parseFloat(hourMatch[1]) * 60);
     matched = true;
   }
 
-  // Match minutes: "30 min", "30 minutes", "15m"
-  const minMatch = s.match(/(\d+)\s*(?:minutes?|mins?|m)\b/);
+  // Match minutes: "30 min", "30 minutes", "15m", "1.5 min"
+  const minMatch = s.match(/(?:^|\s)([\d.]+)\s*(?:minutes?|mins?|m)\b/);
   if (minMatch) {
-    totalMinutes += parseInt(minMatch[1], 10);
+    totalMinutes += Math.round(parseFloat(minMatch[1]));
     matched = true;
   }
 
@@ -190,12 +190,12 @@ export function parseRecipeFrontmatter(content: string, filePath: string): Recip
 
   const getString = (key: string): string | null => {
     const val = yaml[key];
-    return typeof val === 'string' && val.length > 0 ? val : null;
+    return typeof val === 'string' && val.length > 0 && val !== 'null' ? val : null;
   };
 
   const getNumber = (key: string): number | null => {
     const val = yaml[key];
-    if (typeof val !== 'string') return null;
+    if (typeof val !== 'string' || val === 'null') return null;
     const n = parseFloat(val);
     return isNaN(n) ? null : n;
   };
@@ -288,20 +288,57 @@ export function parseRecipeCookingMode(content: string, filePath: string): Recip
 
   const ingredients = parseCookingModeIngredients(content);
 
+  // Extract servings: **4 servings** or **8 servings**
+  let servings: number | null = null;
+  const servingsMatch = content.match(/\*\*(\d+)\s+servings?\*\*/);
+  if (servingsMatch) {
+    servings = parseInt(servingsMatch[1], 10);
+  }
+
+  // Extract source: *Source: [Title](URL) by Channel*
+  let sourceUrl: string | null = null;
+  let sourceChannel: string | null = null;
+  const sourceMatch = content.match(/\*Source:\s*\[([^\]]*)\]\(([^)]+)\)(?:\s+by\s+(.+?))?\*/);
+  if (sourceMatch) {
+    sourceUrl = sourceMatch[2] || null;
+    sourceChannel = sourceMatch[3]?.trim() || null;
+  }
+
+  // Extract tags: first italic line that isn't a source line or ingredient
+  // Pattern: *tag1, tag2, tag3* (standalone italic, not **bold** or *Source:*)
+  let mealOccasions: string | null = null;
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Match standalone italic text: *words* but not **bold** and not *Source:*
+    const tagsMatch = trimmed.match(/^\*([^*]+)\*(?:\s|$)/);
+    if (tagsMatch && !trimmed.startsWith('*Source:') && !trimmed.startsWith('**')) {
+      const tagText = tagsMatch[1].trim();
+      // Must contain a comma (multi-tag) or look like a tag category
+      if (tagText.includes(',')) {
+        const tags = tagText.split(',').map(t => t.trim()).filter(t => t.length > 0);
+        if (tags.length > 0) {
+          mealOccasions = JSON.stringify(tags);
+        }
+        break;
+      }
+    }
+  }
+
   return {
     title,
     content_hash: computeContentHash(content),
-    source_url: null,
-    source_channel: null,
+    source_url: sourceUrl,
+    source_channel: sourceChannel,
     file_path: filePath,
-    servings: null,
+    servings,
     prep_time_minutes: null,
     cook_time_minutes: null,
     difficulty: null,
     cuisine: null,
     protein: null,
     dish_type: null,
-    meal_occasions: null,
+    meal_occasions: mealOccasions,
     dietary: null,
     ingredients: JSON.stringify(ingredients),
     calories: null,

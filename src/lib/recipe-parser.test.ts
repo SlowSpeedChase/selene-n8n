@@ -217,7 +217,7 @@ test('extracts ingredients from italic amount/unit pattern', () => {
   assert.deepStrictEqual(ingredients[2], { amount: '1/2', unit: 'tsp', item: 'salt' });
 });
 
-test('most metadata fields are null (no frontmatter)', () => {
+test('non-extractable metadata fields are null (no frontmatter)', () => {
   const row = parseRecipeCookingMode(COOKING_MODE_RECIPE, 'recipes/butter-biscuits.md');
   assert.strictEqual(row.source_url, null);
   assert.strictEqual(row.source_channel, null);
@@ -227,7 +227,6 @@ test('most metadata fields are null (no frontmatter)', () => {
   assert.strictEqual(row.cuisine, null);
   assert.strictEqual(row.protein, null);
   assert.strictEqual(row.dish_type, null);
-  assert.strictEqual(row.meal_occasions, null);
   assert.strictEqual(row.dietary, null);
   assert.strictEqual(row.calories, null);
   assert.strictEqual(row.nutrition_protein, null);
@@ -241,7 +240,128 @@ test('sets file_path and content_hash', () => {
   assert.ok(/^[a-f0-9]{64}$/.test(row.content_hash));
 });
 
-// ── 4. Content Hash Determinism ───────────────────────────────────
+// ── 4. YAML null Literal Handling (C1 fix) ───────────────────────
+
+console.log('\nYAML null literal handling:');
+
+test('protein: null in YAML returns null (not "null")', () => {
+  const recipe = `---
+title: Test Recipe
+protein: null
+calories: null
+---
+
+## Ingredients
+
+| amount | unit | ingredient |
+|--------|------|------------|
+| 1 | cup | rice |
+`;
+  const row = parseRecipeFrontmatter(recipe, 'test.md');
+  assert.strictEqual(row.protein, null, 'protein should be null, not the string "null"');
+  assert.strictEqual(row.calories, null, 'calories should be null, not NaN');
+});
+
+test('getString returns null for YAML null, getNumber returns null for YAML null', () => {
+  const recipe = `---
+title: Null Test
+cuisine: null
+servings: null
+difficulty: null
+fat: null
+---
+`;
+  const row = parseRecipeFrontmatter(recipe, 'test.md');
+  assert.strictEqual(row.cuisine, null);
+  assert.strictEqual(row.servings, null);
+  assert.strictEqual(row.difficulty, null);
+  assert.strictEqual(row.fat, null);
+});
+
+// ── 5. Decimal Time Parsing (C2 fix) ─────────────────────────────
+
+console.log('\nDecimal time parsing:');
+
+test('"1.5 hours" -> 90', () => {
+  assert.strictEqual(parseTimeToMinutes('1.5 hours'), 90);
+});
+
+test('"0.5 hours" -> 30', () => {
+  assert.strictEqual(parseTimeToMinutes('0.5 hours'), 30);
+});
+
+test('"2.5h" -> 150', () => {
+  assert.strictEqual(parseTimeToMinutes('2.5h'), 150);
+});
+
+test('"1.5 min" -> 2 (rounded)', () => {
+  assert.strictEqual(parseTimeToMinutes('1.5 min'), 2);
+});
+
+// ── 6. Cooking Mode Metadata Extraction (I1 fix) ────────────────
+
+console.log('\nCooking Mode metadata extraction:');
+
+test('extracts servings from **N servings** pattern', () => {
+  const row = parseRecipeCookingMode(COOKING_MODE_RECIPE, 'recipes/butter-biscuits.md');
+  assert.strictEqual(row.servings, 8);
+});
+
+test('extracts tags from italic line as meal_occasions', () => {
+  const row = parseRecipeCookingMode(COOKING_MODE_RECIPE, 'recipes/butter-biscuits.md');
+  assert.notStrictEqual(row.meal_occasions, null, 'meal_occasions should not be null');
+  const tags = JSON.parse(row.meal_occasions!) as string[];
+  assert.deepStrictEqual(tags, ['breakfast', 'baking']);
+});
+
+test('extracts source URL and channel from Source line', () => {
+  const recipeWithSource = `# Kung Pao Chicken
+
+> A spicy Sichuan classic.
+
+*Source: [Kung Pao Chicken](https://youtube.com/watch?v=abc) by Kenji Lopez-Alt*
+
+*chinese, main course* **4 servings**
+
+---
+
+- *2 lbs* chicken thighs
+- *1 tbsp* soy sauce
+
+---
+
+1. Cut chicken
+2. Stir fry
+`;
+  const row = parseRecipeCookingMode(recipeWithSource, 'recipes/kung-pao.md');
+  assert.strictEqual(row.source_url, 'https://youtube.com/watch?v=abc');
+  assert.strictEqual(row.source_channel, 'Kenji Lopez-Alt');
+  assert.strictEqual(row.servings, 4);
+  const tags = JSON.parse(row.meal_occasions!) as string[];
+  assert.deepStrictEqual(tags, ['chinese', 'main course']);
+});
+
+test('cooking mode without extractable metadata returns nulls', () => {
+  const minimal = `# Simple Soup
+
+---
+
+- *1 cup* water
+- *1 tsp* salt
+
+---
+
+1. Boil water
+2. Add salt
+`;
+  const row = parseRecipeCookingMode(minimal, 'recipes/soup.md');
+  assert.strictEqual(row.servings, null);
+  assert.strictEqual(row.source_url, null);
+  assert.strictEqual(row.source_channel, null);
+  assert.strictEqual(row.meal_occasions, null);
+});
+
+// ── 7. Content Hash Determinism ───────────────────────────────────
 
 console.log('\nContent hash determinism:');
 
