@@ -28,12 +28,12 @@ final class LiveActivityManager {
 
     /// Start a new Live Activity for a chat query.
     /// - Parameter query: The user's query text (will be truncated for display)
-    func startActivity(query: String) {
+    func startActivity(query: String) async {
         guard #available(iOS 16.2, *) else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         // End any existing activity before starting a new one
-        endActivity()
+        await endActivity()
 
         let truncatedQuery = String(query.prefix(60)) + (query.count > 60 ? "..." : "")
 
@@ -60,25 +60,23 @@ final class LiveActivityManager {
     /// - Parameters:
     ///   - status: Description of current processing step
     ///   - progress: Progress value from 0.0 to 1.0
-    func updateActivity(status: String, progress: Double) {
+    func updateActivity(status: String, progress: Double) async {
         guard #available(iOS 16.2, *) else { return }
         guard let activity = currentActivity else { return }
 
         let updatedState = SeleneChatActivity.ContentState(
             status: status,
-            progress: progress
+            progress: min(1.0, max(0.0, progress))
         )
 
-        Task {
-            await activity.update(
-                ActivityContent(state: updatedState, staleDate: nil)
-            )
-        }
+        await activity.update(
+            ActivityContent(state: updatedState, staleDate: nil)
+        )
     }
 
     /// End the current Live Activity.
     /// Shows "Complete" briefly before dismissing.
-    func endActivity() {
+    func endActivity() async {
         guard #available(iOS 16.2, *) else { return }
         guard let activity = currentActivity else { return }
 
@@ -87,12 +85,10 @@ final class LiveActivityManager {
             progress: 1.0
         )
 
-        Task {
-            await activity.end(
-                ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .after(.now + 4)
-            )
-        }
+        await activity.end(
+            ActivityContent(state: finalState, staleDate: nil),
+            dismissalPolicy: .after(.now + 4)
+        )
 
         currentActivity = nil
     }

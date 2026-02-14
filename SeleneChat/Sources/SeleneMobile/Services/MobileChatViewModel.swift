@@ -40,14 +40,9 @@ class MobileChatViewModel: ObservableObject {
     func sendMessage(_ content: String) async {
         isProcessing = true
         #if os(iOS)
-        liveActivityManager.startActivity(query: content)
+        await liveActivityManager.startActivity(query: content)
         #endif
-        defer {
-            isProcessing = false
-            #if os(iOS)
-            liveActivityManager.endActivity()
-            #endif
-        }
+        defer { isProcessing = false }
 
         let userMessage = Message(
             role: .user,
@@ -60,32 +55,38 @@ class MobileChatViewModel: ObservableObject {
             // Check for thread queries first
             if let threadIntent = queryAnalyzer.detectThreadIntent(content) {
                 #if os(iOS)
-                liveActivityManager.updateActivity(status: "Loading threads...", progress: 0.5)
+                await liveActivityManager.updateActivity(status: "Loading threads...", progress: 0.5)
                 #endif
                 let response = try await handleThreadQuery(intent: threadIntent)
                 let assistantMessage = Message(role: .assistant, content: response, llmTier: .onDevice, queryType: "thread")
                 currentSession.addMessage(assistantMessage)
                 await saveSession()
+                #if os(iOS)
+                await liveActivityManager.endActivity()
+                #endif
                 return
             }
 
             // Check for synthesis queries
             if queryAnalyzer.detectSynthesisIntent(content) {
                 #if os(iOS)
-                liveActivityManager.updateActivity(status: "Synthesizing threads...", progress: 0.4)
+                await liveActivityManager.updateActivity(status: "Synthesizing threads...", progress: 0.4)
                 #endif
                 let (response, citedNotes, contextNotes, queryType) = try await handleSynthesisQuery(query: content)
                 let assistantMessage = Message(role: .assistant, content: response, llmTier: .local,
                                               citedNotes: citedNotes, contextNotes: contextNotes, queryType: queryType)
                 currentSession.addMessage(assistantMessage)
                 await saveSession()
+                #if os(iOS)
+                await liveActivityManager.endActivity()
+                #endif
                 return
             }
 
             // Check for deep-dive queries
             if let deepDiveIntent = queryAnalyzer.detectDeepDiveIntent(content) {
                 #if os(iOS)
-                liveActivityManager.updateActivity(status: "Deep-diving...", progress: 0.4)
+                await liveActivityManager.updateActivity(status: "Deep-diving...", progress: 0.4)
                 #endif
                 let (response, citedNotes, contextNotes, queryType) = try await handleDeepDiveQuery(
                     threadName: deepDiveIntent.threadName, query: content)
@@ -93,12 +94,15 @@ class MobileChatViewModel: ObservableObject {
                                               citedNotes: citedNotes, contextNotes: contextNotes, queryType: queryType)
                 currentSession.addMessage(assistantMessage)
                 await saveSession()
+                #if os(iOS)
+                await liveActivityManager.endActivity()
+                #endif
                 return
             }
 
             // Standard query with LLM
             #if os(iOS)
-            liveActivityManager.updateActivity(status: "Thinking...", progress: 0.6)
+            await liveActivityManager.updateActivity(status: "Thinking...", progress: 0.6)
             #endif
             let (response, citedNotes, contextNotes, queryType) = try await handleOllamaQuery(query: content)
             let assistantMessage = Message(role: .assistant, content: response, llmTier: .local,
@@ -109,12 +113,19 @@ class MobileChatViewModel: ObservableObject {
             // Save conversation messages (no memory extraction on iOS)
             saveConversationMessages(userMessage: content, assistantResponse: response)
 
+            #if os(iOS)
+            await liveActivityManager.endActivity()
+            #endif
+
         } catch {
             self.error = error.localizedDescription
             let errorMessage = Message(role: .assistant,
                                       content: "I encountered an error: \(error.localizedDescription)",
                                       llmTier: .onDevice)
             currentSession.addMessage(errorMessage)
+            #if os(iOS)
+            await liveActivityManager.endActivity()
+            #endif
         }
     }
 
