@@ -171,7 +171,18 @@ class DatabaseService: ObservableObject {
     private let mealPlanItemsMealPlanId = Expression<Int64>("meal_plan_id")
     private let mealPlanItemsDay = Expression<String>("day")
     private let mealPlanItemsMeal = Expression<String>("meal")
+    private let mealPlanItemsRecipeId = Expression<Int64?>("recipe_id")
     private let mealPlanItemsRecipeTitle = Expression<String>("recipe_title")
+    private let mealPlanItemsNotes = Expression<String?>("notes")
+
+    // shopping_items table
+    private let shoppingItemsTable = Table("shopping_items")
+    private let shoppingItemsId = Expression<Int64>("id")
+    private let shoppingItemsMealPlanId = Expression<Int64>("meal_plan_id")
+    private let shoppingItemsIngredient = Expression<String>("ingredient")
+    private let shoppingItemsAmount = Expression<Double?>("amount")
+    private let shoppingItemsUnit = Expression<String?>("unit")
+    private let shoppingItemsCategory = Expression<String?>("category")
 
     // MARK: - Date Formatter (with fractional seconds support)
 
@@ -215,6 +226,7 @@ class DatabaseService: ObservableObject {
             try? Migration007_ThingsHeading.run(db: db!)
             try? Migration008_ConversationMemory.run(db: db!)
             try? Migration009_ThreadTasks.run(db: db!)
+            try? Migration010_KitchenOSRecipes.run(db: db!)
 
             // Configure services that need database access
             if let db = db {
@@ -2369,6 +2381,72 @@ class DatabaseService: ObservableObject {
             ingredients: ingredientsList,
             calories: row[recipesCalories].map { Int($0) }
         )
+    }
+
+    // MARK: - Meal Plan Write Operations
+
+    func createMealPlan(week: String, testRun: String? = nil) async throws -> Int64 {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let insert = mealPlansTable.insert(
+            mealPlansWeek <- week,
+            mealPlansStatus <- "draft",
+            Expression<String>("created_at") <- now,
+            mealPlansTestRun <- testRun
+        )
+
+        let rowId = try db.run(insert)
+        return rowId
+    }
+
+    func insertMealPlanItem(planId: Int64, day: String, meal: String, recipeId: Int64?, recipeTitle: String, notes: String? = nil) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let insert = mealPlanItemsTable.insert(
+            mealPlanItemsMealPlanId <- planId,
+            mealPlanItemsDay <- day,
+            mealPlanItemsMeal <- meal,
+            mealPlanItemsRecipeId <- recipeId,
+            mealPlanItemsRecipeTitle <- recipeTitle,
+            mealPlanItemsNotes <- notes
+        )
+
+        try db.run(insert)
+    }
+
+    func insertShoppingItem(planId: Int64, ingredient: String, amount: Double?, unit: String?, category: String?) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let insert = shoppingItemsTable.insert(
+            shoppingItemsMealPlanId <- planId,
+            shoppingItemsIngredient <- ingredient,
+            shoppingItemsAmount <- amount,
+            shoppingItemsUnit <- unit,
+            shoppingItemsCategory <- category,
+            Expression<String>("created_at") <- now
+        )
+
+        try db.run(insert)
+    }
+
+    func updateMealPlanStatus(id: Int64, status: String) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let plan = mealPlansTable.filter(mealPlansId == id)
+        try db.run(plan.update(
+            mealPlansStatus <- status,
+            Expression<String?>("updated_at") <- now
+        ))
+    }
+
+    func deleteMealPlan(id: Int64) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+
+        let plan = mealPlansTable.filter(mealPlansId == id)
+        try db.run(plan.delete())
     }
 
     // MARK: - Error Types
