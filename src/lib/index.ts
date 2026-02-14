@@ -7,6 +7,12 @@ export {
   markProcessed,
   findByContentHash,
   insertNote,
+  getAllNotes,
+  getNoteById,
+  searchNotesKeyword,
+  getRecentNotes,
+  getNotesSince,
+  getThreadAssignmentsForNotes,
 } from './db';
 export type { RawNote } from './db';
 export { generate, embed, isAvailable } from './ollama';

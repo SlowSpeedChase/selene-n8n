@@ -1,4 +1,5 @@
 import { createWorkflowLogger, db, generate, embed, searchSimilarNotes, getIndexedNoteIds } from '../lib';
+import { notifyNewThread } from '../lib/apns';
 import type { WorkflowResult } from '../types';
 
 const log = createWorkflowLogger('detect-threads');
@@ -490,6 +491,9 @@ export async function detectThreads(threshold = DEFAULT_SIMILARITY_THRESHOLD): P
 
       // Create thread
       const threadId = createThread(synthesis, unthreadedNotes);
+
+      // Notify iOS devices about new thread
+      await notifyNewThread(synthesis.name);
 
       // Mark these notes as threaded for subsequent iterations
       for (const noteId of unthreadedNotes) {

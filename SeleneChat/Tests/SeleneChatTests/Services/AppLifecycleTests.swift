@@ -1,3 +1,4 @@
+import SeleneShared
 import XCTest
 import AppKit
 @testable import SeleneChat

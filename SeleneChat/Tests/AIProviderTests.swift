@@ -1,3 +1,4 @@
+import SeleneShared
 // SeleneChat/Tests/AIProviderTests.swift
 import XCTest
 @testable import SeleneChat
