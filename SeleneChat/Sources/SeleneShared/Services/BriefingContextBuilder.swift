@@ -1,23 +1,26 @@
-import SeleneShared
 import Foundation
 
 /// Assembles deep context for "Discuss this" chat sessions from briefing cards.
 /// When a user taps "Discuss this" on a briefing card, this service builds the
 /// context string that gets sent to the LLM so Selene can have an informed conversation.
-class BriefingContextBuilder {
+public class BriefingContextBuilder {
 
     /// Context types matching card types
-    enum ContextType {
+    public enum ContextType {
         case whatChanged
         case needsAttention
         case connection
     }
 
+    // MARK: - Init
+
+    public init() {}
+
     // MARK: - What Changed Context
 
     /// Build context for discussing a specific new note.
     /// Includes: full note content, parent thread, related notes, tasks, memories.
-    func buildWhatChangedContext(
+    public func buildWhatChangedContext(
         note: Note,
         thread: Thread?,
         relatedNotes: [Note],
@@ -63,7 +66,7 @@ class BriefingContextBuilder {
 
     /// Build context for discussing a stalled thread.
     /// Includes: thread details, recent notes, tasks, memories.
-    func buildNeedsAttentionContext(
+    public func buildNeedsAttentionContext(
         thread: Thread,
         recentNotes: [Note],
         tasks: [ThreadTask],
@@ -94,7 +97,7 @@ class BriefingContextBuilder {
     // MARK: - Connection Context
 
     /// Build context for discussing a connection between two notes from different threads.
-    func buildConnectionContext(
+    public func buildConnectionContext(
         noteA: Note, threadA: Thread?,
         noteB: Note, threadB: Thread?,
         relatedToA: [Note], relatedToB: [Note],
@@ -150,7 +153,7 @@ class BriefingContextBuilder {
     // MARK: - System Prompt
 
     /// Build system prompt for discuss-this chat sessions.
-    func buildSystemPrompt(for contextType: ContextType) -> String {
+    public func buildSystemPrompt(for contextType: ContextType) -> String {
         let typeGuidance: String
         switch contextType {
         case .whatChanged:

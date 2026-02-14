@@ -1,8 +1,7 @@
-import SeleneShared
 import Foundation
 
-class PrivacyRouter {
-    static let shared = PrivacyRouter()
+public class PrivacyRouter {
+    public static let shared = PrivacyRouter()
 
     // Keywords that indicate sensitive content
     private let sensitiveKeywords = [
@@ -32,13 +31,13 @@ class PrivacyRouter {
         "frontend", "deployment", "infrastructure"
     ]
 
-    enum RoutingDecision {
+    public enum RoutingDecision {
         case onDevice(reason: String)
         case privateCloud(reason: String)
         case external(reason: String)
         case local(reason: String)
 
-        var tier: Message.LLMTier {
+        public var tier: Message.LLMTier {
             switch self {
             case .onDevice: return .onDevice
             case .privateCloud: return .privateCloud
@@ -47,7 +46,7 @@ class PrivacyRouter {
             }
         }
 
-        var reason: String {
+        public var reason: String {
             switch self {
             case .onDevice(let r), .privateCloud(let r), .external(let r), .local(let r):
                 return r
@@ -55,7 +54,9 @@ class PrivacyRouter {
         }
     }
 
-    func routeQuery(_ query: String, relatedNotes: [Note] = []) -> RoutingDecision {
+    public init() {}
+
+    public func routeQuery(_ query: String, relatedNotes: [Note] = []) -> RoutingDecision {
         // Phase 2: All queries route to local Ollama for maximum insight
         // Future: Add complex routing when Claude API integration is needed
         return .local(reason: "Local LLM processing with Ollama for actionable insights")
@@ -93,7 +94,7 @@ class PrivacyRouter {
         }
     }
 
-    func shouldUsePrivateCloud(_ query: String) -> Bool {
+    public func shouldUsePrivateCloud(_ query: String) -> Bool {
         // Use Private Cloud Compute for complex queries that need more compute
         // but still contain sensitive data
         let lowercaseQuery = query.lowercased()
@@ -114,7 +115,7 @@ class PrivacyRouter {
         return isComplex && containsSensitive
     }
 
-    func getRoutingExplanation(for query: String, decision: RoutingDecision) -> String {
+    public func getRoutingExplanation(for query: String, decision: RoutingDecision) -> String {
         """
         Query routed to: \(decision.tier.rawValue)
         Reason: \(decision.reason)

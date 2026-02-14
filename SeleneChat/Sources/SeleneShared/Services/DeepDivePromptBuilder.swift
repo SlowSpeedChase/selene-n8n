@@ -1,9 +1,8 @@
-import SeleneShared
 import Foundation
 
 /// Builds specialized prompts for thread deep-dive conversations.
 /// Uses ADHD-friendly framing and includes action marker instructions.
-class DeepDivePromptBuilder {
+public class DeepDivePromptBuilder {
 
     private let contextBuilder = ThinkingPartnerContextBuilder()
 
@@ -15,6 +14,10 @@ class DeepDivePromptBuilder {
     [ACTION: Brief action description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
     """
 
+    // MARK: - Init
+
+    public init() {}
+
     // MARK: - Initial Prompt
 
     /// Build the initial prompt for starting a deep-dive into a thread.
@@ -22,7 +25,7 @@ class DeepDivePromptBuilder {
     ///   - thread: The thread to explore
     ///   - notes: The notes belonging to this thread
     /// - Returns: A formatted prompt string for the LLM
-    func buildInitialPrompt(thread: Thread, notes: [Note]) -> String {
+    public func buildInitialPrompt(thread: Thread, notes: [Note]) -> String {
         let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
 
         return """
@@ -50,7 +53,7 @@ class DeepDivePromptBuilder {
     ///   - conversationHistory: Previous exchanges in this deep-dive session
     ///   - currentQuery: The user's current question
     /// - Returns: A formatted prompt string for the LLM
-    func buildFollowUpPrompt(
+    public func buildFollowUpPrompt(
         thread: Thread,
         notes: [Note],
         conversationHistory: String,

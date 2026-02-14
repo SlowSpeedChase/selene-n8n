@@ -1,34 +1,48 @@
-import SeleneShared
 import Foundation
 import SwiftUI
 
 /// Parses Ollama responses for note citations and creates attributed strings with tappable links
-class CitationParser {
+public class CitationParser {
 
     // MARK: - Types
 
-    struct ParsedCitation: Identifiable {
-        let id = UUID()
-        let noteTitle: String
-        let noteDate: String
-        let range: Range<String.Index>
+    public struct ParsedCitation: Identifiable {
+        public let id = UUID()
+        public let noteTitle: String
+        public let noteDate: String
+        public let range: Range<String.Index>
 
         /// Original citation text like "[Note: 'Title' - Date]"
-        var fullText: String {
+        public var fullText: String {
             "[Note: '\(noteTitle)' - \(noteDate)]"
+        }
+
+        public init(noteTitle: String, noteDate: String, range: Range<String.Index>) {
+            self.noteTitle = noteTitle
+            self.noteDate = noteDate
+            self.range = range
         }
     }
 
-    struct ParseResult {
-        let attributedText: AttributedString
-        let citations: [ParsedCitation]
+    public struct ParseResult {
+        public let attributedText: AttributedString
+        public let citations: [ParsedCitation]
+
+        public init(attributedText: AttributedString, citations: [ParsedCitation]) {
+            self.attributedText = attributedText
+            self.citations = citations
+        }
     }
+
+    // MARK: - Init
+
+    public init() {}
 
     // MARK: - Parsing
 
     /// Parse citations from Ollama response text
     /// Pattern: [Note: 'Title' - Date]
-    static func parse(_ text: String) -> ParseResult {
+    public static func parse(_ text: String) -> ParseResult {
         // Regex pattern to match: [Note: 'Title' - Date]
         let pattern = #"\[Note: '([^']+)' - ([^\]]+)\]"#
 
@@ -100,7 +114,7 @@ class CitationParser {
     // MARK: - Citation Matching
 
     /// Find the note that matches a citation from the provided note list
-    static func findNote(for citation: ParsedCitation, in notes: [Note]) -> Note? {
+    public static func findNote(for citation: ParsedCitation, in notes: [Note]) -> Note? {
         // Try exact title match first
         if let exactMatch = notes.first(where: { $0.title == citation.noteTitle }) {
             return exactMatch
@@ -142,7 +156,7 @@ class CitationParser {
     }
 
     /// Extract citation info from a selene-note:// URL
-    static func extractCitation(from url: URL) -> ParsedCitation? {
+    public static func extractCitation(from url: URL) -> ParsedCitation? {
         guard url.scheme == "selene-note" else { return nil }
 
         let pathComponents = url.pathComponents.filter { $0 != "/" }

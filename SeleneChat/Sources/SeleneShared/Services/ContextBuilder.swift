@@ -1,13 +1,16 @@
-import SeleneShared
 import Foundation
 
 /// Builds optimal context strings for Ollama based on query type and available notes
-class ContextBuilder {
+public class ContextBuilder {
+
+    // MARK: - Init
+
+    public init() {}
 
     // MARK: - Public Methods
 
     /// Build context string adapted to query type
-    func buildContext(notes: [Note], queryType: QueryAnalyzer.QueryType) -> String {
+    public func buildContext(notes: [Note], queryType: QueryAnalyzer.QueryType) -> String {
         switch queryType {
         case .pattern:
             return buildMetadataContext(notes)
@@ -136,8 +139,8 @@ class ContextBuilder {
         return formatter.string(from: date)
     }
 
-    /// Estimate context size in tokens (rough: 1 token ≈ 4 characters)
-    func estimateTokenCount(for context: String) -> Int {
+    /// Estimate context size in tokens (rough: 1 token ~ 4 characters)
+    public func estimateTokenCount(for context: String) -> Int {
         return context.count / 4
     }
 }

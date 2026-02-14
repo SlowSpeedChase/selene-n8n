@@ -1,12 +1,11 @@
-import SeleneShared
 import Foundation
 
 /// Analyzes user queries to determine query type, extract keywords, and infer time scope
-class QueryAnalyzer {
+public class QueryAnalyzer {
 
     // MARK: - Types
 
-    enum QueryType {
+    public enum QueryType {
         case pattern      // Trend/pattern detection: "what patterns...", "how often..."
         case search       // Find specific notes: "show me...", "find notes about..."
         case knowledge    // Answer from content: "what did I say...", "remind me..."
@@ -17,7 +16,7 @@ class QueryAnalyzer {
         case synthesis    // Cross-thread synthesis: "what should I focus on?"
     }
 
-    enum TimeScope {
+    public enum TimeScope {
         case recent       // Last 7 days
         case thisWeek     // Current week
         case thisMonth    // Current month
@@ -25,19 +24,29 @@ class QueryAnalyzer {
         case custom(from: Date, to: Date)
     }
 
-    enum ThreadQueryIntent {
+    public enum ThreadQueryIntent {
         case listActive           // "what's emerging"
         case showSpecific(String) // "show me X thread"
     }
 
-    struct DeepDiveIntent {
-        let threadName: String
+    public struct DeepDiveIntent {
+        public let threadName: String
+
+        public init(threadName: String) {
+            self.threadName = threadName
+        }
     }
 
-    struct AnalysisResult {
-        let queryType: QueryType
-        let keywords: [String]
-        let timeScope: TimeScope
+    public struct AnalysisResult {
+        public let queryType: QueryType
+        public let keywords: [String]
+        public let timeScope: TimeScope
+
+        public init(queryType: QueryType, keywords: [String], timeScope: TimeScope) {
+            self.queryType = queryType
+            self.keywords = keywords
+            self.timeScope = timeScope
+        }
     }
 
     // MARK: - Detection Patterns
@@ -112,9 +121,13 @@ class QueryAnalyzer {
         "after", "above", "below", "between", "under", "i", "me", "my"
     ])
 
+    // MARK: - Init
+
+    public init() {}
+
     // MARK: - Public Methods
 
-    func analyze(_ query: String) -> AnalysisResult {
+    public func analyze(_ query: String) -> AnalysisResult {
         let lowercased = query.lowercased()
 
         let queryType = detectQueryType(lowercased)
@@ -129,7 +142,7 @@ class QueryAnalyzer {
     }
 
     /// Determine if a query should use semantic (vector) search
-    func shouldUseSemanticSearch(_ query: String) -> Bool {
+    public func shouldUseSemanticSearch(_ query: String) -> Bool {
         let queryType = detectQueryType(query.lowercased())
 
         switch queryType {
@@ -252,7 +265,7 @@ class QueryAnalyzer {
     }
 
     /// Detect if query is thread-related and extract intent
-    func detectThreadIntent(_ query: String) -> ThreadQueryIntent? {
+    public func detectThreadIntent(_ query: String) -> ThreadQueryIntent? {
         let lowercased = query.lowercased()
 
         // Check for list queries first
@@ -275,7 +288,7 @@ class QueryAnalyzer {
     }
 
     /// Detect if query is a deep-dive request and extract the thread name
-    func detectDeepDiveIntent(_ query: String) -> DeepDiveIntent? {
+    public func detectDeepDiveIntent(_ query: String) -> DeepDiveIntent? {
         let lowercased = query.lowercased()
 
         // Check if query contains any deep-dive indicators
@@ -314,7 +327,7 @@ class QueryAnalyzer {
     }
 
     /// Detect if query is a synthesis/prioritization request
-    func detectSynthesisIntent(_ query: String) -> Bool {
+    public func detectSynthesisIntent(_ query: String) -> Bool {
         let lowercased = query.lowercased()
         for indicator in synthesisIndicators {
             if lowercased.contains(indicator) {
@@ -353,7 +366,7 @@ class QueryAnalyzer {
 // MARK: - CustomStringConvertible
 
 extension QueryAnalyzer.QueryType: CustomStringConvertible {
-    var description: String {
+    public var description: String {
         switch self {
         case .pattern: return "pattern"
         case .search: return "search"
@@ -368,7 +381,7 @@ extension QueryAnalyzer.QueryType: CustomStringConvertible {
 }
 
 extension QueryAnalyzer.TimeScope: CustomStringConvertible {
-    var description: String {
+    public var description: String {
         switch self {
         case .recent: return "recent (last 7 days)"
         case .thisWeek: return "this week"

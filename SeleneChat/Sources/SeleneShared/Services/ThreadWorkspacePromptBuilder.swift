@@ -1,9 +1,8 @@
-import SeleneShared
 import Foundation
 
 /// Builds prompts for thread workspace chat conversations.
 /// Similar to DeepDivePromptBuilder but includes task state context.
-class ThreadWorkspacePromptBuilder {
+public class ThreadWorkspacePromptBuilder {
 
     private let contextBuilder = ThinkingPartnerContextBuilder()
 
@@ -14,6 +13,10 @@ class ThreadWorkspacePromptBuilder {
     [ACTION: Brief action description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
     """
 
+    // MARK: - Init
+
+    public init() {}
+
     // MARK: - Initial Prompt
 
     /// Build the initial prompt for a workspace chat session.
@@ -22,7 +25,7 @@ class ThreadWorkspacePromptBuilder {
     ///   - notes: Notes belonging to this thread
     ///   - tasks: Current tasks linked to this thread
     /// - Returns: A formatted prompt string for the LLM
-    func buildInitialPrompt(thread: Thread, notes: [Note], tasks: [ThreadTask]) -> String {
+    public func buildInitialPrompt(thread: Thread, notes: [Note], tasks: [ThreadTask]) -> String {
         let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
         let taskContext = buildTaskContext(tasks)
 
@@ -51,7 +54,7 @@ class ThreadWorkspacePromptBuilder {
     ///   - conversationHistory: Previous exchanges in this session
     ///   - currentQuery: The user's current question
     /// - Returns: A formatted prompt string for the LLM
-    func buildFollowUpPrompt(
+    public func buildFollowUpPrompt(
         thread: Thread,
         notes: [Note],
         tasks: [ThreadTask],

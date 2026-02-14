@@ -1,9 +1,8 @@
-import SeleneShared
 import Foundation
 
 /// Compute cosine similarity between two vectors. Returns -1.0 to 1.0.
 /// Returns 0.0 for empty, mismatched, or zero-magnitude vectors.
-func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
+public func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
     guard a.count == b.count, !a.isEmpty else { return 0.0 }
 
     var dotProduct: Float = 0.0
@@ -24,7 +23,7 @@ func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
 
 /// Serialize [Float] to raw bytes for SQLite BLOB storage.
 /// Format: contiguous Float32 values in native byte order.
-func serializeEmbedding(_ embedding: [Float]) -> Data {
+public func serializeEmbedding(_ embedding: [Float]) -> Data {
     return embedding.withUnsafeBufferPointer { buffer in
         Data(buffer: buffer)
     }
@@ -32,7 +31,7 @@ func serializeEmbedding(_ embedding: [Float]) -> Data {
 
 /// Deserialize raw bytes from SQLite BLOB to [Float].
 /// Returns nil if data size is not a multiple of Float size.
-func deserializeEmbedding(_ data: Data) -> [Float]? {
+public func deserializeEmbedding(_ data: Data) -> [Float]? {
     let floatSize = MemoryLayout<Float>.size
     guard data.count % floatSize == 0 else { return nil }
 

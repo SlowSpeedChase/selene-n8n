@@ -1,24 +1,29 @@
-import SeleneShared
 import Foundation
 
 /// Extracts action items from LLM responses using structured markers
 /// Format: [ACTION: description | ENERGY: level | TIMEFRAME: time]
-class ActionExtractor {
+public class ActionExtractor {
 
     // MARK: - Types
 
-    struct ExtractedAction: Equatable {
-        let description: String
-        let energy: EnergyLevel
-        let timeframe: Timeframe
+    public struct ExtractedAction: Equatable {
+        public let description: String
+        public let energy: EnergyLevel
+        public let timeframe: Timeframe
 
-        enum EnergyLevel: String, Equatable {
+        public init(description: String, energy: EnergyLevel, timeframe: Timeframe) {
+            self.description = description
+            self.energy = energy
+            self.timeframe = timeframe
+        }
+
+        public enum EnergyLevel: String, Equatable {
             case high
             case medium
             case low
         }
 
-        enum Timeframe: String, Equatable {
+        public enum Timeframe: String, Equatable {
             case today = "today"
             case thisWeek = "this-week"
             case someday = "someday"
@@ -31,12 +36,16 @@ class ActionExtractor {
     /// Format: [ACTION: description | ENERGY: level | TIMEFRAME: time]
     private let actionPattern = #"\[ACTION:\s*([^|]+)\s*\|\s*ENERGY:\s*(\w+)\s*\|\s*TIMEFRAME:\s*([^\]]+)\]"#
 
+    // MARK: - Init
+
+    public init() {}
+
     // MARK: - Public Methods
 
     /// Extract all action items from an LLM response
     /// - Parameter response: The LLM response string
     /// - Returns: Array of extracted actions
-    func extractActions(from response: String) -> [ExtractedAction] {
+    public func extractActions(from response: String) -> [ExtractedAction] {
         guard let regex = try? NSRegularExpression(pattern: actionPattern, options: .caseInsensitive) else {
             return []
         }
@@ -73,7 +82,7 @@ class ActionExtractor {
     /// Remove action markers from a response for display
     /// - Parameter response: The LLM response string with action markers
     /// - Returns: Cleaned string without action markers
-    func removeActionMarkers(from response: String) -> String {
+    public func removeActionMarkers(from response: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: actionPattern, options: .caseInsensitive) else {
             return response.trimmingCharacters(in: .whitespacesAndNewlines)
         }

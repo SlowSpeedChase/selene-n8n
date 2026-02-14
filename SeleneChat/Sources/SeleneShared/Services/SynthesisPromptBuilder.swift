@@ -1,9 +1,12 @@
-import SeleneShared
 import Foundation
 
 /// Builds specialized prompts for cross-thread synthesis and prioritization queries
-class SynthesisPromptBuilder {
+public class SynthesisPromptBuilder {
     private let contextBuilder = ThinkingPartnerContextBuilder()
+
+    // MARK: - Init
+
+    public init() {}
 
     // MARK: - Public Methods
 
@@ -12,7 +15,7 @@ class SynthesisPromptBuilder {
     ///   - threads: Active threads to consider for prioritization
     ///   - notesPerThread: Recent notes organized by thread ID
     /// - Returns: A complete prompt for the LLM
-    func buildSynthesisPrompt(threads: [Thread], notesPerThread: [Int64: [Note]]) -> String {
+    public func buildSynthesisPrompt(threads: [Thread], notesPerThread: [Int64: [Note]]) -> String {
         let context = contextBuilder.buildSynthesisContext(threads: threads, notesPerThread: notesPerThread)
 
         return buildPromptWithContext(context: context, conversationHistory: nil, currentQuery: nil)
@@ -25,7 +28,7 @@ class SynthesisPromptBuilder {
     ///   - conversationHistory: Previous conversation turns
     ///   - currentQuery: The user's current question
     /// - Returns: A complete prompt for the LLM
-    func buildSynthesisPromptWithHistory(
+    public func buildSynthesisPromptWithHistory(
         threads: [Thread],
         notesPerThread: [Int64: [Note]],
         conversationHistory: String,

@@ -1,4 +1,3 @@
-import SeleneShared
 // ResurfaceTriggerService.swift
 // SeleneChat
 //
@@ -11,33 +10,59 @@ import Foundation
 
 /// Configuration for resurface triggers
 /// Defaults match config/resurface-triggers.yaml
-struct ResurfaceConfig {
-    let progressTrigger: ProgressTrigger
-    let stuckTrigger: StuckTrigger
-    let completionTrigger: CompletionTrigger
+public struct ResurfaceConfig {
+    public let progressTrigger: ProgressTrigger
+    public let stuckTrigger: StuckTrigger
+    public let completionTrigger: CompletionTrigger
 
-    struct ProgressTrigger {
-        let enabled: Bool
-        let thresholdPercent: Int
-        let message: String
-        let triggerOnce: Bool
+    public struct ProgressTrigger {
+        public let enabled: Bool
+        public let thresholdPercent: Int
+        public let message: String
+        public let triggerOnce: Bool
+
+        public init(enabled: Bool, thresholdPercent: Int, message: String, triggerOnce: Bool) {
+            self.enabled = enabled
+            self.thresholdPercent = thresholdPercent
+            self.message = message
+            self.triggerOnce = triggerOnce
+        }
     }
 
-    struct StuckTrigger {
-        let enabled: Bool
-        let daysInactive: Int
-        let message: String
-        let cooldownDays: Int
+    public struct StuckTrigger {
+        public let enabled: Bool
+        public let daysInactive: Int
+        public let message: String
+        public let cooldownDays: Int
+
+        public init(enabled: Bool, daysInactive: Int, message: String, cooldownDays: Int) {
+            self.enabled = enabled
+            self.daysInactive = daysInactive
+            self.message = message
+            self.cooldownDays = cooldownDays
+        }
     }
 
-    struct CompletionTrigger {
-        let enabled: Bool
-        let message: String
-        let celebration: Bool
+    public struct CompletionTrigger {
+        public let enabled: Bool
+        public let message: String
+        public let celebration: Bool
+
+        public init(enabled: Bool, message: String, celebration: Bool) {
+            self.enabled = enabled
+            self.message = message
+            self.celebration = celebration
+        }
+    }
+
+    public init(progressTrigger: ProgressTrigger, stuckTrigger: StuckTrigger, completionTrigger: CompletionTrigger) {
+        self.progressTrigger = progressTrigger
+        self.stuckTrigger = stuckTrigger
+        self.completionTrigger = completionTrigger
     }
 
     /// Default config matching config/resurface-triggers.yaml
-    static let `default` = ResurfaceConfig(
+    public static let `default` = ResurfaceConfig(
         progressTrigger: ProgressTrigger(
             enabled: true,
             thresholdPercent: 50,
@@ -60,12 +85,12 @@ struct ResurfaceConfig {
 
 // MARK: - Resurface Trigger
 
-enum ResurfaceTrigger {
+public enum ResurfaceTrigger {
     case progress(percent: Int, message: String)
     case stuck(days: Int, message: String)
     case completion(message: String)
 
-    var reasonCode: String {
+    public var reasonCode: String {
         switch self {
         case .progress(let percent, _): return "progress_\(percent)"
         case .stuck(let days, _): return "stuck_\(days)d"
@@ -73,7 +98,7 @@ enum ResurfaceTrigger {
         }
     }
 
-    var message: String {
+    public var message: String {
         switch self {
         case .progress(_, let msg), .stuck(_, let msg), .completion(let msg):
             return msg
@@ -83,12 +108,12 @@ enum ResurfaceTrigger {
 
 // MARK: - Resurface Trigger Service
 
-class ResurfaceTriggerService: ObservableObject {
-    static let shared = ResurfaceTriggerService()
+public class ResurfaceTriggerService: ObservableObject {
+    public static let shared = ResurfaceTriggerService()
 
     private let config: ResurfaceConfig
 
-    init(config: ResurfaceConfig = .default) {
+    public init(config: ResurfaceConfig = .default) {
         self.config = config
     }
 
@@ -97,7 +122,7 @@ class ResurfaceTriggerService: ObservableObject {
     ///   - thread: The discussion thread to evaluate
     ///   - tasks: Current status of tasks linked to this thread
     /// - Returns: The highest priority trigger that fired, or nil
-    func evaluateTriggers(
+    public func evaluateTriggers(
         thread: DiscussionThread,
         tasks: [ThingsTaskStatus]
     ) -> ResurfaceTrigger? {
