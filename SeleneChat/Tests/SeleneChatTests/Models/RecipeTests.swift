@@ -1,5 +1,6 @@
 import XCTest
 @testable import SeleneChat
+@testable import SeleneShared
 
 final class RecipeTests: XCTestCase {
 

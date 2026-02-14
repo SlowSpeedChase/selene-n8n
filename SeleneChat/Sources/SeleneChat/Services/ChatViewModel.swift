@@ -20,6 +20,8 @@ class ChatViewModel: ObservableObject {
     private let memoryService = MemoryService.shared
     private let deepDivePromptBuilder = DeepDivePromptBuilder()
     private let synthesisPromptBuilder = SynthesisPromptBuilder()
+    private let mealPlanContextBuilder = MealPlanContextBuilder()
+    private let mealPlanPromptBuilder = MealPlanPromptBuilder()
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
     private let briefingContextBuilder = BriefingContextBuilder()
@@ -27,6 +29,10 @@ class ChatViewModel: ObservableObject {
 
     /// Currently active deep-dive thread (if in deep-dive mode)
     @Published var activeDeepDiveThread: Thread?
+
+    /// Pending meal plan actions waiting for user confirmation
+    @Published var pendingMealActions: [ActionExtractor.ExtractedMealAction] = []
+    @Published var pendingShopActions: [ActionExtractor.ExtractedShopAction] = []
 
     init(dataProvider: DataProvider = DatabaseService.shared,
          llmProvider: LLMProvider = OllamaService.shared) {
@@ -101,6 +107,22 @@ class ChatViewModel: ObservableObject {
                 currentSession.addMessage(assistantMessage)
                 speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
                 await saveSession()
+                return
+            }
+
+            // Check for meal planning queries
+            if queryAnalyzer.analyze(content).queryType == .mealPlanning {
+                let response = try await handleMealPlanningQuery(query: content)
+                let assistantMessage = Message(
+                    role: .assistant,
+                    content: response,
+                    llmTier: .local,
+                    queryType: "meal-planning"
+                )
+                currentSession.addMessage(assistantMessage)
+                speakIfVoiceOriginated(response, voiceOriginated: voiceOriginated)
+                await saveSession()
+                saveConversationMessages(userMessage: content, assistantResponse: response)
                 return
             }
 
@@ -714,6 +736,59 @@ class ChatViewModel: ObservableObject {
         let allNotes = notesPerThread.values.flatMap { $0 }
 
         return (response, allNotes, allNotes, "synthesis")
+    }
+
+    // MARK: - Meal Planning
+
+    private func handleMealPlanningQuery(query: String) async throws -> String {
+        // 1. Fetch recipes from DB
+        let recipes = try await dataProvider.getAllRecipes(limit: 200)
+
+        // 2. Fetch recent meal plans
+        let recentMeals = try await dataProvider.getRecentMealPlans(weeks: 3)
+
+        // 3. Build context
+        let context = mealPlanContextBuilder.buildFullContext(
+            recipes: recipes,
+            recentMeals: recentMeals,
+            nutritionTargets: nil
+        )
+
+        // 4. Build conversation history from current session
+        let history: [(role: String, content: String)]
+        if useConversationHistory {
+            history = currentSession.messages.suffix(6).map { msg in
+                (role: msg.role == .user ? "user" : "assistant", content: msg.content)
+            }
+        } else {
+            history = []
+        }
+
+        // 5. Build prompt
+        let systemPrompt = mealPlanPromptBuilder.buildSystemPrompt()
+        let userPrompt = mealPlanPromptBuilder.buildPlanningPrompt(
+            query: query,
+            context: context,
+            conversationHistory: history
+        )
+
+        let fullPrompt = systemPrompt + "\n\n" + userPrompt
+
+        // 6. Send to Ollama
+        let response = try await llmProvider.generate(prompt: fullPrompt, model: "mistral:7b")
+
+        // 7. Extract meal/shop actions
+        let mealActions = actionExtractor.extractMealActions(from: response)
+        let shopActions = actionExtractor.extractShopActions(from: response)
+
+        // 8. Store pending actions if any
+        if !mealActions.isEmpty || !shopActions.isEmpty {
+            pendingMealActions = mealActions
+            pendingShopActions = shopActions
+        }
+
+        // 9. Clean response for display
+        return actionExtractor.removeMealAndShopMarkers(from: response)
     }
 
     private func limitFor(queryType: QueryAnalyzer.QueryType) -> Int {

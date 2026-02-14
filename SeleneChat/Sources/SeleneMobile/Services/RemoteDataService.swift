@@ -288,6 +288,13 @@ actor RemoteDataService: DataProvider {
         return response.associations.map { ($0.noteAId, $0.noteBId, $0.similarity) }
     }
 
+    // MARK: - Recipes (TODO: implement REST endpoints)
+
+    func getAllRecipes(limit: Int) async throws -> [Recipe] { [] }
+    func getRecipeById(_ id: Int64) async throws -> Recipe? { nil }
+    func searchRecipes(query: String, limit: Int) async throws -> [Recipe] { [] }
+    func getRecentMealPlans(weeks: Int) async throws -> [(week: String, items: [(day: String, meal: String, recipeTitle: String)])] { [] }
+
     // MARK: - Availability
 
     func isAPIAvailable() async -> Bool {

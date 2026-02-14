@@ -30,18 +30,18 @@ public class ActionExtractor {
         }
     }
 
-    struct ExtractedMealAction {
-        let day: String
-        let meal: String
-        let recipeTitle: String
-        let recipeId: Int64?
+    public struct ExtractedMealAction {
+        public let day: String
+        public let meal: String
+        public let recipeTitle: String
+        public let recipeId: Int64?
     }
 
-    struct ExtractedShopAction {
-        let ingredient: String
-        let amount: Double?
-        let unit: String?
-        let category: String?
+    public struct ExtractedShopAction {
+        public let ingredient: String
+        public let amount: Double?
+        public let unit: String?
+        public let category: String?
     }
 
     // MARK: - Private Properties
@@ -125,7 +125,7 @@ public class ActionExtractor {
     /// Extract all meal actions from an LLM response
     /// - Parameter response: The LLM response string
     /// - Returns: Array of extracted meal actions
-    func extractMealActions(from response: String) -> [ExtractedMealAction] {
+    public func extractMealActions(from response: String) -> [ExtractedMealAction] {
         guard let regex = try? NSRegularExpression(pattern: mealPattern, options: .caseInsensitive) else {
             return []
         }
@@ -169,7 +169,7 @@ public class ActionExtractor {
     /// Extract all shop actions from an LLM response
     /// - Parameter response: The LLM response string
     /// - Returns: Array of extracted shop actions
-    func extractShopActions(from response: String) -> [ExtractedShopAction] {
+    public func extractShopActions(from response: String) -> [ExtractedShopAction] {
         guard let regex = try? NSRegularExpression(pattern: shopPattern, options: .caseInsensitive) else {
             return []
         }
@@ -207,7 +207,7 @@ public class ActionExtractor {
     /// Remove meal and shop markers from a response for display
     /// - Parameter response: The LLM response string with meal/shop markers
     /// - Returns: Cleaned string without meal/shop markers
-    func removeMealAndShopMarkers(from response: String) -> String {
+    public func removeMealAndShopMarkers(from response: String) -> String {
         var result = response
 
         // Remove MEAL markers

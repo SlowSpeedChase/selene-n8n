@@ -43,6 +43,13 @@ public protocol DataProvider: AnyObject {
     func getAllMemoriesWithEmbeddings(limit: Int) async throws -> [(memory: ConversationMemory, embedding: [Float]?)]
     func saveMemoryEmbedding(id: Int64, embedding: [Float]) async throws
 
+    // MARK: - Recipes
+
+    func getAllRecipes(limit: Int) async throws -> [Recipe]
+    func getRecipeById(_ id: Int64) async throws -> Recipe?
+    func searchRecipes(query: String, limit: Int) async throws -> [Recipe]
+    func getRecentMealPlans(weeks: Int) async throws -> [(week: String, items: [(day: String, meal: String, recipeTitle: String)])]
+
     // MARK: - Briefing
 
     func getCrossThreadAssociations(minSimilarity: Double, recentDays: Int, limit: Int) async throws -> [(noteAId: Int, noteBId: Int, similarity: Double)]
