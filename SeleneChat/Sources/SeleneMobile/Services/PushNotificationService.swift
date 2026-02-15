@@ -9,6 +9,10 @@ class PushNotificationService: NSObject, ObservableObject {
     @Published var isRegistered = false
     @Published var permissionStatus: UNAuthorizationStatus = .notDetermined
 
+    /// Remote push notifications require a paid Apple Developer account with APS entitlement.
+    /// Set to false for free developer accounts to avoid failed registration attempts.
+    var remoteNotificationsEnabled = false
+
     private var serverURL: String = ""
     private var apiToken: String = ""
 
@@ -21,10 +25,11 @@ class PushNotificationService: NSObject, ObservableObject {
         #if os(iOS)
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, _ in
             Task { @MainActor in
-                if granted {
+                guard let self else { return }
+                if granted && self.remoteNotificationsEnabled {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
-                self?.checkPermissionStatus()
+                self.checkPermissionStatus()
             }
         }
         #endif

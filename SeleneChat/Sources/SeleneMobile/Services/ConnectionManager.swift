@@ -12,8 +12,15 @@ class ConnectionManager: ObservableObject {
     private(set) var dataProvider: RemoteDataService?
     private(set) var llmProvider: RemoteOllamaService?
 
+    private static let defaultServerURL = "http://100.111.6.10:5678"
+
     init() {
-        loadSaved()
+        self.serverURL = Self.defaultServerURL
+        self.apiToken = ""
+        self.isConfigured = true
+        Task {
+            _ = await configure(serverURL: Self.defaultServerURL, apiToken: "")
+        }
     }
 
     func configure(serverURL: String, apiToken: String) async -> Bool {
@@ -29,23 +36,9 @@ class ConnectionManager: ObservableObject {
             self.llmProvider = remoteLLM
             self.isConnected = true
             self.isConfigured = true
-            save()
             return true
         }
         return false
-    }
-
-    private func loadSaved() {
-        if let url = UserDefaults.standard.string(forKey: "selene_server_url"),
-           let token = UserDefaults.standard.string(forKey: "selene_api_token"),
-           !url.isEmpty {
-            self.serverURL = url
-            self.apiToken = token
-            self.isConfigured = true
-            Task {
-                _ = await configure(serverURL: url, apiToken: token)
-            }
-        }
     }
 
     private func save() {

@@ -143,12 +143,12 @@ final class WorkflowRunnerTests: XCTestCase {
     func testBuildCommandForServer() {
         let workflow = ScheduledWorkflow.mock(
             id: "server",
-            scriptPath: "npm start",
+            scriptPath: "src/server.ts",
             schedule: .persistent
         )
         let (command, arguments) = runner.buildCommand(for: workflow)
-        XCTAssertEqual(command, "/usr/local/bin/npm")
-        XCTAssertEqual(arguments, ["run", "start"])
+        XCTAssertEqual(command, "/usr/local/bin/npx")
+        XCTAssertEqual(arguments, ["ts-node", "src/server.ts"])
     }
 
     // MARK: - buildCommand: All Real Workflows

@@ -12,16 +12,9 @@ struct SeleneMobileApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if connectionManager.isConfigured {
-                    TabRootView()
-                        .environmentObject(connectionManager)
-                        .environmentObject(pushService)
-                } else {
-                    ServerSetupView()
-                        .environmentObject(connectionManager)
-                }
-            }
+            TabRootView()
+                .environmentObject(connectionManager)
+                .environmentObject(pushService)
             .onAppear {
                 #if os(iOS)
                 appDelegate.pushService = pushService

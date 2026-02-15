@@ -67,3 +67,6 @@ test_persistence.swift
 
 # Workflow ID mapping (environment-specific)
 .workflow-ids.json
+
+# Generated Xcode projects (regenerated from project.yml via xcodegen)
+SeleneChat/SeleneMobile/*.xcodeproj

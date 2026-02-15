@@ -207,7 +207,7 @@ final class ScheduledWorkflowTests: XCTestCase {
         let workflow = ScheduledWorkflow(
             id: "server",
             name: "Selene Server",
-            scriptPath: "npm start",
+            scriptPath: "src/server.ts",
             schedule: .persistent,
             usesOllama: false,
             lastRunAt: nil
@@ -219,7 +219,7 @@ final class ScheduledWorkflowTests: XCTestCase {
         let workflow = ScheduledWorkflow(
             id: "server",
             name: "Selene Server",
-            scriptPath: "npm start",
+            scriptPath: "src/server.ts",
             schedule: .persistent,
             usesOllama: false,
             lastRunAt: nil
@@ -274,7 +274,7 @@ final class ScheduledWorkflowTests: XCTestCase {
         let workflow = ScheduledWorkflow.allWorkflows.first { $0.id == "server" }
         XCTAssertNotNil(workflow)
         XCTAssertEqual(workflow?.name, "Selene Server")
-        XCTAssertEqual(workflow?.scriptPath, "npm start")
+        XCTAssertEqual(workflow?.scriptPath, "src/server.ts")
         XCTAssertFalse(workflow?.usesOllama ?? true)
         if case .persistent = workflow?.schedule {
             // Success

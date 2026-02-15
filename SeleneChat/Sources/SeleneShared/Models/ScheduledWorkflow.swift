@@ -67,7 +67,11 @@ public struct ScheduledWorkflow: Identifiable {
     /// Always returns the canonical path (`~/selene-n8n`), even when running
     /// from a worktree. Workflows execute against the main project directory.
     public static var projectRoot: String {
+        #if os(iOS)
+        let home = NSHomeDirectory()
+        #else
         let home = FileManager.default.homeDirectoryForCurrentUser.path
+        #endif
         return "\(home)/selene-n8n"
     }
 
@@ -149,9 +153,13 @@ public struct ScheduledWorkflow: Identifiable {
             id: "transcribe-voice-memos",
             name: "Transcribe Voice Memos",
             scriptPath: "src/workflows/transcribe-voice-memos.ts",
-            schedule: .watchPath(
-                "\(FileManager.default.homeDirectoryForCurrentUser.path)/Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings"
-            ),
+            schedule: .watchPath({
+                #if os(iOS)
+                return NSHomeDirectory() + "/Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings"
+                #else
+                return FileManager.default.homeDirectoryForCurrentUser.path + "/Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings"
+                #endif
+            }()),
             usesOllama: false
         ),
     ]
