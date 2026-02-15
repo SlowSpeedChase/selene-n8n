@@ -110,6 +110,103 @@ public class ThreadWorkspacePromptBuilder {
         return context
     }
 
+    // MARK: - Chunk-Based Prompts
+
+    /// Build the initial prompt using retrieved chunks instead of full notes.
+    /// - Parameters:
+    ///   - thread: The thread being worked on
+    ///   - retrievedChunks: Semantically relevant chunks with similarity scores
+    ///   - tasks: Current tasks linked to this thread
+    /// - Returns: A formatted prompt string for the LLM
+    public func buildInitialPromptWithChunks(
+        thread: Thread,
+        retrievedChunks: [(chunk: NoteChunk, similarity: Float)],
+        tasks: [ThreadTask]
+    ) -> String {
+        let chunkContext = formatChunkContext(thread: thread, chunks: retrievedChunks)
+        let taskContext = buildTaskContext(tasks)
+
+        return """
+        You are a thinking partner for someone with ADHD, grounded in the context of their "\(thread.name)" thread.
+
+        \(chunkContext)
+
+        \(taskContext)
+
+        Respond naturally to whatever the user asks. Use the context above to give informed, specific answers.
+
+        \(actionMarkerFormat)
+
+        Keep your response under 200 words. Be direct and specific.
+        """
+    }
+
+    /// Build a follow-up prompt with pinned chunks from prior turns and newly retrieved chunks.
+    /// - Parameters:
+    ///   - thread: The thread being worked on
+    ///   - pinnedChunks: Chunks referenced in prior conversation turns (preserves context)
+    ///   - retrievedChunks: Newly retrieved chunks for the current query
+    ///   - tasks: Current tasks linked to this thread
+    ///   - conversationHistory: Previous exchanges in this session
+    ///   - currentQuery: The user's current question
+    /// - Returns: A formatted prompt string for the LLM
+    public func buildFollowUpPromptWithChunks(
+        thread: Thread,
+        pinnedChunks: [(chunk: NoteChunk, similarity: Float)],
+        retrievedChunks: [(chunk: NoteChunk, similarity: Float)],
+        tasks: [ThreadTask],
+        conversationHistory: String,
+        currentQuery: String
+    ) -> String {
+        let chunkContext = formatChunkContext(thread: thread, chunks: pinnedChunks + retrievedChunks)
+        let taskContext = buildTaskContext(tasks)
+
+        return """
+        You are a thinking partner for someone with ADHD, continuing a conversation about "\(thread.name)".
+
+        \(chunkContext)
+
+        \(taskContext)
+
+        ## Conversation So Far
+        \(conversationHistory)
+
+        ## Current Question
+        \(currentQuery)
+
+        Respond naturally to the user's question. Use the context to give informed, specific answers.
+
+        \(actionMarkerFormat)
+
+        Keep your response under 150 words. Be direct and specific.
+        """
+    }
+
+    /// Format retrieved chunks into context for the prompt, deduplicating by chunk ID.
+    private func formatChunkContext(thread: Thread, chunks: [(chunk: NoteChunk, similarity: Float)]) -> String {
+        var context = "## Thread: \(thread.name)\n"
+        context += "Status: \(thread.status) \(thread.statusEmoji) | Notes: \(thread.noteCount)\n"
+
+        if let why = thread.why, !why.isEmpty {
+            context += "Why: \(why)\n"
+        }
+
+        context += "\n## Relevant Context\n\n"
+
+        var seen = Set<Int64>()
+        for item in chunks {
+            guard !seen.contains(item.chunk.id) else { continue }
+            seen.insert(item.chunk.id)
+
+            if let topic = item.chunk.topic {
+                context += "**[\(topic)]**\n"
+            }
+            context += "\(item.chunk.content)\n\n"
+        }
+
+        return context
+    }
+
     // MARK: - What's Next
 
     /// Patterns that indicate a "what's next" query

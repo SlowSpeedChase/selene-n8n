@@ -25,6 +25,8 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
     private let actionService = ActionService()
     private let promptBuilder = ThreadWorkspacePromptBuilder()
     private let databaseService = DatabaseService.shared
+    private var pinnedChunkIds: Set<Int64> = []
+    private let chunkRetrievalService = ChunkRetrievalService()
 
     // MARK: - Init
 
@@ -36,7 +38,7 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
 
     // MARK: - Send Message
 
-    /// Send a user message and get an LLM response.
+    /// Send a user message and get an LLM response using chunk-based retrieval.
     func sendMessage(_ content: String) async {
         guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
@@ -45,8 +47,8 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
         defer { isProcessing = false }
 
         do {
-            let prompt = buildPrompt(for: content)
-            let response = try await ollamaService.generate(prompt: prompt)
+            let prompt = await buildChunkBasedPrompt(for: content)
+            let response = try await ollamaService.generate(prompt: prompt, numCtx: 16384)
             processResponse(response)
         } catch {
             let errorMessage = Message(
@@ -174,5 +176,123 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
             let role = msg.role == .user ? "User" : "Assistant"
             return "\(role): \(msg.content)"
         }.joined(separator: "\n")
+    }
+
+    // MARK: - Chunk-Based Prompt Building
+
+    /// Build a prompt using chunk-based retrieval instead of full notes.
+    /// Falls back to old approach if no chunks are available.
+    func buildChunkBasedPrompt(for query: String) async -> String {
+        // Check for "what's next" query first — uses old approach
+        if promptBuilder.isWhatsNextQuery(query) {
+            return promptBuilder.buildWhatsNextPrompt(
+                thread: thread,
+                notes: notes,
+                tasks: tasks
+            )
+        }
+
+        // Try to retrieve relevant chunks
+        let retrievedChunks = await retrieveChunksForQuery(query)
+
+        // If no chunks available, fall back to old approach
+        guard !retrievedChunks.isEmpty else {
+            return buildPrompt(for: query)
+        }
+
+        // Get pinned chunks from prior turns
+        let pinned = await getPinnedChunks()
+
+        // Pin newly retrieved chunk IDs for future turns
+        pinnedChunkIds.formUnion(retrievedChunks.map { $0.chunk.id })
+
+        // Check if we have conversation history
+        let priorMessages = messages.filter { $0.role != .system }
+        let hasHistory = priorMessages.contains { $0.role == .assistant }
+
+        if hasHistory {
+            let history = buildConversationHistory()
+            return promptBuilder.buildFollowUpPromptWithChunks(
+                thread: thread,
+                pinnedChunks: pinned,
+                retrievedChunks: retrievedChunks,
+                tasks: tasks,
+                conversationHistory: history,
+                currentQuery: query
+            )
+        } else {
+            return promptBuilder.buildInitialPromptWithChunks(
+                thread: thread,
+                retrievedChunks: retrievedChunks,
+                tasks: tasks
+            )
+        }
+    }
+
+    /// Retrieve the most relevant chunks for a query via embedding + cosine similarity.
+    private func retrieveChunksForQuery(_ query: String) async -> [(chunk: NoteChunk, similarity: Float)] {
+        do {
+            let noteIds = notes.map { $0.id }
+            guard !noteIds.isEmpty else { return [] }
+
+            let queryEmbedding = try await ollamaService.embed(text: query)
+
+            let candidates = try await databaseService.getChunksWithEmbeddings(noteIds: noteIds)
+            let validCandidates: [(chunk: NoteChunk, embedding: [Float])] = candidates.compactMap { item in
+                guard let embedding = item.embedding else { return nil }
+                return (chunk: item.chunk, embedding: embedding)
+            }
+
+            guard !validCandidates.isEmpty else { return [] }
+
+            let results = chunkRetrievalService.retrieveTopChunks(
+                queryEmbedding: queryEmbedding,
+                candidates: validCandidates,
+                limit: 15,
+                minSimilarity: 0.3,
+                tokenBudget: 8000
+            )
+
+            // If thread-scoped results are poor, try global fallback
+            if results.isEmpty || (results.first?.similarity ?? 0) < 0.5 {
+                let allCandidates = try await databaseService.getAllChunksWithEmbeddings()
+                let validAll: [(chunk: NoteChunk, embedding: [Float])] = allCandidates.compactMap { item in
+                    guard let embedding = item.embedding else { return nil }
+                    return (chunk: item.chunk, embedding: embedding)
+                }
+                if !validAll.isEmpty {
+                    return chunkRetrievalService.retrieveTopChunks(
+                        queryEmbedding: queryEmbedding,
+                        candidates: validAll,
+                        limit: 15,
+                        minSimilarity: 0.3,
+                        tokenBudget: 8000
+                    )
+                }
+            }
+
+            return results
+        } catch {
+            print("[ThreadWorkspaceChatVM] Chunk retrieval failed: \(error)")
+            return []
+        }
+    }
+
+    /// Get pinned chunks from prior conversation turns.
+    private func getPinnedChunks() async -> [(chunk: NoteChunk, similarity: Float)] {
+        guard !pinnedChunkIds.isEmpty else { return [] }
+
+        do {
+            let noteIds = notes.map { $0.id }
+            guard !noteIds.isEmpty else { return [] }
+
+            let allChunks = try await databaseService.getChunksForNotes(noteIds: noteIds)
+            return allChunks
+                .filter { pinnedChunkIds.contains($0.id) }
+                .map { (chunk: $0, similarity: Float(1.0)) }
+        } catch {
+            print("[ThreadWorkspaceChatVM] Failed to load pinned chunks: \(error)")
+            return []
+        }
     }
 }
