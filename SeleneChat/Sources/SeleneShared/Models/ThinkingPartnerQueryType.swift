@@ -11,7 +11,7 @@ public enum ThinkingPartnerQueryType: String {
         switch self {
         case .briefing: return 1500
         case .synthesis: return 2000
-        case .deepDive: return 3000
+        case .deepDive: return 8000
         }
     }
 

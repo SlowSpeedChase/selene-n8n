@@ -3,10 +3,15 @@ import Foundation
 
 // MARK: - Request/Response Models
 
+private struct GenerateOptions: Codable {
+    let num_ctx: Int?
+}
+
 private struct GenerateRequest: Codable {
     let model: String
     let prompt: String
     let stream: Bool
+    let options: GenerateOptions?
 }
 
 private struct GenerateResponse: Codable {
@@ -98,12 +103,18 @@ actor OllamaService {
         }
     }
 
-    /// Generate text completion from Ollama
+    /// Generate text completion from Ollama (LLMProvider conformance)
+    func generate(prompt: String, model: String? = nil) async throws -> String {
+        try await generate(prompt: prompt, model: model, numCtx: nil)
+    }
+
+    /// Generate text completion from Ollama with optional context window size
     /// - Parameters:
     ///   - prompt: The full prompt including system instructions and context
     ///   - model: The model to use (default: mistral:7b)
+    ///   - numCtx: Optional context window size (e.g. 16384 for thread chat)
     /// - Returns: Generated text response
-    func generate(prompt: String, model: String? = nil) async throws -> String {
+    func generate(prompt: String, model: String? = nil, numCtx: Int?) async throws -> String {
         let resolvedModel = model ?? "mistral:7b"
 
         guard let url = URL(string: "\(baseURL)/api/generate") else {
@@ -111,10 +122,12 @@ actor OllamaService {
         }
 
         // Build request body
+        let options = numCtx.map { GenerateOptions(num_ctx: $0) }
         let requestBody = GenerateRequest(
             model: resolvedModel,
             prompt: prompt,
-            stream: false
+            stream: false,
+            options: options
         )
 
         // Create URLRequest

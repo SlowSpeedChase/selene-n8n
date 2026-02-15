@@ -16,6 +16,7 @@ struct SeleneChatApp: App {
     @StateObject private var speechService = SpeechRecognitionService()
     @StateObject private var scheduler = WorkflowScheduler()
     @StateObject private var speechSynthesisService = SpeechSynthesisService()
+    @StateObject private var chunkingPipeline = BackgroundChunkingPipeline()
 
     init() {
         // Start as menu bar accessory — no dock icon until window opens
@@ -107,6 +108,9 @@ struct SeleneChatApp: App {
                             #endif
                         }
                     }
+
+                    // Start background chunking pipeline
+                    chunkingPipeline.start()
 
                     #if DEBUG
                     // Register chatViewModel provider on main actor

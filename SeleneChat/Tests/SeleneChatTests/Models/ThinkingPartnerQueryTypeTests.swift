@@ -13,6 +13,6 @@ final class ThinkingPartnerQueryTypeTests: XCTestCase {
     func testQueryTypeTokenBudgets() {
         XCTAssertEqual(ThinkingPartnerQueryType.briefing.tokenBudget, 1500)
         XCTAssertEqual(ThinkingPartnerQueryType.synthesis.tokenBudget, 2000)
-        XCTAssertEqual(ThinkingPartnerQueryType.deepDive.tokenBudget, 3000)
+        XCTAssertEqual(ThinkingPartnerQueryType.deepDive.tokenBudget, 8000)
     }
 }

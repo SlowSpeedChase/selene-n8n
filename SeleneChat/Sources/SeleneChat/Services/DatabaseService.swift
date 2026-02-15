@@ -139,6 +139,17 @@ class DatabaseService: ObservableObject {
     private let memCreatedAt = Expression<String>("created_at")
     private let memUpdatedAt = Expression<String>("updated_at")
 
+    // note_chunks table
+    private let noteChunksTable = Table("note_chunks")
+    private let chunkId = Expression<Int64>("id")
+    private let chunkNoteId = Expression<Int>("note_id")
+    private let chunkIndexCol = Expression<Int>("chunk_index")
+    private let chunkContent = Expression<String>("content")
+    private let chunkTopic = Expression<String?>("topic")
+    private let chunkTokenCount = Expression<Int>("token_count")
+    private let chunkEmbedding = Expression<SQLite.Blob?>("embedding")
+    private let chunkCreatedAt = Expression<String>("created_at")
+
     // MARK: - Date Formatter (with fractional seconds support)
 
     /// Shared ISO8601 formatter that handles fractional seconds (e.g., "2026-02-01T21:21:52.269Z")
@@ -181,6 +192,7 @@ class DatabaseService: ObservableObject {
             try? Migration007_ThingsHeading.run(db: db!)
             try? Migration008_ConversationMemory.run(db: db!)
             try? Migration009_ThreadTasks.run(db: db!)
+            try? createNoteChunksTable(db: db!)
 
             // Configure services that need database access
             if let db = db {
@@ -2026,6 +2038,150 @@ class DatabaseService: ObservableObject {
         #endif
 
         return results
+    }
+
+    // MARK: - Note Chunks Table Creation
+
+    private func createNoteChunksTable(db: Connection) throws {
+        try db.run(noteChunksTable.create(ifNotExists: true) { t in
+            t.column(chunkId, primaryKey: .autoincrement)
+            t.column(chunkNoteId)
+            t.column(chunkIndexCol)
+            t.column(chunkContent)
+            t.column(chunkTopic)
+            t.column(chunkTokenCount)
+            t.column(chunkEmbedding)
+            t.column(chunkCreatedAt)
+            t.unique(chunkNoteId, chunkIndexCol)
+        })
+        try db.run(noteChunksTable.createIndex(chunkNoteId, ifNotExists: true))
+    }
+
+    // MARK: - Note Chunks
+
+    func insertNoteChunk(noteId: Int, chunkIndex: Int, content: String, topic: String?, tokenCount: Int, embedding: [Float]?) async throws -> Int64 {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let embeddingBlob = embedding.map { SQLite.Blob(bytes: [UInt8](serializeEmbedding($0))) }
+        let now = iso8601Formatter.string(from: Date())
+        return try db.run(noteChunksTable.insert(
+            chunkNoteId <- noteId,
+            chunkIndexCol <- chunkIndex,
+            chunkContent <- content,
+            chunkTopic <- topic,
+            chunkTokenCount <- tokenCount,
+            chunkEmbedding <- embeddingBlob,
+            chunkCreatedAt <- now
+        ))
+    }
+
+    func getChunksForNote(noteId: Int) async throws -> [NoteChunk] {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let query = noteChunksTable
+            .filter(chunkNoteId == noteId)
+            .order(chunkIndexCol.asc)
+        return try db.prepare(query).map { row in
+            NoteChunk(
+                id: row[chunkId],
+                noteId: row[chunkNoteId],
+                chunkIndex: row[chunkIndexCol],
+                content: row[chunkContent],
+                topic: row[chunkTopic],
+                tokenCount: row[chunkTokenCount],
+                createdAt: parseDateString(row[chunkCreatedAt]) ?? Date()
+            )
+        }
+    }
+
+    func getChunksForNotes(noteIds: [Int]) async throws -> [NoteChunk] {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let query = noteChunksTable
+            .filter(noteIds.contains(chunkNoteId))
+            .order(chunkNoteId.asc, chunkIndexCol.asc)
+        return try db.prepare(query).map { row in
+            NoteChunk(
+                id: row[chunkId],
+                noteId: row[chunkNoteId],
+                chunkIndex: row[chunkIndexCol],
+                content: row[chunkContent],
+                topic: row[chunkTopic],
+                tokenCount: row[chunkTokenCount],
+                createdAt: parseDateString(row[chunkCreatedAt]) ?? Date()
+            )
+        }
+    }
+
+    func deleteChunksForNote(noteId: Int) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+        try db.run(noteChunksTable.filter(chunkNoteId == noteId).delete())
+    }
+
+    func getUnchunkedNoteIds(limit: Int) async throws -> [Int] {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let sql = """
+            SELECT rn.id FROM raw_notes rn
+            LEFT JOIN note_chunks nc ON rn.id = nc.note_id
+            WHERE nc.id IS NULL AND rn.status != 'pending'
+            ORDER BY rn.created_at DESC
+            LIMIT ?
+        """
+        var ids: [Int] = []
+        for row in try db.prepare(sql, limit) {
+            if let id = row[0] as? Int64 { ids.append(Int(id)) }
+        }
+        return ids
+    }
+
+    func saveChunkEmbedding(chunkId targetChunkId: Int64, embedding: [Float]) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let blob = SQLite.Blob(bytes: [UInt8](serializeEmbedding(embedding)))
+        try db.run(noteChunksTable.filter(chunkId == targetChunkId).update(chunkEmbedding <- blob))
+    }
+
+    func updateChunkTopic(chunkId targetChunkId: Int64, topic: String) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+        try db.run(noteChunksTable.filter(chunkId == targetChunkId).update(chunkTopic <- topic))
+    }
+
+    func getAllChunksWithEmbeddings(limit: Int = 1000) async throws -> [(chunk: NoteChunk, embedding: [Float]?)] {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let query = noteChunksTable
+            .filter(chunkEmbedding != nil)
+            .order(chunkCreatedAt.desc)
+            .limit(limit)
+        return try db.prepare(query).map { row in
+            let chunk = NoteChunk(
+                id: row[chunkId],
+                noteId: row[chunkNoteId],
+                chunkIndex: row[chunkIndexCol],
+                content: row[chunkContent],
+                topic: row[chunkTopic],
+                tokenCount: row[chunkTokenCount],
+                createdAt: parseDateString(row[chunkCreatedAt]) ?? Date()
+            )
+            let embedding = row[chunkEmbedding].flatMap { deserializeEmbedding(Data($0.bytes)) }
+            return (chunk: chunk, embedding: embedding)
+        }
+    }
+
+    func getChunksWithEmbeddings(noteIds: [Int]) async throws -> [(chunk: NoteChunk, embedding: [Float]?)] {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let query = noteChunksTable
+            .filter(noteIds.contains(chunkNoteId))
+            .filter(chunkEmbedding != nil)
+            .order(chunkNoteId.asc, chunkIndexCol.asc)
+        return try db.prepare(query).map { row in
+            let chunk = NoteChunk(
+                id: row[chunkId],
+                noteId: row[chunkNoteId],
+                chunkIndex: row[chunkIndexCol],
+                content: row[chunkContent],
+                topic: row[chunkTopic],
+                tokenCount: row[chunkTokenCount],
+                createdAt: parseDateString(row[chunkCreatedAt]) ?? Date()
+            )
+            let embedding = row[chunkEmbedding].flatMap { deserializeEmbedding(Data($0.bytes)) }
+            return (chunk: chunk, embedding: embedding)
+        }
     }
 
     // MARK: - Error Types
