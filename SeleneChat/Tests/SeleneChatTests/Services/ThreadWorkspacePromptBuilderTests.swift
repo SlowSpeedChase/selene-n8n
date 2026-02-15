@@ -330,4 +330,66 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.contains("Write principles doc"), "Should include completed task")
         XCTAssertTrue(prompt.contains("recommend"), "Should ask LLM to recommend")
     }
+
+    // MARK: - Planning Detection Tests
+
+    func testIsPlanningQueryDetectsCommonPatterns() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        XCTAssertTrue(builder.isPlanningQuery("help me make a plan"))
+        XCTAssertTrue(builder.isPlanningQuery("Help me figure out next steps"))
+        XCTAssertTrue(builder.isPlanningQuery("break this down"))
+        XCTAssertTrue(builder.isPlanningQuery("how should I approach this?"))
+        XCTAssertTrue(builder.isPlanningQuery("what are my options"))
+        XCTAssertTrue(builder.isPlanningQuery("help me think through this"))
+        XCTAssertTrue(builder.isPlanningQuery("can you help me prioritize"))
+        XCTAssertTrue(builder.isPlanningQuery("I need to figure out what to do"))
+        XCTAssertTrue(builder.isPlanningQuery("help me work through this"))
+        XCTAssertTrue(builder.isPlanningQuery("what should my next move be"))
+    }
+
+    func testIsPlanningQueryRejectsNonPlanningQueries() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        XCTAssertFalse(builder.isPlanningQuery("tell me about this thread"))
+        XCTAssertFalse(builder.isPlanningQuery("summarize my notes"))
+        XCTAssertFalse(builder.isPlanningQuery("what is this thread about"))
+        XCTAssertFalse(builder.isPlanningQuery("when did I last update this"))
+    }
+
+    func testIsPlanningQueryHasAtLeast20Patterns() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        let planningPhrases = [
+            "help me make a plan",
+            "break this down",
+            "how should I approach",
+            "what are my options",
+            "figure out",
+            "think through",
+            "work through",
+            "prioritize",
+            "decide between",
+            "next move",
+            "help me plan",
+            "make a plan",
+            "create a plan",
+            "come up with a plan",
+            "what should I do about",
+            "how do I tackle",
+            "where do I start",
+            "help me decide",
+            "map this out",
+            "lay out the steps",
+        ]
+
+        var detected = 0
+        for phrase in planningPhrases {
+            if builder.isPlanningQuery(phrase) {
+                detected += 1
+            }
+        }
+
+        XCTAssertGreaterThanOrEqual(detected, 20, "Should detect at least 20 planning patterns, got \(detected)")
+    }
 }

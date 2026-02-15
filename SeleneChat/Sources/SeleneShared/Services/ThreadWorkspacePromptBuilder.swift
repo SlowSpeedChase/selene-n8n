@@ -222,6 +222,33 @@ public class ThreadWorkspacePromptBuilder {
         return whatsNextPatterns.contains { lowered.contains($0) }
     }
 
+    // MARK: - Planning Intent Detection
+
+    /// Patterns that indicate a planning/help intent (broader than "what's next")
+    private let planningPatterns: [String] = [
+        "help me", "can you help",
+        "make a plan", "create a plan", "come up with a plan",
+        "help me plan", "build a plan",
+        "break this down", "break it down",
+        "lay out the steps", "map this out", "map out",
+        "how should i approach", "how do i tackle",
+        "where do i start", "where should i start",
+        "what are my options", "decide between", "help me decide",
+        "what should i do about", "which should i",
+        "think through", "work through", "figure out",
+        "think about this", "reason through",
+        "prioritize", "what matters most", "most important",
+        "next move", "what to tackle",
+    ]
+
+    /// Detect if a query has planning/help intent (distinct from "what's next").
+    public func isPlanningQuery(_ query: String) -> Bool {
+        let lowered = query.lowercased()
+            .replacingOccurrences(of: "?", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        return planningPatterns.contains { lowered.contains($0) }
+    }
+
     /// Build a specialized prompt for "what's next" recommendations
     public func buildWhatsNextPrompt(thread: Thread, notes: [Note], tasks: [ThreadTask]) -> String {
         let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
