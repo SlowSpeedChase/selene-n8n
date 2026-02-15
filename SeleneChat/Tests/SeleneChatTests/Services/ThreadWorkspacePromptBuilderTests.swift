@@ -392,4 +392,81 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
 
         XCTAssertGreaterThanOrEqual(detected, 20, "Should detect at least 20 planning patterns, got \(detected)")
     }
+
+    // MARK: - Planning Prompt Tests
+
+    func testBuildPlanningPromptCoachesClarifyingQuestions() {
+        let thread = Thread.mock(name: "Dog Training", why: "Train the dog")
+        let notes = [Note.mock(id: 1, title: "Leash training", content: "Positive reinforcement works best")]
+        let builder = ThreadWorkspacePromptBuilder()
+
+        let prompt = builder.buildPlanningPrompt(
+            thread: thread,
+            notes: notes,
+            tasks: [],
+            userQuery: "help me make a plan for this"
+        )
+
+        XCTAssertTrue(
+            prompt.lowercased().contains("clarifying question") || prompt.lowercased().contains("clarifying questions"),
+            "Planning prompt should coach asking clarifying questions"
+        )
+    }
+
+    func testBuildPlanningPromptIncludesUserQuery() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        let prompt = builder.buildPlanningPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: [],
+            userQuery: "help me break down the API integration"
+        )
+
+        XCTAssertTrue(prompt.contains("help me break down the API integration"))
+    }
+
+    func testBuildPlanningPromptIncludesThreadContext() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        let prompt = builder.buildPlanningPrompt(
+            thread: Thread.mock(name: "Voice Features"),
+            notes: [Note.mock(id: 1, title: "TTS Research", content: "AVSpeechSynthesizer works offline")],
+            tasks: [],
+            userQuery: "help me plan"
+        )
+
+        XCTAssertTrue(prompt.contains("Voice Features"))
+        XCTAssertTrue(prompt.contains("TTS Research"))
+    }
+
+    func testBuildPlanningPromptIncludesTaskState() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let tasks = [
+            ThreadTask.mock(thingsTaskId: "T-001", title: "Research APIs"),
+            ThreadTask.mock(thingsTaskId: "T-002", title: "Write tests", completedAt: Date())
+        ]
+
+        let prompt = builder.buildPlanningPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: tasks,
+            userQuery: "help me plan"
+        )
+
+        XCTAssertTrue(prompt.contains("Research APIs"))
+    }
+
+    func testBuildPlanningPromptMentionsThingsCapability() {
+        let builder = ThreadWorkspacePromptBuilder()
+
+        let prompt = builder.buildPlanningPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: [],
+            userQuery: "help me plan"
+        )
+
+        XCTAssertTrue(prompt.contains("Things"))
+    }
 }

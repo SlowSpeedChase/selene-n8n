@@ -249,6 +249,45 @@ public class ThreadWorkspacePromptBuilder {
         return planningPatterns.contains { lowered.contains($0) }
     }
 
+    /// Build a planning-specific prompt that coaches multi-turn clarifying dialogue.
+    /// Used when `isPlanningQuery` returns true.
+    public func buildPlanningPrompt(
+        thread: Thread,
+        notes: [Note],
+        tasks: [ThreadTask],
+        userQuery: String
+    ) -> String {
+        let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
+        let taskContext = buildTaskContext(tasks)
+
+        return """
+        You are an interactive thinking partner for someone with ADHD, helping them plan their next steps on "\(thread.name)".
+
+        \(threadContext)
+
+        \(taskContext)
+
+        ## User's Request
+        \(userQuery)
+
+        INSTRUCTIONS:
+        Start by asking 1-2 short clarifying questions about the user's priorities, constraints, or what success looks like. Do NOT jump to a full plan yet.
+
+        After the user answers, you will:
+        1. Identify 2-3 possible directions with trade-offs
+        2. Ask which resonates
+        3. Break the chosen direction into concrete steps
+        4. Suggest creating tasks in Things using action markers:
+           [ACTION: Brief description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
+
+        CAPABILITIES:
+        - You can create tasks in Things (the user's task manager) via action markers
+        - You have the user's full note history and existing tasks for this thread
+
+        Keep your questions specific to the thread context. Do not ask generic questions.
+        """
+    }
+
     /// Build a specialized prompt for "what's next" recommendations
     public func buildWhatsNextPrompt(thread: Thread, notes: [Note], tasks: [ThreadTask]) -> String {
         let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
