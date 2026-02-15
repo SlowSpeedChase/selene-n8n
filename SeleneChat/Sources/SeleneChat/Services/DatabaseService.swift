@@ -2137,6 +2137,32 @@ class DatabaseService: ObservableObject {
         try db.run(noteChunksTable.filter(chunkId == targetChunkId).update(chunkEmbedding <- blob))
     }
 
+    func updateChunkTopic(chunkId targetChunkId: Int64, topic: String) async throws {
+        guard let db = db else { throw DatabaseError.notConnected }
+        try db.run(noteChunksTable.filter(chunkId == targetChunkId).update(chunkTopic <- topic))
+    }
+
+    func getAllChunksWithEmbeddings(limit: Int = 1000) async throws -> [(chunk: NoteChunk, embedding: [Float]?)] {
+        guard let db = db else { throw DatabaseError.notConnected }
+        let query = noteChunksTable
+            .filter(chunkEmbedding != nil)
+            .order(chunkCreatedAt.desc)
+            .limit(limit)
+        return try db.prepare(query).map { row in
+            let chunk = NoteChunk(
+                id: row[chunkId],
+                noteId: row[chunkNoteId],
+                chunkIndex: row[chunkIndexCol],
+                content: row[chunkContent],
+                topic: row[chunkTopic],
+                tokenCount: row[chunkTokenCount],
+                createdAt: parseDateString(row[chunkCreatedAt]) ?? Date()
+            )
+            let embedding = row[chunkEmbedding].flatMap { deserializeEmbedding(Data($0.bytes)) }
+            return (chunk: chunk, embedding: embedding)
+        }
+    }
+
     func getChunksWithEmbeddings(noteIds: [Int]) async throws -> [(chunk: NoteChunk, embedding: [Float]?)] {
         guard let db = db else { throw DatabaseError.notConnected }
         let query = noteChunksTable
