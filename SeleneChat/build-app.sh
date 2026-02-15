@@ -27,14 +27,14 @@ echo "📋 Copying Info.plist..."
 cp "Info.plist" "$APP_DIR/Contents/Info.plist"
 
 # Copy Assets (if they exist)
-if [ -d "Sources/Resources/Assets.xcassets" ]; then
+if [ -d "Sources/SeleneChat/Resources/Assets.xcassets" ]; then
     echo "📋 Copying assets..."
-    cp -R "Sources/Resources/Assets.xcassets" "$APP_DIR/Contents/Resources/"
+    cp -R "Sources/SeleneChat/Resources/Assets.xcassets" "$APP_DIR/Contents/Resources/"
 fi
 
 # Copy app icon from Assets.xcassets
 echo "🎨 Creating app icon..."
-ICON_SOURCE="Sources/Resources/Assets.xcassets/AppIcon.appiconset"
+ICON_SOURCE="Sources/SeleneChat/Resources/Assets.xcassets/AppIcon.appiconset"
 
 if [ -d "$ICON_SOURCE" ]; then
     # Create .iconset directory for iconutil
