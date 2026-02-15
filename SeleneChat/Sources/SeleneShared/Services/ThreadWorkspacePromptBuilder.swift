@@ -6,11 +6,23 @@ public class ThreadWorkspacePromptBuilder {
 
     private let contextBuilder = ThinkingPartnerContextBuilder()
 
-    // MARK: - Action Marker Format
+    // MARK: - System Identity
 
-    private let actionMarkerFormat = """
-    Only use action markers when the user asks for task breakdown, next steps, or actionable items. When you do, use this format:
-    [ACTION: Brief action description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
+    private let systemIdentity = """
+    You are an interactive thinking partner for someone with ADHD. Your job is to help the user make progress on this thread — not summarize it back to them.
+
+    CAPABILITIES:
+    - You can create tasks in Things (the user's task manager). When you and the user have collaboratively identified concrete next steps, suggest them using action markers:
+      [ACTION: Brief action description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
+    - You have full context of the user's notes, thread history, and existing tasks
+
+    BEHAVIOR:
+    - When the user asks for planning help: Ask 1-2 clarifying questions about their priorities or constraints first, then break the problem into concrete steps
+    - When the user asks "what's next": Propose 2-3 possible directions with trade-offs, ask which resonates
+    - When you identify actionable steps: Suggest creating them as tasks in Things
+    - Default: Be a collaborator, not a summarizer. Ask before assuming.
+
+    Be concise but thorough. Prefer asking a good question over giving a generic answer. Never summarize the thread back to the user unless they specifically ask for a summary.
     """
 
     // MARK: - Init
@@ -30,17 +42,13 @@ public class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are a thinking partner for someone with ADHD, grounded in the context of their "\(thread.name)" thread.
+        \(systemIdentity)
+
+        ## Thread: "\(thread.name)"
 
         \(threadContext)
 
         \(taskContext)
-
-        Respond naturally to whatever the user asks. Use the thread context and notes above to give informed, specific answers. You can help with planning, brainstorming, answering questions, giving advice, or anything else related to this thread.
-
-        \(actionMarkerFormat)
-
-        Keep your response under 200 words. Be direct and specific.
         """
     }
 
@@ -65,7 +73,9 @@ public class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are a thinking partner for someone with ADHD, continuing a conversation about "\(thread.name)".
+        \(systemIdentity)
+
+        ## Thread: "\(thread.name)"
 
         \(threadContext)
 
@@ -76,12 +86,6 @@ public class ThreadWorkspacePromptBuilder {
 
         ## Current Question
         \(currentQuery)
-
-        Respond naturally to the user's question. Use the thread context to give informed, specific answers.
-
-        \(actionMarkerFormat)
-
-        Keep your response under 150 words. Be direct and specific.
         """
     }
 
@@ -127,17 +131,11 @@ public class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are a thinking partner for someone with ADHD, grounded in the context of their "\(thread.name)" thread.
+        \(systemIdentity)
 
         \(chunkContext)
 
         \(taskContext)
-
-        Respond naturally to whatever the user asks. Use the context above to give informed, specific answers.
-
-        \(actionMarkerFormat)
-
-        Keep your response under 200 words. Be direct and specific.
         """
     }
 
@@ -162,7 +160,7 @@ public class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are a thinking partner for someone with ADHD, continuing a conversation about "\(thread.name)".
+        \(systemIdentity)
 
         \(chunkContext)
 
@@ -173,12 +171,6 @@ public class ThreadWorkspacePromptBuilder {
 
         ## Current Question
         \(currentQuery)
-
-        Respond naturally to the user's question. Use the context to give informed, specific answers.
-
-        \(actionMarkerFormat)
-
-        Keep your response under 150 words. Be direct and specific.
         """
     }
 

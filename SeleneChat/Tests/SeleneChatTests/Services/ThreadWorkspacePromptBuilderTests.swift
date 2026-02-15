@@ -167,7 +167,10 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
         let builder = ThreadWorkspacePromptBuilder()
         let prompt = builder.buildInitialPrompt(thread: thread, notes: [Note.mock()], tasks: [])
 
-        XCTAssertTrue(prompt.contains("Only use action markers"), "Action markers should be conditional, not always applied")
+        XCTAssertTrue(
+            prompt.contains("collaboratively identified"),
+            "Action markers should be tied to collaborative identification of steps"
+        )
     }
 
     func testFollowUpActionMarkersAreConditional() {
@@ -181,7 +184,10 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
             currentQuery: "Next?"
         )
 
-        XCTAssertTrue(prompt.contains("Only use action markers"), "Follow-up action markers should be conditional")
+        XCTAssertTrue(
+            prompt.contains("collaboratively identified"),
+            "Follow-up action markers should be tied to collaborative identification"
+        )
     }
 
     func testBuildFollowUpPromptIncludesThreadContext() {
