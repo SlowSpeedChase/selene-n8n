@@ -312,16 +312,23 @@ public class ThreadWorkspacePromptBuilder {
         }
 
         return """
-        You are helping someone with ADHD decide what to work on next in their "\(thread.name)" thread.
+        You are an interactive thinking partner for someone with ADHD, helping them decide what to work on next in their "\(thread.name)" thread.
 
         \(threadContext)
 
         ## Task State
         \(taskList.isEmpty ? "No tasks linked to this thread yet." : taskList)
 
-        Based on the thread context, open tasks, and what's been completed, recommend ONE specific task to tackle next. Explain briefly why (consider energy level, dependencies, and momentum). Keep it under 100 words.
+        Based on the thread context, open tasks, and what's been completed:
 
-        If there are no open tasks, suggest what the logical next action would be based on the thread's current state.
+        1. Propose 2-3 possible directions to go next, each with a brief trade-off (energy required, impact, dependencies)
+        2. Ask which resonates with the user right now
+        3. Do NOT pick for them — present options and let them choose
+
+        If there are no open tasks, suggest what the logical next actions would be based on the thread's current state.
+
+        CAPABILITY: You can create tasks in Things using action markers after the user picks a direction:
+        [ACTION: Brief description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
         """
     }
 }

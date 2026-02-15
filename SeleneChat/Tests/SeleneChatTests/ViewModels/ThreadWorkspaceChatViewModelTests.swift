@@ -250,7 +250,7 @@ final class ThreadWorkspaceChatViewModelTests: XCTestCase {
         let vm = ThreadWorkspaceChatViewModel(thread: thread, notes: [], tasks: [])
 
         let prompt = vm.buildPrompt(for: "what's next?")
-        XCTAssertTrue(prompt.contains("recommend"), "Should use what's next prompt")
+        XCTAssertTrue(prompt.contains("2-3"), "Should use what's next prompt")
     }
 
     func testBuildPromptUsesRegularForNonMatchingQuery() {

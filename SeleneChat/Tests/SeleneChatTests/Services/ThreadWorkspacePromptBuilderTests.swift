@@ -328,7 +328,40 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
 
         XCTAssertTrue(prompt.contains("Research time-blocking"), "Should include open task")
         XCTAssertTrue(prompt.contains("Write principles doc"), "Should include completed task")
-        XCTAssertTrue(prompt.contains("recommend"), "Should ask LLM to recommend")
+        XCTAssertTrue(prompt.contains("2-3"), "Should propose multiple options")
+    }
+
+    func testBuildWhatsNextPromptProposesMultipleOptions() {
+        let thread = Thread.mock(name: "Project X", why: "Ship the feature")
+        let notes = [Note.mock(id: 1, title: "Research", content: "Found three approaches")]
+        let tasks = [ThreadTask.mock(thingsTaskId: "T-001", title: "Open task")]
+
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildWhatsNextPrompt(thread: thread, notes: notes, tasks: tasks)
+
+        XCTAssertTrue(
+            prompt.contains("2-3") || prompt.contains("two or three") || prompt.contains("multiple"),
+            "What's Next prompt should ask LLM to propose multiple options"
+        )
+        XCTAssertFalse(
+            prompt.contains("recommend ONE"),
+            "What's Next prompt should NOT limit to one recommendation"
+        )
+        XCTAssertFalse(
+            prompt.contains("under 100 words"),
+            "What's Next prompt should NOT have 100-word limit"
+        )
+    }
+
+    func testBuildWhatsNextPromptAsksWhichResonates() {
+        let thread = Thread.mock(name: "Test")
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildWhatsNextPrompt(thread: thread, notes: [Note.mock()], tasks: [])
+
+        XCTAssertTrue(
+            prompt.lowercased().contains("resonat") || prompt.lowercased().contains("which"),
+            "What's Next prompt should ask user which option resonates"
+        )
     }
 
     // MARK: - Planning Detection Tests
