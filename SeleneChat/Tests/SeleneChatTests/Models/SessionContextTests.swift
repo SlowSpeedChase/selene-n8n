@@ -90,7 +90,7 @@ final class SessionContextTests: XCTestCase {
     // MARK: - Summary Tests
 
     func testSummarizedHistory() {
-        // 12 messages - first 4 should be summarized, last 8 verbatim (4 turns)
+        // 12 messages - first 4 should be compressed, last 8 verbatim (4 turns)
         var messages: [Message] = []
         for i in 0..<6 {
             messages.append(Message(role: .user, content: "Topic \(i): discussion about subject \(i)", llmTier: .local))
@@ -100,8 +100,8 @@ final class SessionContextTests: XCTestCase {
         let context = SessionContext(messages: messages)
         let result = context.historyWithSummary(recentTurnCount: 4)
 
-        // Should have summary marker for old messages
-        XCTAssertTrue(result.contains("[Earlier in conversation:"))
+        // Should have compressed older messages section
+        XCTAssertTrue(result.contains("[Earlier in conversation:]"))
 
         // Most recent 4 turns (8 messages) should be verbatim
         XCTAssertTrue(result.contains("Topic 5"))
@@ -127,7 +127,7 @@ final class SessionContextTests: XCTestCase {
         XCTAssertEqual(SessionContext.recentTurnsVerbatim, 4)
     }
 
-    func testSummaryExtractsTopicsFromUserMessages() {
+    func testSummaryCompressesOlderMessages() {
         var messages: [Message] = []
         // Create 10 messages (5 turns) so we have something to summarize with default of 4 turns
         for i in 0..<5 {
@@ -138,8 +138,8 @@ final class SessionContextTests: XCTestCase {
         let context = SessionContext(messages: messages)
         let result = context.historyWithSummary(recentTurnCount: 4)
 
-        // Should extract topics from first turn's user message
-        XCTAssertTrue(result.contains("[Earlier in conversation:"))
+        // Should compress older messages within budget
+        XCTAssertTrue(result.contains("[Earlier in conversation:]"))
         XCTAssertTrue(result.contains("Question about Swift programming"))
     }
 
@@ -148,5 +148,54 @@ final class SessionContextTests: XCTestCase {
         let result = context.historyWithSummary()
 
         XCTAssertEqual(result, "")
+    }
+
+    func testSummaryStaysWithinTokenBudget() {
+        // Create a long conversation that would exceed budget without compression
+        var messages: [Message] = []
+        for i in 0..<20 {
+            messages.append(Message(
+                role: .user,
+                content: "This is a longer user message number \(i) that contains some detail about a topic",
+                llmTier: .local
+            ))
+            messages.append(Message(
+                role: .assistant,
+                content: "This is a detailed assistant response number \(i) that provides helpful information",
+                llmTier: .local
+            ))
+        }
+
+        let context = SessionContext(messages: messages)
+        let result = context.historyWithSummary()
+
+        // Should stay under budget (2000 tokens * 4 chars = 8000 chars + buffer)
+        XCTAssertLessThan(result.count, 9000)
+
+        // Most recent messages should be present verbatim
+        XCTAssertTrue(result.contains("message number 19"))
+        XCTAssertTrue(result.contains("response number 19"))
+    }
+
+    func testCompressionTruncatesOlderMessages() {
+        var messages: [Message] = []
+        // Create 6 turns, first 2 with long messages
+        let longContent = String(repeating: "word ", count: 50) // 250 chars
+        messages.append(Message(role: .user, content: longContent, llmTier: .local))
+        messages.append(Message(role: .assistant, content: longContent, llmTier: .local))
+
+        for i in 1..<6 {
+            messages.append(Message(role: .user, content: "Short message \(i)", llmTier: .local))
+            messages.append(Message(role: .assistant, content: "Short response \(i)", llmTier: .local))
+        }
+
+        let context = SessionContext(messages: messages)
+        let result = context.historyWithSummary(recentTurnCount: 4)
+
+        // Older long messages should be truncated (contain "...")
+        if result.contains("[Earlier in conversation:]") {
+            let earlierSection = result.components(separatedBy: "[Recent:]").first ?? ""
+            XCTAssertTrue(earlierSection.contains("..."), "Long older messages should be truncated")
+        }
     }
 }

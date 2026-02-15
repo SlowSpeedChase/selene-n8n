@@ -54,7 +54,8 @@ public struct SessionContext {
         return result.joined(separator: "\n\n")
     }
 
-    /// Get history with older messages summarized
+    /// Get history with older messages compressed to fit within token budget.
+    /// Recent turns are kept verbatim; older messages are truncated to 100 chars each.
     /// - Parameter recentTurnCount: Number of recent message pairs to keep verbatim
     public func historyWithSummary(recentTurnCount: Int = SessionContext.recentTurnsVerbatim) -> String {
         guard !messages.isEmpty else { return "" }
@@ -67,12 +68,8 @@ public struct SessionContext {
         }
 
         // Split into old and recent
-        let oldMessages = Array(messages.prefix(messages.count - recentMessageCount))
+        let olderMessages = Array(messages.prefix(messages.count - recentMessageCount))
         let recentMessages = Array(messages.suffix(recentMessageCount))
-
-        // Summarize old messages (simple extraction for now - LLM summary in Phase 2)
-        let oldTopics = extractTopics(from: oldMessages)
-        let summary = "[Earlier in conversation: \(oldTopics)]"
 
         // Format recent messages verbatim
         let recentFormatted = recentMessages.map { message in
@@ -80,23 +77,50 @@ public struct SessionContext {
             return "\(role): \(message.content)"
         }.joined(separator: "\n\n")
 
-        return "\(summary)\n\n\(recentFormatted)"
+        // Calculate remaining char budget for older messages
+        let maxChars = SessionContext.maxHistoryTokens * 4
+        let headerOverhead = 40 // "[Earlier in conversation:]\n\n" + "[Recent:]\n\n"
+        let remainingBudget = maxChars - recentFormatted.count - headerOverhead
+
+        if remainingBudget <= 0 || olderMessages.isEmpty {
+            return recentFormatted
+        }
+
+        // Compress older messages: truncate each to 100 chars, stop when budget exhausted
+        let olderCompressed = compressMessages(olderMessages, maxChars: remainingBudget)
+
+        if olderCompressed.isEmpty {
+            return recentFormatted
+        }
+
+        return "[Earlier in conversation:]\n\n\(olderCompressed)\n\n[Recent:]\n\n\(recentFormatted)"
     }
 
-    /// Extract key topics from messages (simple heuristic for now)
-    private func extractTopics(from messages: [Message]) -> String {
-        let userMessages = messages.filter { $0.role == .user }
+    /// Compress messages by truncating each to a maximum character count,
+    /// stopping when the total character budget is exhausted.
+    private func compressMessages(_ messages: [Message], maxChars: Int) -> String {
+        let maxCharsPerMessage = 100
+        var lines: [String] = []
+        var totalChars = 0
 
-        // Take first few words from each user message as topic hints
-        let topics = userMessages.map { message in
-            let words = message.content.split(separator: " ").prefix(5)
-            return words.joined(separator: " ")
+        for message in messages {
+            let role = message.role == .user ? "User" : "Selene"
+            if message.role == .system { continue }
+
+            var content = message.content
+            if content.count > maxCharsPerMessage {
+                content = String(content.prefix(maxCharsPerMessage - 3)) + "..."
+            }
+
+            let line = "\(role): \(content)"
+            let lineChars = line.count + 2 // +2 for "\n\n" separator
+
+            if totalChars + lineChars > maxChars { break }
+
+            lines.append(line)
+            totalChars += lineChars
         }
 
-        if topics.isEmpty {
-            return "general discussion"
-        }
-
-        return topics.joined(separator: "; ")
+        return lines.joined(separator: "\n\n")
     }
 }
