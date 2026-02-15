@@ -212,6 +212,97 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
         XCTAssertFalse(builder.isWhatsNextQuery("tell me about this thread"))
     }
 
+    // MARK: - Interactive Identity Tests
+
+    func testInitialPromptHasInteractiveIdentity() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildInitialPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: []
+        )
+
+        XCTAssertTrue(
+            prompt.contains("interactive thinking partner"),
+            "Prompt should use interactive thinking partner identity"
+        )
+        XCTAssertFalse(
+            prompt.contains("Respond naturally to whatever"),
+            "Prompt should NOT use old generic instruction"
+        )
+    }
+
+    func testInitialPromptDescribesThingsCapability() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildInitialPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: []
+        )
+
+        XCTAssertTrue(
+            prompt.contains("Things"),
+            "Prompt should mention Things task manager by name"
+        )
+        XCTAssertTrue(
+            prompt.lowercased().contains("capability") || prompt.lowercased().contains("capabilities"),
+            "Prompt should frame action markers as a capability"
+        )
+    }
+
+    func testInitialPromptHasNoBriefWordLimit() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildInitialPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: []
+        )
+
+        XCTAssertFalse(prompt.contains("under 200 words"))
+        XCTAssertFalse(prompt.contains("under 150 words"))
+        XCTAssertFalse(prompt.contains("under 100 words"))
+    }
+
+    func testInitialPromptCoachesAgainstSummarizing() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildInitialPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: []
+        )
+
+        XCTAssertTrue(
+            prompt.lowercased().contains("not summarize") || prompt.lowercased().contains("not a summarizer"),
+            "Prompt should explicitly discourage summarizing"
+        )
+    }
+
+    func testChunkBasedInitialPromptHasInteractiveIdentity() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let chunks = [(chunk: NoteChunk.mock(id: 1, content: "Test chunk"), similarity: Float(0.8))]
+        let prompt = builder.buildInitialPromptWithChunks(
+            thread: Thread.mock(name: "Test"),
+            retrievedChunks: chunks,
+            tasks: []
+        )
+
+        XCTAssertTrue(prompt.contains("interactive thinking partner"))
+        XCTAssertFalse(prompt.contains("under 200 words"))
+    }
+
+    func testFollowUpPromptHasNoBriefWordLimit() {
+        let builder = ThreadWorkspacePromptBuilder()
+        let prompt = builder.buildFollowUpPrompt(
+            thread: Thread.mock(name: "Test"),
+            notes: [Note.mock()],
+            tasks: [],
+            conversationHistory: "User: Q\nAssistant: A",
+            currentQuery: "Next?"
+        )
+
+        XCTAssertFalse(prompt.contains("under 150 words"))
+    }
+
     func testBuildWhatsNextPromptIncludesTaskState() {
         let thread = Thread.mock(
             name: "ADHD System",
