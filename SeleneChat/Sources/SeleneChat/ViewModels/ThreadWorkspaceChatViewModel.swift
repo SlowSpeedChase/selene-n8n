@@ -148,9 +148,18 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
             )
         }
 
-        // If no prior conversation, use initial prompt
+        // Check for planning intent (first message only — follow-ups use regular flow)
         let priorMessages = messages.filter { $0.role != .system }
         let hasHistory = priorMessages.contains { $0.role == .assistant }
+
+        if !hasHistory && promptBuilder.isPlanningQuery(query) {
+            return promptBuilder.buildPlanningPrompt(
+                thread: thread,
+                notes: notes,
+                tasks: tasks,
+                userQuery: query
+            )
+        }
 
         if hasHistory {
             let history = buildConversationHistory()
@@ -192,6 +201,19 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
             )
         }
 
+        // Check for planning intent (first message only)
+        let priorMessages = messages.filter { $0.role != .system }
+        let hasHistory = priorMessages.contains { $0.role == .assistant }
+
+        if !hasHistory && promptBuilder.isPlanningQuery(query) {
+            return promptBuilder.buildPlanningPrompt(
+                thread: thread,
+                notes: notes,
+                tasks: tasks,
+                userQuery: query
+            )
+        }
+
         // Try to retrieve relevant chunks
         let retrievedChunks = await retrieveChunksForQuery(query)
 
@@ -206,10 +228,7 @@ class ThreadWorkspaceChatViewModel: ObservableObject {
         // Pin newly retrieved chunk IDs for future turns
         pinnedChunkIds.formUnion(retrievedChunks.map { $0.chunk.id })
 
-        // Check if we have conversation history
-        let priorMessages = messages.filter { $0.role != .system }
-        let hasHistory = priorMessages.contains { $0.role == .assistant }
-
+        // Check if we have conversation history (reuses hasHistory from planning check above)
         if hasHistory {
             let history = buildConversationHistory()
             return promptBuilder.buildFollowUpPromptWithChunks(

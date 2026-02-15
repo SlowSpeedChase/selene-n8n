@@ -261,4 +261,32 @@ final class ThreadWorkspaceChatViewModelTests: XCTestCase {
         XCTAssertFalse(prompt.contains("recommend ONE specific task"),
                        "Should NOT use what's next prompt for regular queries")
     }
+
+    // MARK: - Planning Detection Routing
+
+    func testBuildPromptUsesPlanningPromptForPlanningQueries() {
+        let thread = Thread.mock(name: "Test Thread")
+        let notes = [Note.mock()]
+        let vm = ThreadWorkspaceChatViewModel(thread: thread, notes: notes, tasks: [])
+
+        let prompt = vm.buildPrompt(for: "help me make a plan for this")
+
+        XCTAssertTrue(
+            prompt.contains("Do NOT jump to a full plan yet"),
+            "Planning queries should use the dedicated planning prompt"
+        )
+    }
+
+    func testBuildPromptUsesRegularPromptForNonPlanningQueries() {
+        let thread = Thread.mock(name: "Test Thread")
+        let notes = [Note.mock()]
+        let vm = ThreadWorkspaceChatViewModel(thread: thread, notes: notes, tasks: [])
+
+        let prompt = vm.buildPrompt(for: "tell me about this thread")
+
+        XCTAssertFalse(
+            prompt.contains("Do NOT jump to a full plan yet"),
+            "Non-planning queries should NOT use the dedicated planning prompt"
+        )
+    }
 }
