@@ -13,6 +13,7 @@ export {
   getRecentNotes,
   getNotesSince,
   getThreadAssignmentsForNotes,
+  updateCalendarEvent,
 } from './db';
 export type { RawNote } from './db';
 export { generate, embed, isAvailable } from './ollama';
