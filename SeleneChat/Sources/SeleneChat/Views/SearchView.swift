@@ -299,6 +299,19 @@ struct NoteRow: View {
                         .cornerRadius(4)
                 }
 
+                if let event = note.calendarEvent {
+                    HStack(spacing: 2) {
+                        Image(systemName: "calendar")
+                        Text(event.title)
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.15))
+                    .cornerRadius(4)
+                }
+
                 Spacer()
 
                 Text(note.formattedDate)
@@ -399,6 +412,24 @@ struct NoteDetailView: View {
 
                     if let sentiment = note.overallSentiment {
                         metadataRow(label: "Sentiment", value: sentiment.capitalized)
+                    }
+
+                    if let event = note.calendarEvent {
+                        HStack {
+                            Text("Calendar")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                                .frame(width: 80, alignment: .leading)
+
+                            HStack(spacing: 4) {
+                                Image(systemName: "calendar")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                                Text("\(event.title) \u{00B7} \(event.formattedTimeRange)")
+                                    .font(.caption)
+                            }
+                        }
                     }
 
                     if let concepts = note.concepts, !concepts.isEmpty {

@@ -62,6 +62,7 @@ class DatabaseService: ObservableObject {
     private let exportedToObsidian = Expression<Int64>("exported_to_obsidian")
     private let sourceUUID = Expression<String?>("source_uuid")
     private let testRun = Expression<String?>("test_run")
+    private let calendarEvent = Expression<String?>("calendar_event")
 
     // processed_notes columns
     private let rawNoteId = Expression<Int64>("raw_note_id")
@@ -542,6 +543,13 @@ class DatabaseService: ObservableObject {
             secondaryThemesArray = try? JSONDecoder().decode([String].self, from: data)
         }
 
+        // Parse calendar event JSON from raw_notes (may be NULL)
+        var calendarEventContext: CalendarEventContext? = nil
+        if let calendarStr = try? row.get(rawNotes[calendarEvent]),
+           let data = calendarStr.data(using: .utf8) {
+            calendarEventContext = try? JSONDecoder().decode(CalendarEventContext.self, from: data)
+        }
+
         return Note(
             id: Int(try row.get(rawNotes[id])),
             title: try row.get(rawNotes[title]),
@@ -567,7 +575,8 @@ class DatabaseService: ObservableObject {
             overallSentiment: try? row.get(processedNotes[overallSentiment]),
             sentimentScore: try? row.get(processedNotes[sentimentScore]),
             emotionalTone: try? row.get(processedNotes[emotionalTone]),
-            energyLevel: try? row.get(processedNotes[energyLevel])
+            energyLevel: try? row.get(processedNotes[energyLevel]),
+            calendarEvent: calendarEventContext
         )
     }
 

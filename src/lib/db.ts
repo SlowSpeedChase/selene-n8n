@@ -1,6 +1,7 @@
 import Database, { Database as DatabaseType } from 'better-sqlite3';
 import { config } from './config';
 import { logger } from './logger';
+import type { CalendarEvent } from '../types';
 
 // Initialize database connection
 export const db: DatabaseType = new Database(config.dbPath);
@@ -63,6 +64,7 @@ export interface RawNote {
   status: string;
   exported_to_obsidian: number;
   test_run: string | null;
+  calendar_event: string | null;
 }
 
 // Helper: Get pending notes for processing
@@ -125,6 +127,12 @@ export function insertNote(note: {
     );
 
   return result.lastInsertRowid as number;
+}
+
+// Helper: Update calendar event metadata on a note
+export function updateCalendarEvent(noteId: number, calendarEvent: CalendarEvent): void {
+  db.prepare('UPDATE raw_notes SET calendar_event = ? WHERE id = ?')
+    .run(JSON.stringify(calendarEvent), noteId);
 }
 
 // Helper: Get all notes with processed data

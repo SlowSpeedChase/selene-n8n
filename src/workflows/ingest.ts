@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
-import { createWorkflowLogger, findByContentHash, insertNote } from '../lib';
+import { createWorkflowLogger, findByContentHash, insertNote, updateCalendarEvent } from '../lib';
+import { queryCalendar, pickBestEvent } from '../lib/calendar';
 import type { IngestInput, IngestResult } from '../types';
 
 const log = createWorkflowLogger('ingest');
@@ -26,14 +27,29 @@ export async function ingest(input: IngestInput): Promise<IngestResult> {
   const tags = content.match(/#\w+/g) || [];
 
   // Insert note
+  const createdAt = created_at || new Date().toISOString();
   const id = insertNote({
     title,
     content,
     contentHash,
     tags,
-    createdAt: created_at || new Date().toISOString(),
+    createdAt,
     testRun: test_run,
   });
+
+  // Calendar enrichment (best-effort, never blocks ingestion)
+  try {
+    const calendarResult = await queryCalendar(createdAt);
+    if (calendarResult && calendarResult.events.length > 0) {
+      const bestEvent = pickBestEvent(calendarResult.events);
+      if (bestEvent) {
+        updateCalendarEvent(id, bestEvent);
+        log.info({ id, event: bestEvent.title, matchType: calendarResult.matchType }, 'Calendar event linked');
+      }
+    }
+  } catch (err) {
+    log.warn({ id, err }, 'Calendar enrichment failed (best-effort)');
+  }
 
   log.info({ id, title, tags }, 'Note ingested successfully');
 

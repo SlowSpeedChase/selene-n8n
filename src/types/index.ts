@@ -54,6 +54,20 @@ export interface ExportResult {
   message: string;
 }
 
+// Calendar event context (from selene-calendar CLI)
+export interface CalendarEvent {
+  title: string;
+  startDate: string;  // ISO 8601
+  endDate: string;
+  calendar: string;
+  isAllDay: boolean;
+}
+
+export interface CalendarLookupResult {
+  events: CalendarEvent[];
+  matchType: 'during' | 'just_ended' | 'none';
+}
+
 // Voice memo transcription types
 export interface ProcessedFileEntry {
   transcribedAt: string;

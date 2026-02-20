@@ -91,6 +91,18 @@ struct MobileBriefingView: View {
                     Text(note.title)
                         .font(.subheadline)
                         .fontWeight(.medium)
+                    if let event = note.calendarEvent {
+                        HStack(spacing: 2) {
+                            Image(systemName: "calendar")
+                            Text(event.title)
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.15))
+                        .cornerRadius(4)
+                    }
                     HStack {
                         Text(note.formattedDate)
                         if let theme = note.primaryTheme {
