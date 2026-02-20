@@ -57,6 +57,10 @@ public class ContextBuilder {
                 context += "- Energy: \(energy)\n"
             }
 
+            if let event = note.calendarEvent {
+                context += "- Calendar: \(event.title)\n"
+            }
+
             context += "\n"
         }
 
@@ -75,6 +79,10 @@ public class ContextBuilder {
             let preview = String(note.content.prefix(200))
             let cleanPreview = preview.trimmingCharacters(in: .whitespacesAndNewlines)
             context += "Content: \"\(cleanPreview)...\"\n"
+
+            if let event = note.calendarEvent {
+                context += "- Calendar: \(event.title) (\(event.formattedTimeRange))\n"
+            }
 
             if let concepts = note.concepts, !concepts.isEmpty {
                 context += "- Concepts: \(concepts.joined(separator: ", "))\n"
@@ -97,6 +105,9 @@ public class ContextBuilder {
 
         for (index, note) in notes.enumerated() {
             context += "Note \(index + 1): \"\(note.title)\" (\(formatDate(note.createdAt)))\n"
+            if let event = note.calendarEvent {
+                context += "Calendar Context: Written during \"\(event.title)\" (\(event.formattedTimeRange))\n"
+            }
             context += "Full Content:\n"
             context += "\"\(note.content)\"\n\n"
 

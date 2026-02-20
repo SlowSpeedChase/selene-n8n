@@ -1,5 +1,38 @@
 import Foundation
 
+public struct CalendarEventContext: Codable, Hashable {
+    public let title: String
+    public let startDate: String
+    public let endDate: String
+    public let calendar: String
+    public let isAllDay: Bool
+
+    public init(title: String, startDate: String, endDate: String, calendar: String, isAllDay: Bool) {
+        self.title = title
+        self.startDate = startDate
+        self.endDate = endDate
+        self.calendar = calendar
+        self.isAllDay = isAllDay
+    }
+
+    /// Formatted time range like "5:00 PM–7:00 PM"
+    public var formattedTimeRange: String {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.timeStyle = .short
+        timeFormatter.dateStyle = .none
+
+        guard let start = isoFormatter.date(from: startDate),
+              let end = isoFormatter.date(from: endDate) else {
+            return ""
+        }
+
+        return "\(timeFormatter.string(from: start))\u{2013}\(timeFormatter.string(from: end))"
+    }
+}
+
 public struct Note: Identifiable, Codable, Hashable {
     public let id: Int
     public let title: String
@@ -28,6 +61,7 @@ public struct Note: Identifiable, Codable, Hashable {
     public var sentimentScore: Double?
     public var emotionalTone: String?
     public var energyLevel: String?
+    public var calendarEvent: CalendarEventContext?
 
     enum CodingKeys: String, CodingKey {
         case id, title, content
@@ -53,6 +87,7 @@ public struct Note: Identifiable, Codable, Hashable {
         case sentimentScore = "sentiment_score"
         case emotionalTone = "emotional_tone"
         case energyLevel = "energy_level"
+        case calendarEvent = "calendar_event"
     }
 
     public init(
@@ -80,7 +115,8 @@ public struct Note: Identifiable, Codable, Hashable {
         overallSentiment: String? = nil,
         sentimentScore: Double? = nil,
         emotionalTone: String? = nil,
-        energyLevel: String? = nil
+        energyLevel: String? = nil,
+        calendarEvent: CalendarEventContext? = nil
     ) {
         self.id = id
         self.title = title
@@ -107,6 +143,44 @@ public struct Note: Identifiable, Codable, Hashable {
         self.sentimentScore = sentimentScore
         self.emotionalTone = emotionalTone
         self.energyLevel = energyLevel
+        self.calendarEvent = calendarEvent
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        content = try container.decode(String.self, forKey: .content)
+        contentHash = try container.decode(String.self, forKey: .contentHash)
+        sourceType = try container.decode(String.self, forKey: .sourceType)
+        wordCount = try container.decode(Int.self, forKey: .wordCount)
+        characterCount = try container.decode(Int.self, forKey: .characterCount)
+        tags = try container.decodeIfPresent([String].self, forKey: .tags)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        importedAt = try container.decode(Date.self, forKey: .importedAt)
+        processedAt = try container.decodeIfPresent(Date.self, forKey: .processedAt)
+        exportedAt = try container.decodeIfPresent(Date.self, forKey: .exportedAt)
+        status = try container.decode(String.self, forKey: .status)
+        exportedToObsidian = try container.decode(Bool.self, forKey: .exportedToObsidian)
+        sourceUUID = try container.decodeIfPresent(String.self, forKey: .sourceUUID)
+        testRun = try container.decodeIfPresent(String.self, forKey: .testRun)
+        concepts = try container.decodeIfPresent([String].self, forKey: .concepts)
+        conceptConfidence = try container.decodeIfPresent([String: Double].self, forKey: .conceptConfidence)
+        primaryTheme = try container.decodeIfPresent(String.self, forKey: .primaryTheme)
+        secondaryThemes = try container.decodeIfPresent([String].self, forKey: .secondaryThemes)
+        themeConfidence = try container.decodeIfPresent(Double.self, forKey: .themeConfidence)
+        overallSentiment = try container.decodeIfPresent(String.self, forKey: .overallSentiment)
+        sentimentScore = try container.decodeIfPresent(Double.self, forKey: .sentimentScore)
+        emotionalTone = try container.decodeIfPresent(String.self, forKey: .emotionalTone)
+        energyLevel = try container.decodeIfPresent(String.self, forKey: .energyLevel)
+
+        // calendar_event is stored as a JSON string in SQLite
+        if let jsonString = try container.decodeIfPresent(String.self, forKey: .calendarEvent),
+           let data = jsonString.data(using: .utf8) {
+            calendarEvent = try? JSONDecoder().decode(CalendarEventContext.self, from: data)
+        } else {
+            calendarEvent = try container.decodeIfPresent(CalendarEventContext.self, forKey: .calendarEvent)
+        }
     }
 
     public var energyEmoji: String {
@@ -178,7 +252,8 @@ extension Note {
         overallSentiment: String? = nil,
         sentimentScore: Double? = nil,
         emotionalTone: String? = nil,
-        energyLevel: String? = nil
+        energyLevel: String? = nil,
+        calendarEvent: CalendarEventContext? = nil
     ) -> Note {
         Note(
             id: id,
@@ -205,7 +280,8 @@ extension Note {
             overallSentiment: overallSentiment,
             sentimentScore: sentimentScore,
             emotionalTone: emotionalTone,
-            energyLevel: energyLevel
+            energyLevel: energyLevel,
+            calendarEvent: calendarEvent
         )
     }
 }
