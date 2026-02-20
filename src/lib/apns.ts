@@ -207,19 +207,3 @@ export async function notifyNewThread(threadName: string): Promise<void> {
   );
 }
 
-/**
- * Send thread momentum notification.
- */
-export async function notifyThreadMomentum(threadName: string, momentum: string): Promise<void> {
-  await notifyAllDevices(
-    'Thread Update',
-    `"${threadName}" is ${momentum}. Check your threads.`,
-    {
-      category: 'THREAD',
-      collapseId: `thread-${threadName}`,
-      threadId: 'threads',
-      interruptionLevel: 'passive',
-      customData: { type: 'thread-momentum', threadName, momentum },
-    }
-  );
-}

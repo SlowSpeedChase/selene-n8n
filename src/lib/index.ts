@@ -3,7 +3,6 @@ export { logger, createWorkflowLogger } from './logger';
 export {
   db,
   getPendingNotes,
-  getProcessedNotes,
   markProcessed,
   findByContentHash,
   insertNote,

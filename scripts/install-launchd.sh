@@ -38,12 +38,14 @@ AGENTS=(
     "com.selene.server"
     "com.selene.process-llm"
     "com.selene.extract-tasks"
-    "com.selene.compute-embeddings"
-    "com.selene.compute-associations"
+    "com.selene.index-vectors"
+    "com.selene.compute-relationships"
     "com.selene.daily-summary"
+    "com.selene.send-digest"
     "com.selene.export-obsidian"
     "com.selene.detect-threads"
     "com.selene.reconsolidate-threads"
+    "com.selene.thread-lifecycle"
     "com.selene.transcribe-voice-memos"
 )
 

@@ -225,20 +225,8 @@ struct MessageBubble: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                // Message content with citations
-                Group {
-                    if let attributedContent = message.attributedContent {
-                        // Use attributed text with clickable citations
-                        Text(attributedContent)
-                            .environment(\.openURL, OpenURLAction { url in
-                                handleCitationTap(url)
-                                return .handled
-                            })
-                    } else {
-                        // Fallback to plain text
-                        Text(message.content)
-                    }
-                }
+                // Message content
+                Text(message.content)
                 .padding(12)
                 .background(backgroundColor)
                 .foregroundColor(textColor)
@@ -309,20 +297,6 @@ struct MessageBubble: View {
         }
         .sheet(item: $selectedNote) { note in
             NoteDetailView(note: note)
-        }
-    }
-
-    private func handleCitationTap(_ url: URL) {
-        // Extract citation from URL
-        guard let citation = CitationParser.extractCitation(from: url) else {
-            return
-        }
-
-        // Find the note in contextNotes
-        if let contextNotes = message.contextNotes {
-            if let note = CitationParser.findNote(for: citation, in: contextNotes) {
-                selectedNote = note
-            }
         }
     }
 

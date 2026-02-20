@@ -28,20 +28,6 @@ export interface GenerateOptions {
   maxTokens?: number;
 }
 
-// Result types for external use
-export interface GenerateResult {
-  response: string;
-  model: string;
-  totalDuration?: number;
-  promptTokens?: number;
-  responseTokens?: number;
-}
-
-export interface EmbeddingResult {
-  embedding: number[];
-  model: string;
-}
-
 const ollamaLogger = logger.child({ module: 'ollama' });
 
 /**
@@ -190,77 +176,3 @@ export async function isAvailable(): Promise<boolean> {
   }
 }
 
-/**
- * Generate with full result metadata
- * @param prompt The prompt to send to the model
- * @param options Configuration options
- * @returns Full result with metadata
- */
-export async function generateWithMetadata(
-  prompt: string,
-  options: GenerateOptions = {}
-): Promise<GenerateResult> {
-  const model = options.model || config.ollamaModel;
-  const timeoutMs = options.timeoutMs || 120000;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${config.ollamaUrl}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        prompt,
-        stream: false,
-        options: {
-          temperature: options.temperature,
-          num_predict: options.maxTokens,
-        },
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Ollama generate failed: ${response.status} ${errorText}`);
-    }
-
-    const data = (await response.json()) as OllamaGenerateResponse;
-
-    return {
-      response: data.response,
-      model: data.model,
-      totalDuration: data.total_duration,
-      promptTokens: data.prompt_eval_count,
-      responseTokens: data.eval_count,
-    };
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Ollama generation timed out after ${timeoutMs}ms`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-/**
- * Embed with full result metadata
- * @param text The text to embed
- * @param model Optional model override
- * @returns Full result with metadata
- */
-export async function embedWithMetadata(
-  text: string,
-  model?: string
-): Promise<EmbeddingResult> {
-  const embeddingModel = model || config.embeddingModel;
-  const embedding = await embed(text, embeddingModel);
-
-  return {
-    embedding,
-    model: embeddingModel,
-  };
-}

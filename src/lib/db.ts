@@ -74,13 +74,6 @@ export function getPendingNotes(limit = 10): RawNote[] {
     .all('pending', limit) as RawNote[];
 }
 
-// Helper: Get processed notes needing further work
-export function getProcessedNotes(limit = 10): RawNote[] {
-  return db
-    .prepare('SELECT * FROM raw_notes WHERE status = ? ORDER BY processed_at ASC LIMIT ?')
-    .all('processed', limit) as RawNote[];
-}
-
 // Helper: Mark note as processed
 export function markProcessed(id: number): void {
   db.prepare('UPDATE raw_notes SET status = ?, processed_at = ? WHERE id = ?').run(
