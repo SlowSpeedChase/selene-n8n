@@ -13,10 +13,6 @@ let package = Package(
             targets: ["SeleneChat"]
         ),
         .executable(
-            name: "SeleneMobile",
-            targets: ["SeleneMobile"]
-        ),
-        .executable(
             name: "selene-calendar",
             targets: ["selene-calendar"]
         ),
@@ -49,16 +45,11 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "SeleneMobile",
-            dependencies: ["SeleneShared"],
-            path: "Sources/SeleneMobile",
+            name: "selene-calendar",
+            path: "Sources/SeleneCalendar",
             exclude: [
                 "Info.plist"
             ]
-        ),
-        .executableTarget(
-            name: "selene-calendar",
-            path: "Sources/SeleneCalendar"
         ),
         .testTarget(
             name: "SeleneChatTests",

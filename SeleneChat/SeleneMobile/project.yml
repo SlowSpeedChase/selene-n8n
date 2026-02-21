@@ -24,27 +24,40 @@ targets:
         CFBundleDisplayName: Selene
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
         NSMicrophoneUsageDescription: Selene uses the microphone for voice input to capture notes and queries hands-free.
         NSSpeechRecognitionUsageDescription: Selene uses speech recognition to convert your voice into text for note capture and search.
         NSSupportsLiveActivities: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.selene.mobile
+        PRODUCT_BUNDLE_IDENTIFIER: com.chaseeasterling.selene-mobile
         PRODUCT_NAME: SeleneMobile
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_ENTITLEMENTS: SeleneMobile.entitlements
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: XZJ6358HHF
         SWIFT_VERSION: "5.9"
-        GENERATE_INFOPLIST_FILE: true
+        GENERATE_INFOPLIST_FILE: false
         ENABLE_PREVIEWS: true
     dependencies:
       - package: SeleneChat
         product: SeleneShared
     entitlements:
       path: SeleneMobile.entitlements
+
+schemes:
+  SeleneMobile:
+    build:
+      targets:
+        SeleneMobile: all
+    run:
+      config: Debug
+    archive:
+      config: Release

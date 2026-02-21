@@ -296,6 +296,15 @@ actor RemoteDataService: DataProvider {
             return false
         }
     }
+
+    func connectionError() async -> String? {
+        do {
+            _ = try await get("/health")
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
 }
 
 // MARK: - Response Types
