@@ -1,4 +1,5 @@
 import { createWorkflowLogger, db, generate } from '../lib';
+import { normalizeThreadName } from '../lib/strings';
 import type { WorkflowResult } from '../types';
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
@@ -140,7 +141,7 @@ function parseSynthesis(response: string, defaultName: string): ThreadSynthesis 
 
     // Validate and provide defaults
     return {
-      name: parsed.name || defaultName,
+      name: normalizeThreadName(parsed.name || defaultName),
       summary: parsed.summary || '',
       why: parsed.why || '',
       direction: ['exploring', 'emerging', 'clear'].includes(parsed.direction)

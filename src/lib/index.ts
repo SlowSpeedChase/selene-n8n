@@ -1,4 +1,5 @@
 export { config } from './config';
+export { normalizeThreadName } from './strings';
 export { logger, createWorkflowLogger } from './logger';
 export {
   db,

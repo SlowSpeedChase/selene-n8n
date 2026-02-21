@@ -1,4 +1,5 @@
 import { createWorkflowLogger, db, generate } from '../lib';
+import { normalizeThreadName } from '../lib/strings';
 import type { WorkflowResult } from '../types';
 
 const log = createWorkflowLogger('thread-lifecycle');
@@ -175,7 +176,7 @@ function parseSynthesis(response: string): ThreadSynthesis | null {
     if (!parsed.name || !parsed.summary) return null;
 
     return {
-      name: parsed.name,
+      name: normalizeThreadName(parsed.name),
       why: parsed.why || '',
       summary: parsed.summary,
     };

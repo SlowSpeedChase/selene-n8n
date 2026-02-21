@@ -1,4 +1,5 @@
 import { createWorkflowLogger, db, generate, embed, searchSimilarNotes, getIndexedNoteIds } from '../lib';
+import { normalizeThreadName } from '../lib/strings';
 import { notifyNewThread } from '../lib/apns';
 import type { WorkflowResult } from '../types';
 
@@ -353,7 +354,7 @@ function parseSynthesis(response: string): ThreadSynthesis | null {
     }
 
     return {
-      name: parsed.name,
+      name: normalizeThreadName(parsed.name),
       why: parsed.why || '',
       summary: parsed.summary || '',
       direction: ['exploring', 'emerging', 'clear'].includes(parsed.direction)
