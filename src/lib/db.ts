@@ -11,36 +11,36 @@ db.pragma('journal_mode = WAL');
 
 logger.info({ dbPath: config.dbPath, env: config.env }, 'Database connected');
 
-// Fail-safe: Verify test environment is using test database
-if (config.isTestEnv) {
+// Fail-safe: Verify non-production environment is using correct database
+if (config.isTestEnv || config.isDevEnv) {
+  const expectedEnv = config.env; // 'test' or 'development'
   try {
     const result = db.prepare(
       "SELECT value FROM _selene_metadata WHERE key = 'environment'"
     ).get() as { value: string } | undefined;
 
-    if (!result || result.value !== 'test') {
+    if (!result || result.value !== expectedEnv) {
       logger.error(
-        { dbPath: config.dbPath },
-        'SELENE_ENV=test but database is not a test database. Run ./scripts/create-test-db.sh first.'
+        { dbPath: config.dbPath, expected: expectedEnv, actual: result?.value },
+        `SELENE_ENV=${expectedEnv} but database environment mismatch. Run scripts/create-dev-db.sh first.`
       );
       throw new Error(
-        `SELENE_ENV=test but database is not marked as test environment.\n` +
-        `Expected _selene_metadata.environment = 'test'.\n` +
-        `Run ./scripts/create-test-db.sh to create a test database.`
+        `SELENE_ENV=${expectedEnv} but database is not marked as ${expectedEnv} environment.\n` +
+        `Expected _selene_metadata.environment = '${expectedEnv}'.\n` +
+        `Run scripts/create-dev-db.sh to create the database.`
       );
     }
 
-    logger.info('Test environment verified');
+    logger.info({ env: expectedEnv }, 'Environment verified');
   } catch (err: unknown) {
-    // If table doesn't exist, that's also a failure
     if (err instanceof Error && err.message.includes('no such table')) {
       logger.error(
         { dbPath: config.dbPath },
-        'SELENE_ENV=test but _selene_metadata table not found. Run ./scripts/create-test-db.sh first.'
+        `SELENE_ENV=${expectedEnv} but _selene_metadata table not found. Run scripts/create-dev-db.sh first.`
       );
       throw new Error(
-        `SELENE_ENV=test but _selene_metadata table not found.\n` +
-        `Run ./scripts/create-test-db.sh to create a test database.`
+        `SELENE_ENV=${expectedEnv} but _selene_metadata table not found.\n` +
+        `Run scripts/create-dev-db.sh to create the database.`
       );
     }
     throw err;
