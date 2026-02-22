@@ -3,6 +3,7 @@ import { join } from 'path';
 import { execSync, execFileSync } from 'child_process';
 import { createWorkflowLogger } from '../lib/logger';
 import { config } from '../lib/config';
+import { generate } from '../lib/ollama';
 import type { ProcessedManifest, ProcessedFileEntry, VoiceMemoWorkflowResult } from '../types';
 
 const log = createWorkflowLogger('transcribe-voice-memos');
@@ -234,6 +235,50 @@ function getAudioDuration(filePath: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// LLM title generation
+// ---------------------------------------------------------------------------
+
+const TITLE_PROMPT_TEMPLATE = `Summarize this voice memo transcription as a short, descriptive title (5-8 words).
+Return ONLY the title, no quotes or punctuation at the end.
+
+Transcription:
+`;
+
+const MAX_TRANSCRIPTION_CHARS = 500;
+
+async function generateMemoTitle(transcription: string, fallbackTitle: string): Promise<string> {
+  if (!transcription.trim()) {
+    log.info('Empty transcription, using fallback title');
+    return fallbackTitle;
+  }
+
+  try {
+    const truncated = transcription.slice(0, MAX_TRANSCRIPTION_CHARS);
+    const prompt = TITLE_PROMPT_TEMPLATE + truncated;
+
+    const result = await generate(prompt, {
+      temperature: 0.3,
+      maxTokens: 20,
+      timeoutMs: 15000,
+    });
+
+    const title = result.trim().replace(/[."']+$/g, '');
+
+    if (!title || title.length < 3) {
+      log.warn({ result }, 'LLM returned empty/short title, using fallback');
+      return fallbackTitle;
+    }
+
+    log.info({ generatedTitle: title }, 'Generated LLM title for voice memo');
+    return title;
+  } catch (err) {
+    const error = err as Error;
+    log.warn({ err: error }, 'Failed to generate LLM title, using fallback');
+    return fallbackTitle;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Send to Drafts app for review/editing
 // ---------------------------------------------------------------------------
 
@@ -314,8 +359,9 @@ ${transcription}
     writeFileSync(markdownPath, markdown);
     log.info({ markdownPath }, 'Transcript written');
 
-    // Step 6: Send to Drafts for review
-    const title = `Voice Memo ${parsed.friendlyName}`;
+    // Step 6: Generate title and send to Drafts for review
+    const fallbackTitle = `Voice Memo ${parsed.friendlyName}`;
+    const title = await generateMemoTitle(transcription, fallbackTitle);
     const ingested = await sendToDrafts(title, transcription);
 
     // Step 7: Update manifest
