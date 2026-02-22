@@ -265,6 +265,26 @@ CREATE INDEX idx_memories_type ON conversation_memories(memory_type);
 CREATE INDEX idx_memories_confidence ON conversation_memories(confidence);
 CREATE INDEX idx_memories_last_accessed ON conversation_memories(last_accessed);
 
+-- Relationships
+CREATE TABLE note_relationships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_a_id INTEGER NOT NULL,
+    note_b_id INTEGER NOT NULL,
+    relationship_type TEXT NOT NULL CHECK(relationship_type IN
+        ('BT', 'NT', 'RT', 'TEMPORAL', 'SAME_THREAD', 'SAME_PROJECT')),
+    strength REAL,
+    source TEXT NOT NULL CHECK(source IN
+        ('llm_extracted', 'embedding_high', 'temporal', 'structural', 'user_explicit')),
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (note_a_id) REFERENCES raw_notes(id) ON DELETE CASCADE,
+    FOREIGN KEY (note_b_id) REFERENCES raw_notes(id) ON DELETE CASCADE,
+    UNIQUE(note_a_id, note_b_id, relationship_type)
+);
+CREATE INDEX idx_relationships_a ON note_relationships(note_a_id);
+CREATE INDEX idx_relationships_b ON note_relationships(note_b_id);
+CREATE INDEX idx_relationships_type ON note_relationships(relationship_type);
+CREATE INDEX idx_relationships_source ON note_relationships(source);
+
 -- Analytics
 CREATE TABLE sentiment_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
