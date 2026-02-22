@@ -22,7 +22,12 @@ const server = Fastify({
 // ---------------------------------------------------------------------------
 
 server.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
+  return {
+    status: 'ok',
+    env: config.env,
+    port: config.port,
+    timestamp: new Date().toISOString(),
+  };
 });
 
 // ---------------------------------------------------------------------------

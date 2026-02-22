@@ -22,9 +22,9 @@ class DatabaseService: ObservableObject {
                 .appendingPathComponent("selene-data/selene.db")
                 .path
         } else {
-            // Development: test database (not production data)
+            // Development: fake test data (never production)
             return FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("selene-n8n/data-test/selene-test.db")
+                .appendingPathComponent("selene-data-dev/selene.db")
                 .path
         }
     }
