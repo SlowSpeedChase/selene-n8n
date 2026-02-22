@@ -1,7 +1,7 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-02-14
-**Status:** SeleneMobile iOS App | Server REST API | Living System Active
+**Last Updated:** 2026-02-22
+**Status:** Dev Environment Isolation | Living System Active
 
 ---
 
@@ -22,6 +22,13 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 All three "Ready" designs from 2026-02-12 are now implemented and merged. The system has grown significantly: menu bar orchestrator manages workflow scheduling, voice memos are auto-transcribed via whisper.cpp, and the morning briefing got a full redesign with structured cards.
 
 ### Recent Completions
+- **Dev Environment Isolation** (2026-02-22) - Full parallel dev environment with 536 fictional notes
+  - `~/selene-data-dev/` with separate SQLite, LanceDB, Obsidian vault
+  - `SELENE_ENV=development` environment switching via `src/lib/config.ts`
+  - `dev-process-batch.sh` runs 6-step pipeline with configurable batch sizes
+  - `compute-associations.ts` — new TypeScript workflow (was missing from old n8n port)
+  - Hourly launchd agent (`com.selene.dev-process-batch`) for gradual processing
+  - Scripts: `create-dev-db.sh`, `seed-dev-data.ts`, `reset-dev-data.sh`
 - **SeleneMobile iOS App** (2026-02-14) - Full-parity iOS app over Tailscale VPN
   - Three-target SPM: SeleneShared + SeleneChat + SeleneMobile
   - Protocol-based data layer: DataProvider, LLMProvider
@@ -41,6 +48,9 @@ All three "Ready" designs from 2026-02-12 are now implemented and merged. The sy
 - **Voice Input Phase 1** (2026-02-05) - SpeechRecognitionService, VoiceMicButton, URL scheme
 - **Thinking Partner** (2026-02-05) - Conversation memory, context builder, deep-dive, synthesis
 - **Test Environment Isolation** (2026-02-06) - Anonymized test data, environment switching
+
+### Dev Environment (Background)
+A parallel development environment at `~/selene-data-dev/` processes 536 fictional notes through the full pipeline via hourly launchd batch job (`com.selene.dev-process-batch`). Use `SELENE_ENV=development` to target it. See `@.claude/OPERATIONS.md` (Development Environment section) for commands.
 
 ### Living System (Background)
 The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat menu bar app + launchd):
@@ -82,6 +92,9 @@ The processing pipeline runs automatically (via WorkflowScheduler in SeleneChat 
 | REST API Endpoints | `src/server.ts` (~30 routes) | Done |
 | SeleneShared Library | `SeleneChat/Sources/SeleneShared/` | Done |
 | SeleneMobile iOS App | `SeleneChat/Sources/SeleneMobile/` | Done |
+| Association Computation | `src/workflows/compute-associations.ts` | Done |
+| Dev Batch Processor | `scripts/dev-process-batch.sh` | Done |
+| Dev Launchd Agent | `launchd/com.selene.dev-process-batch.plist` | Done |
 | Launchd Agents | `launchd/*.plist` | Done |
 | Install Script | `scripts/install-launchd.sh` | Done |
 
@@ -145,6 +158,7 @@ src/
     process-llm.ts              # LLM concept extraction
     extract-tasks.ts            # Task classification
     index-vectors.ts            # LanceDB vector indexing
+    compute-associations.ts     # Pairwise note similarity (LanceDB)
     compute-relationships.ts    # Typed note relationships
     detect-threads.ts           # Thread detection
     reconsolidate-threads.ts    # Thread summary + momentum
