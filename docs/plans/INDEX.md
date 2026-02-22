@@ -47,7 +47,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
 | 2026-02-21 | 2026-02-21-tiered-context-compression-design.md | architecture, llm | Lifecycle-based fidelity tiers for LLM context scaling |
-| 2026-02-21 | 2026-02-21-dev-environment-isolation-design.md | infra, dev-experience | Full parallel dev environment with fake data, Overmind, beta builds |
+| 2026-02-21 | 2026-02-21-dev-environment-isolation-design.md | infra, dev-experience | Full parallel dev environment with fake data — **core implemented** (db, seeding, batch processing, launchd). Remaining: Overmind, beta builds. |
 | 2026-02-15 | 2026-02-15-thinking-partner-upgrade-design.md | selenechat, cloud-ai | Interactive planning + Cloud AI with file workspace (builds on Phase 7.3) |
 | 2026-02-13 | 2026-02-13-kitchenos-selene-integration-design.md | integrations, meal-planning | KitchenOS recipe indexing + conversational meal planning in SeleneChat |
 | 2026-02-13 | 2026-02-13-trmnl-daily-digest-design.md | integrations | Push morning digest to TRMNL e-ink display |

@@ -34,6 +34,7 @@ ADHD-focused knowledge management system using TypeScript workflows, SQLite, and
 | **Run tests** | `@.claude/OPERATIONS.md` | - |
 | **Design ADHD features** | `@.claude/ADHD_Principles.md` | `@.claude/DEVELOPMENT.md` |
 | **Daily operations** | `@.claude/OPERATIONS.md` | `@scripts/CLAUDE.md` |
+| **Use dev environment** | `@.claude/OPERATIONS.md` (Dev Environment) | `@scripts/CLAUDE.md` |
 | **Check status** | `@.claude/PROJECT-STATUS.md` | `@docs/plans/INDEX.md` |
 | **Development workflow** | `@.claude/GITOPS.md` | `@docs/plans/INDEX.md` |
 
@@ -113,6 +114,7 @@ src/
     process-llm.ts              # LLM concept extraction
     extract-tasks.ts            # Task classification and routing
     index-vectors.ts            # LanceDB vector indexing
+    compute-associations.ts     # Pairwise note similarity (LanceDB)
     compute-relationships.ts    # Typed note relationships
     detect-threads.ts           # Thread detection
     reconsolidate-threads.ts    # Thread summary + momentum
@@ -135,6 +137,7 @@ launchd/
   com.selene.thread-lifecycle.plist        # Daily at 2am
   com.selene.send-digest.plist             # Daily at 6am
   com.selene.transcribe-voice-memos.plist  # WatchPaths trigger
+  com.selene.dev-process-batch.plist       # Dev: hourly batch processing
 ```
 
 **Why this architecture?** See `@.claude/DEVELOPMENT.md` (System Architecture section)
@@ -214,6 +217,7 @@ launchctl kickstart -k gui/$(id -u)/com.selene.server
 npx ts-node src/workflows/process-llm.ts
 npx ts-node src/workflows/extract-tasks.ts
 npx ts-node src/workflows/index-vectors.ts
+npx ts-node src/workflows/compute-associations.ts
 npx ts-node src/workflows/compute-relationships.ts
 npx ts-node src/workflows/detect-threads.ts
 npx ts-node src/workflows/reconsolidate-threads.ts
@@ -246,6 +250,21 @@ sqlite3 data/selene.db "SELECT COUNT(*) FROM raw_notes;"
 sqlite3 data/selene.db ".schema raw_notes"
 ```
 
+### Dev Environment
+```bash
+# Check dev processing status
+./scripts/dev-process-batch.sh --status
+
+# Run one batch manually
+SELENE_ENV=development ./scripts/dev-process-batch.sh
+
+# Set up from scratch
+./scripts/create-dev-db.sh && npx ts-node scripts/seed-dev-data.ts
+
+# View dev batch logs
+tail -f ~/selene-data-dev/logs/batch-process.log
+```
+
 ### Testing
 ```bash
 # Test ingestion endpoint
@@ -271,7 +290,9 @@ curl -X POST http://localhost:5678/webhook/api/drafts \
 - Ingestion - Note capture with duplicate detection
 - LLM Processing - Concept extraction working
 - Vector Search - LanceDB integration (replaced brute-force similarity)
+- Note Associations - Pairwise similarity via LanceDB vector search
 - Relationships - Typed note relationships with incremental computation
+- Dev Environment - Parallel dev environment with 536 fictional notes, hourly batch processing
 - Thread System - Detection, reconsolidation, lifecycle (archive/split/merge), Obsidian export
 - SeleneChat - Database integration, Ollama AI, thread queries, thread workspace
 - Thinking Partner - Conversation memory, context builder, deep-dive, synthesis
