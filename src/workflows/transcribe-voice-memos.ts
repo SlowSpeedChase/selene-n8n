@@ -262,10 +262,10 @@ async function generateMemoTitle(transcription: string, fallbackTitle: string): 
       timeoutMs: 15000,
     });
 
-    const title = result.trim().replace(/[."']+$/g, '');
+    const title = result.trim().replace(/^["']+|[."']+$/g, '');
 
-    if (!title || title.length < 3) {
-      log.warn({ result }, 'LLM returned empty/short title, using fallback');
+    if (!title || title.length < 3 || title.length > 100) {
+      log.warn({ result, length: title?.length }, 'LLM returned invalid title, using fallback');
       return fallbackTitle;
     }
 
@@ -370,6 +370,7 @@ ${transcription}
       archivedTo: archivePath,
       markdownPath,
       ingestedToSelene: ingested,
+      draftsTitle: title,
     };
     manifest.files[filename] = entry;
     saveManifest(manifest);
@@ -419,11 +420,13 @@ async function retryFailedSends(manifest: ProcessedManifest): Promise<number> {
       const transcription = parts.length > 1 ? parts.slice(1).join('\n---\n').trim() : markdown;
 
       const parsed = parseMemoFilename(filename);
-      const title = `Voice Memo ${parsed.friendlyName}`;
+      const fallbackTitle = `Voice Memo ${parsed.friendlyName}`;
+      const title = await generateMemoTitle(transcription, fallbackTitle);
 
       const sent = await sendToDrafts(title, transcription);
       if (sent) {
         entry.ingestedToSelene = true;
+        entry.draftsTitle = title;
         saveManifest(manifest);
         retried++;
         log.info({ filename }, 'Retry successful');

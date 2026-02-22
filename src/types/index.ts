@@ -74,6 +74,7 @@ export interface ProcessedFileEntry {
   archivedTo: string;
   markdownPath: string;
   ingestedToSelene: boolean;
+  draftsTitle?: string;
 }
 
 export interface ProcessedManifest {
