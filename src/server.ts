@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { config, logger } from './lib';
+import { config, db, logger } from './lib';
 import { requireAuth } from './lib/auth';
 import { ingest } from './workflows/ingest';
 import { exportObsidian } from './workflows/export-obsidian';
@@ -27,6 +27,59 @@ server.get('/health', async () => {
     env: config.env,
     port: config.port,
     timestamp: new Date().toISOString(),
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Compression stats (tiered context)
+// ---------------------------------------------------------------------------
+
+server.get('/health/compression', async () => {
+  const tierDistribution = db
+    .prepare(
+      `SELECT COALESCE(fidelity_tier, 'full') as tier, COUNT(*) as count
+       FROM processed_notes
+       WHERE raw_note_id IN (SELECT id FROM raw_notes WHERE test_run IS NULL)
+       GROUP BY fidelity_tier`
+    )
+    .all() as Array<{ tier: string; count: number }>;
+
+  const essenceProgress = db
+    .prepare(
+      `SELECT
+         COUNT(*) as total,
+         SUM(CASE WHEN essence IS NOT NULL THEN 1 ELSE 0 END) as with_essence
+       FROM processed_notes
+       WHERE raw_note_id IN (SELECT id FROM raw_notes WHERE test_run IS NULL)`
+    )
+    .get() as { total: number; with_essence: number };
+
+  const threadDigests = db
+    .prepare(
+      `SELECT
+         COUNT(*) as total_active,
+         SUM(CASE WHEN thread_digest IS NOT NULL THEN 1 ELSE 0 END) as with_digest
+       FROM threads
+       WHERE status = 'active'`
+    )
+    .get() as { total_active: number; with_digest: number };
+
+  return {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    tiers: Object.fromEntries(tierDistribution.map((r) => [r.tier, r.count])),
+    essences: {
+      total: essenceProgress.total,
+      computed: essenceProgress.with_essence,
+      remaining: essenceProgress.total - essenceProgress.with_essence,
+      percent: essenceProgress.total > 0
+        ? Math.round((essenceProgress.with_essence / essenceProgress.total) * 100)
+        : 0,
+    },
+    threadDigests: {
+      activeThreads: threadDigests.total_active,
+      withDigest: threadDigests.with_digest,
+    },
   };
 });
 
