@@ -1,7 +1,7 @@
 # Dev Environment Isolation Design
 
 **Date:** 2026-02-21
-**Status:** Ready
+**Status:** Done
 **Topic:** infrastructure, developer-experience, privacy
 
 ---
@@ -178,15 +178,15 @@ scripts/reset-dev-data.sh               # Wipe and reseed everything
 
 ## Acceptance Criteria
 
-- [ ] `SELENE_ENV=development` resolves all paths to `~/selene-data-dev/`
-- [ ] Dev server runs on port 5679 alongside production on 5678
-- [ ] Seed script generates ~500 notes and processes through all pipelines
-- [ ] SeleneChat CLI build auto-connects to dev database
-- [ ] SeleneMobile can connect to dev server on port 5679
-- [ ] Dev Obsidian vault populated with fictional data
-- [ ] `reset-dev-data.sh` cleanly wipes and reseeds
-- [ ] Production data (`~/selene-data/`) is never read by dev tools
-- [ ] `overmind start -f Procfile.dev` brings up full dev stack
+- [x] `SELENE_ENV=development` resolves all paths to `~/selene-data-dev/`
+- [x] Dev server runs on port 5679 alongside production on 5678
+- [x] Seed script generates ~500 notes and processes through all pipelines
+- [x] SeleneChat CLI build auto-connects to dev database
+- [x] SeleneMobile can connect to dev server on port 5679
+- [x] Dev Obsidian vault populated with fictional data
+- [x] `reset-dev-data.sh` cleanly wipes and reseeds
+- [x] Production data (`~/selene-data/`) is never read by dev tools
+- [x] `overmind start -f Procfile.dev` brings up full dev stack
 
 ## ADHD Check
 
@@ -197,4 +197,4 @@ scripts/reset-dev-data.sh               # Wipe and reseed everything
 
 ## Scope Check
 
-- [ ] Estimable as < 1 week of focused work? **Yes** — config changes are small, seed script is the bulk of work, Overmind setup is trivial
+- [x] Estimable as < 1 week of focused work? **Yes** — completed in one session
