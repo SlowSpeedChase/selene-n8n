@@ -471,6 +471,103 @@ LOG_FILE=./logs/selene.log
 
 ---
 
+## Development Environment
+
+### Overview
+
+A full parallel dev environment exists at `~/selene-data-dev/` with 536 fictional notes. Use `SELENE_ENV=development` to target it. **Never test against the production database.**
+
+### Directory Layout
+
+```
+~/selene-data-dev/
+  selene.db           # Dev SQLite database (environment='development')
+  vault/              # Dev Obsidian vault
+  vectors.lance/      # Dev LanceDB vector store
+  digests/            # Dev digest output
+  logs/               # Dev processing logs
+  voice-memos/        # Dev voice memo output
+```
+
+### Quick Start
+
+```bash
+# Set up dev environment from scratch
+./scripts/create-dev-db.sh                    # Create empty dev database
+npx ts-node scripts/seed-dev-data.ts          # Seed 536 fictional notes + LLM process
+
+# Check dev processing status
+./scripts/dev-process-batch.sh --status
+
+# Run one batch manually (default 15 notes per step)
+SELENE_ENV=development ./scripts/dev-process-batch.sh
+
+# Run with custom batch size
+SELENE_ENV=development ./scripts/dev-process-batch.sh 25
+
+# Reset everything (wipe and reseed)
+./scripts/reset-dev-data.sh
+```
+
+### Automated Processing
+
+The dev environment has an hourly launchd agent that processes notes in batches:
+
+```bash
+# Check if dev batch agent is running
+launchctl list com.selene.dev-process-batch
+
+# Manually trigger a batch
+launchctl start com.selene.dev-process-batch
+
+# View dev batch logs
+tail -f ~/selene-data-dev/logs/batch-process.log
+
+# Install/reload the agent
+cp launchd/com.selene.dev-process-batch.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.selene.dev-process-batch.plist
+```
+
+### Dev Pipeline Steps
+
+The batch processor runs these 6 steps sequentially:
+
+| Step | Workflow | What It Does |
+|------|----------|-------------|
+| 1 | `index-vectors.ts` | Embed notes into LanceDB |
+| 2 | `compute-associations.ts` | Pairwise similarity via vector search |
+| 3 | `compute-relationships.ts` | Temporal, thread, project relationships |
+| 4 | `detect-threads.ts` | Cluster notes into threads |
+| 5 | `reconsolidate-threads.ts` | Thread summaries + momentum scores |
+| 6 | `export-obsidian.ts` | Sync to dev Obsidian vault |
+
+### Running Individual Dev Workflows
+
+```bash
+# Any workflow can be run against dev by setting SELENE_ENV
+SELENE_ENV=development npx ts-node src/workflows/index-vectors.ts 50
+SELENE_ENV=development npx ts-node src/workflows/compute-associations.ts 20
+SELENE_ENV=development npx ts-node src/workflows/detect-threads.ts
+```
+
+### Dev Database Queries
+
+```bash
+DEV_DB=~/selene-data-dev/selene.db
+
+# Check processing progress
+sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM raw_notes;"
+sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM processed_notes;"
+sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM note_associations;"
+sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM threads;"
+sqlite3 "$DEV_DB" "SELECT COUNT(*) FROM raw_notes WHERE exported_to_obsidian = 1;"
+
+# Verify it's a dev database
+sqlite3 "$DEV_DB" "SELECT value FROM _selene_metadata WHERE key='environment';"
+```
+
+---
+
 ## Related Context Files
 
 - **`@src/workflows/`** - TypeScript workflow implementations

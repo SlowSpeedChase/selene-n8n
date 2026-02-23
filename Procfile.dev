@@ -1,1 +1,2 @@
-server: npx ts-node src/server.ts
+server: SELENE_ENV=development npx ts-node src/server.ts
+workflows: while true; do SELENE_ENV=development ./scripts/dev-process-batch.sh 25 || true; sleep 300; done
