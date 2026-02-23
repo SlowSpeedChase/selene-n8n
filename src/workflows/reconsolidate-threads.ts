@@ -1,4 +1,4 @@
-import { createWorkflowLogger, db, generate } from '../lib';
+import { createWorkflowLogger, db, generate, ContextBuilder } from '../lib';
 import { normalizeThreadName } from '../lib/strings';
 import type { WorkflowResult } from '../types';
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
@@ -7,7 +7,7 @@ import { join } from 'path';
 const log = createWorkflowLogger('reconsolidate-threads');
 
 // Configuration
-const MAX_NOTES_PER_SYNTHESIS = 15;
+const MAX_NOTES_PER_SYNTHESIS = 30;
 
 // Types
 interface ThreadRecord {
@@ -24,6 +24,10 @@ interface NoteRecord {
   title: string;
   content: string;
   created_at: string;
+  essence: string | null;
+  primary_theme: string | null;
+  concepts: string | null;
+  fidelity_tier: string;
 }
 
 interface ThreadSynthesis {
@@ -85,11 +89,14 @@ function getThreadsNeedingUpdate(): ThreadRecord[] {
 function getThreadNotes(threadId: number, limit: number): NoteRecord[] {
   return db
     .prepare(
-      `SELECT r.id, r.title, r.content, r.created_at
-       FROM raw_notes r
-       JOIN thread_notes tn ON r.id = tn.raw_note_id
+      `SELECT rn.id, rn.title, rn.content, rn.created_at,
+              pn.essence, pn.primary_theme, pn.concepts,
+              COALESCE(pn.fidelity_tier, 'full') as fidelity_tier
+       FROM raw_notes rn
+       JOIN thread_notes tn ON rn.id = tn.raw_note_id
+       LEFT JOIN processed_notes pn ON rn.id = pn.raw_note_id
        WHERE tn.thread_id = ?
-       ORDER BY r.created_at DESC
+       ORDER BY rn.created_at DESC
        LIMIT ?`
     )
     .all(threadId, limit) as NoteRecord[];
@@ -99,9 +106,21 @@ function getThreadNotes(threadId: number, limit: number): NoteRecord[] {
  * Build LLM prompt for thread resynthesis
  */
 function buildResynthesisPrompt(thread: ThreadRecord, notes: NoteRecord[]): string {
-  const noteTexts = notes
-    .map((n, i) => `--- Note ${i + 1} (${n.created_at}) ---\nTitle: ${n.title}\n${n.content}`)
-    .join('\n\n');
+  const builder = new ContextBuilder(3000);
+
+  for (const note of notes) {
+    builder.addNote({
+      id: note.id,
+      title: `${note.title} (${note.created_at})`,
+      content: note.content,
+      essence: note.essence,
+      primary_theme: note.primary_theme,
+      concepts: note.concepts,
+      fidelity_tier: note.fidelity_tier,
+    });
+  }
+
+  const noteTexts = builder.build();
 
   return `Thread: ${thread.name}
 Previous summary: ${thread.summary || '(none)'}
