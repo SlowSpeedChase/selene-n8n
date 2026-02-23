@@ -48,7 +48,9 @@ export async function compileThreadDigests(): Promise<WorkflowResult> {
     return { processed: 0, errors: 0, details: [] };
   }
 
-  // Find active threads with 10+ notes where digest is stale or missing
+  // Find active threads with 10+ notes where digest is missing or new essences
+  // have been computed since the digest was last compiled (tracked via updated_at
+  // on the thread_digest column — we update updated_at when writing the digest).
   const threads = db
     .prepare(
       `SELECT t.id, t.name, t.summary, t.why,
@@ -57,11 +59,13 @@ export async function compileThreadDigests(): Promise<WorkflowResult> {
        WHERE t.status = 'active'
          AND (SELECT COUNT(*) FROM thread_notes tn WHERE tn.thread_id = t.id) >= 10
          AND (t.thread_digest IS NULL
-              OR t.updated_at > COALESCE(
-                (SELECT MAX(pn.essence_at) FROM processed_notes pn
-                 JOIN thread_notes tn2 ON pn.raw_note_id = tn2.raw_note_id
-                 WHERE tn2.thread_id = t.id AND pn.essence IS NOT NULL),
-                '1970-01-01'))
+              OR EXISTS (
+                SELECT 1 FROM processed_notes pn
+                JOIN thread_notes tn2 ON pn.raw_note_id = tn2.raw_note_id
+                WHERE tn2.thread_id = t.id
+                  AND pn.essence IS NOT NULL
+                  AND pn.essence_at > t.updated_at
+              ))
        ORDER BY t.momentum_score DESC NULLS LAST`
     )
     .all() as ThreadForDigest[];
@@ -105,7 +109,7 @@ export async function compileThreadDigests(): Promise<WorkflowResult> {
         continue;
       }
 
-      db.prepare(`UPDATE threads SET thread_digest = ? WHERE id = ?`).run(digest, thread.id);
+      db.prepare(`UPDATE threads SET thread_digest = ?, updated_at = datetime('now') WHERE id = ?`).run(digest, thread.id);
 
       log.info({ threadId: thread.id, digestLength: digest.length }, 'Thread digest compiled');
       result.processed++;

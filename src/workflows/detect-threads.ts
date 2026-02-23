@@ -1,4 +1,5 @@
 import { createWorkflowLogger, db, generate, embed, searchSimilarNotes, getIndexedNoteIds, ContextBuilder } from '../lib';
+import type { FidelityTier } from '../lib/context-builder';
 import { normalizeThreadName } from '../lib/strings';
 import { notifyNewThread } from '../lib/apns';
 import type { WorkflowResult } from '../types';
@@ -9,8 +10,6 @@ const log = createWorkflowLogger('detect-threads');
 // Tuned via US-046: 0.65 provides best balance between cluster detection and over-merging
 const DEFAULT_SIMILARITY_THRESHOLD = 0.65;
 const MIN_CLUSTER_SIZE = 3;
-const MAX_NOTES_PER_SYNTHESIS = 15;
-
 // Thread assignment configuration
 // L2 distance threshold - based on observed data: median ~288, 75th percentile ~346
 const MAX_ASSIGNMENT_DISTANCE = 350; // L2 distance threshold for thread assignment
@@ -26,7 +25,7 @@ interface NoteRecord {
   essence: string | null;
   primary_theme: string | null;
   concepts: string | null;
-  fidelity_tier: string;
+  fidelity_tier: FidelityTier;
 }
 
 interface AssociationRecord {

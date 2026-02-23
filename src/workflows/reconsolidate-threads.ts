@@ -1,4 +1,5 @@
 import { createWorkflowLogger, db, generate, ContextBuilder } from '../lib';
+import type { FidelityTier } from '../lib/context-builder';
 import { normalizeThreadName } from '../lib/strings';
 import type { WorkflowResult } from '../types';
 import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
@@ -27,7 +28,7 @@ interface NoteRecord {
   essence: string | null;
   primary_theme: string | null;
   concepts: string | null;
-  fidelity_tier: string;
+  fidelity_tier: FidelityTier;
 }
 
 interface ThreadSynthesis {

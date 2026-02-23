@@ -20,7 +20,7 @@ export interface NoteContext {
   essence: string | null;
   primary_theme: string | null;
   concepts: string | null; // JSON array string
-  fidelity_tier: string;
+  fidelity_tier: FidelityTier;
 }
 
 export interface ThreadContext {
@@ -46,7 +46,7 @@ export class ContextBuilder {
 
   /** Add a note rendered at its fidelity tier. */
   addNote(note: NoteContext): this {
-    const block = this.renderNote(note, note.fidelity_tier as FidelityTier);
+    const block = this.renderNote(note, note.fidelity_tier);
     return this.appendBlock(block);
   }
 
@@ -73,11 +73,12 @@ export class ContextBuilder {
   }
 
   private appendBlock(block: string): this {
-    if (this.usedChars + block.length > this.budgetChars) {
+    const separatorCost = this.blocks.length > 0 ? 2 : 0; // '\n\n' between blocks
+    if (this.usedChars + block.length + separatorCost > this.budgetChars) {
       return this;
     }
     this.blocks.push(block);
-    this.usedChars += block.length;
+    this.usedChars += block.length + separatorCost;
     return this;
   }
 
