@@ -109,6 +109,7 @@ src/
     ollama.ts         # Ollama API client
     auth.ts           # Bearer token auth middleware
     apns.ts           # APNs push notification client
+    context-builder.ts    # Tiered context assembly utility
   workflows/
     ingest.ts                   # Note ingestion (called by webhook)
     process-llm.ts              # LLM concept extraction
@@ -123,6 +124,9 @@ src/
     daily-summary.ts            # Daily summary generation
     send-digest.ts              # Apple Notes digest delivery
     transcribe-voice-memos.ts   # whisper.cpp voice transcription
+    distill-essences.ts             # Essence backfill + retry
+    evaluate-fidelity.ts            # Fidelity tier assignment (daily)
+    compile-thread-digests.ts       # Thread digest compilation
 
 launchd/
   com.selene.server.plist                  # Webhook server (always running)
@@ -138,6 +142,9 @@ launchd/
   com.selene.send-digest.plist             # Daily at 6am
   com.selene.transcribe-voice-memos.plist  # WatchPaths trigger
   com.selene.dev-process-batch.plist       # Dev: hourly batch processing
+  com.selene.distill-essences.plist          # Every 5 minutes
+  com.selene.evaluate-fidelity.plist         # Daily at 3am
+  com.selene.compile-thread-digests.plist    # Hourly
 ```
 
 **Why this architecture?** See `@.claude/DEVELOPMENT.md` (System Architecture section)
@@ -226,9 +233,15 @@ npx ts-node src/workflows/export-obsidian.ts
 npx ts-node src/workflows/daily-summary.ts
 npx ts-node src/workflows/send-digest.ts
 npx ts-node src/workflows/transcribe-voice-memos.ts
+npx ts-node src/workflows/distill-essences.ts
+npx ts-node src/workflows/evaluate-fidelity.ts
+npx ts-node src/workflows/compile-thread-digests.ts
 
 # View workflow logs
 tail -f logs/selene.log | npx pino-pretty
+
+# Check compression progress
+curl http://localhost:5678/health/compression
 ```
 
 ### Launchd Management

@@ -41,10 +41,11 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
   // Get notes from the past week
   const notes = db
     .prepare(
-      `SELECT rn.title, rn.content, pn.primary_theme, pn.secondary_themes, pn.concepts
+      `SELECT rn.title, rn.content, pn.primary_theme, pn.secondary_themes, pn.concepts, pn.essence
        FROM raw_notes rn
        LEFT JOIN processed_notes pn ON rn.id = pn.raw_note_id
        WHERE rn.created_at BETWEEN ? AND ?
+         AND rn.test_run IS NULL
        ORDER BY rn.created_at`
     )
     .all(startOfWeek.toISOString(), endOfDay.toISOString()) as Array<{
@@ -53,6 +54,7 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
     primary_theme: string | null;
     secondary_themes: string | null;
     concepts: string | null;
+    essence: string | null;
   }>;
 
   log.info({ noteCount: notes.length }, 'Found notes for past week');
@@ -65,19 +67,21 @@ export async function dailySummary(): Promise<{ success: boolean; path?: string;
   // Format notes for prompt
   const notesText = notes
     .map((n) => {
-      // Use concepts if available, otherwise first 100 chars of content
-      let preview = n.content.slice(0, 100);
+      // Prefer essence, then concepts, then truncated content
+      if (n.essence) {
+        return `- ${n.title}: ${n.essence}`;
+      }
       if (n.concepts) {
         try {
           const conceptList = JSON.parse(n.concepts);
           if (conceptList.length > 0) {
-            preview = conceptList.slice(0, 3).join(', ');
+            return `- ${n.title}: ${conceptList.slice(0, 3).join(', ')}`;
           }
-        } catch (e) {
-          // Fall back to content preview
+        } catch {
+          // Fall through
         }
       }
-      return `- ${n.title}: ${preview}...`;
+      return `- ${n.title}: ${n.content.slice(0, 100)}...`;
     })
     .join('\n');
 

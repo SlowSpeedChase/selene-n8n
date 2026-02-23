@@ -1,4 +1,5 @@
-import { createWorkflowLogger, db, generate, embed, searchSimilarNotes, getIndexedNoteIds } from '../lib';
+import { createWorkflowLogger, db, generate, embed, searchSimilarNotes, getIndexedNoteIds, ContextBuilder } from '../lib';
+import type { FidelityTier } from '../lib/context-builder';
 import { normalizeThreadName } from '../lib/strings';
 import { notifyNewThread } from '../lib/apns';
 import type { WorkflowResult } from '../types';
@@ -9,8 +10,6 @@ const log = createWorkflowLogger('detect-threads');
 // Tuned via US-046: 0.65 provides best balance between cluster detection and over-merging
 const DEFAULT_SIMILARITY_THRESHOLD = 0.65;
 const MIN_CLUSTER_SIZE = 3;
-const MAX_NOTES_PER_SYNTHESIS = 15;
-
 // Thread assignment configuration
 // L2 distance threshold - based on observed data: median ~288, 75th percentile ~346
 const MAX_ASSIGNMENT_DISTANCE = 350; // L2 distance threshold for thread assignment
@@ -23,6 +22,10 @@ interface NoteRecord {
   title: string;
   content: string;
   created_at: string;
+  essence: string | null;
+  primary_theme: string | null;
+  concepts: string | null;
+  fidelity_tier: FidelityTier;
 }
 
 interface AssociationRecord {
@@ -296,10 +299,13 @@ function getNoteContent(noteIds: number[]): NoteRecord[] {
   const placeholders = noteIds.map(() => '?').join(',');
   return db
     .prepare(
-      `SELECT id, title, content, created_at
-       FROM raw_notes
-       WHERE id IN (${placeholders})
-       ORDER BY created_at ASC`
+      `SELECT rn.id, rn.title, rn.content, rn.created_at,
+              pn.essence, pn.primary_theme, pn.concepts,
+              COALESCE(pn.fidelity_tier, 'full') as fidelity_tier
+       FROM raw_notes rn
+       LEFT JOIN processed_notes pn ON rn.id = pn.raw_note_id
+       WHERE rn.id IN (${placeholders})
+       ORDER BY rn.created_at ASC`
     )
     .all(...noteIds) as NoteRecord[];
 }
@@ -308,10 +314,21 @@ function getNoteContent(noteIds: number[]): NoteRecord[] {
  * Build LLM prompt for thread synthesis
  */
 function buildSynthesisPrompt(notes: NoteRecord[]): string {
-  const noteTexts = notes
-    .slice(0, MAX_NOTES_PER_SYNTHESIS)
-    .map((n, i) => `--- Note ${i + 1} (${n.created_at}) ---\nTitle: ${n.title}\n${n.content}`)
-    .join('\n\n');
+  const builder = new ContextBuilder(3000);
+
+  for (const note of notes) {
+    builder.addNote({
+      id: note.id,
+      title: `${note.title} (${note.created_at})`,
+      content: note.content,
+      essence: note.essence,
+      primary_theme: note.primary_theme,
+      concepts: note.concepts,
+      fidelity_tier: note.fidelity_tier,
+    });
+  }
+
+  const noteTexts = builder.build();
 
   return `These notes were written over time by the same person. They cluster together based on semantic similarity.
 

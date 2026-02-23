@@ -22,6 +22,14 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 All three "Ready" designs from 2026-02-12 are now implemented and merged. The system has grown significantly: menu bar orchestrator manages workflow scheduling, voice memos are auto-transcribed via whisper.cpp, and the morning briefing got a full redesign with structured cards.
 
 ### Recent Completions
+- **Tiered Context Compression** (2026-02-22) - Lifecycle-based fidelity tiers for LLM context scaling
+  - `ContextBuilder` shared utility — tiered rendering (full/high/summary/skeleton) within token budgets
+  - `distill-essences.ts` — backfills note essences (1-2 sentence distillations) at ~120/hour
+  - `evaluate-fidelity.ts` — daily tier assignment based on age + thread activity
+  - `compile-thread-digests.ts` — thread-level narrative digest compilation
+  - Updated `detect-threads.ts`, `reconsolidate-threads.ts`, `daily-summary.ts` to use ContextBuilder
+  - `/health/compression` endpoint for monitoring tier distribution and backfill progress
+  - Migration 020: `essence`, `fidelity_tier` on `processed_notes`, `thread_digest` on `threads`
 - **Dev Environment Isolation** (2026-02-22) - Full parallel dev environment with 536 fictional notes
   - `~/selene-data-dev/` with separate SQLite, LanceDB, Obsidian vault
   - `SELENE_ENV=development` environment switching via `src/lib/config.ts`

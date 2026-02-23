@@ -27,6 +27,42 @@ Respond in JSON format:
 
 JSON response:`;
 
+const ESSENCE_PROMPT = `Distill this note into 1-2 sentences capturing what it means to the person who wrote it. Focus on the core insight, decision, or question — not a summary of the text.
+
+Title: {title}
+Content: {content}
+{context}
+
+Respond with ONLY the 1-2 sentence distillation, no quotes or explanation:`;
+
+export function buildEssencePrompt(
+  title: string,
+  content: string,
+  concepts: string | null,
+  primaryTheme: string | null
+): string {
+  const contextParts: string[] = [];
+  if (concepts) {
+    try {
+      const conceptList = JSON.parse(concepts);
+      if (conceptList.length > 0) {
+        contextParts.push(`Key concepts: ${conceptList.join(', ')}`);
+      }
+    } catch { /* ignore */ }
+  }
+  if (primaryTheme) {
+    contextParts.push(`Theme: ${primaryTheme}`);
+  }
+  const contextStr = contextParts.length > 0
+    ? contextParts.join('\n')
+    : '';
+
+  return ESSENCE_PROMPT
+    .replace('{title}', title)
+    .replace('{content}', content)
+    .replace('{context}', contextStr);
+}
+
 export async function processLlm(limit = 10): Promise<WorkflowResult> {
   log.info({ limit }, 'Starting LLM processing run');
 
@@ -96,6 +132,27 @@ export async function processLlm(limit = 10): Promise<WorkflowResult> {
 
       // Mark note as processed
       markProcessed(note.id);
+
+      // Compute essence inline
+      try {
+        const essencePrompt = buildEssencePrompt(
+          note.title,
+          note.content,
+          JSON.stringify(extracted.concepts || []),
+          extracted.primary_theme || null
+        );
+        const essenceResponse = await generate(essencePrompt);
+        const essence = essenceResponse.trim();
+        if (essence && essence.length > 10) {
+          db.prepare(
+            `UPDATE processed_notes SET essence = ?, essence_at = ? WHERE raw_note_id = ?`
+          ).run(essence, new Date().toISOString(), note.id);
+          log.info({ noteId: note.id, essenceLength: essence.length }, 'Essence computed');
+        }
+      } catch (essenceErr) {
+        // Non-fatal — distill-essences workflow will retry
+        log.warn({ noteId: note.id, err: essenceErr as Error }, 'Essence computation failed, will retry later');
+      }
 
       log.info({ noteId: note.id, concepts: extracted.concepts, theme: extracted.primary_theme }, 'Note processed successfully');
       result.processed++;

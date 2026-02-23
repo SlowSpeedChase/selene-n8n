@@ -31,3 +31,4 @@ export {
   type SimilarNote,
   type SearchOptions,
 } from './lancedb';
+export { ContextBuilder, type NoteContext, type ThreadContext, type FidelityTier } from './context-builder';
