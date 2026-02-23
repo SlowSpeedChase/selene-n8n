@@ -464,7 +464,7 @@ function markAsExported(noteId: number): void {
 export async function exportObsidian(noteId?: number): Promise<ExportResult> {
   log.info({ noteId }, 'Starting Obsidian export');
 
-  const vaultPath = process.env.OBSIDIAN_VAULT_PATH || join(config.projectRoot, 'vault');
+  const vaultPath = process.env.OBSIDIAN_VAULT_PATH || config.vaultPath;
   log.info({ vaultPath }, 'Using vault path');
 
   const notes = getNotesForExport(noteId);
