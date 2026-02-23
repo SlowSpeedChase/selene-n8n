@@ -8,6 +8,17 @@
         "@upstash/context7-mcp@latest"
       ],
       "env": {}
+    },
+    "sqlite-dev": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@anthropic/mcp-sqlite",
+        "--db-path",
+        "/Users/chaseeasterling/selene-data-dev/selene.db"
+      ],
+      "env": {}
     }
   }
 }
