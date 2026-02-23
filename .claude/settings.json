@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '(\\.env$|\\.env\\.|selene\\.db)'; then echo 'BLOCKED: Cannot edit .env files or production database' >&2; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -q '\\.ts$'; then cd /Users/chaseeasterling/selene-n8n && npx tsc --noEmit --pretty 2>&1 | head -20; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
