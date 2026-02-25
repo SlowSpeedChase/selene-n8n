@@ -128,6 +128,10 @@ actor RemoteDataService: DataProvider {
         return result
     }
 
+    func getEmotionalNotes(keywords: [String], limit: Int) async throws -> [Note] {
+        return []
+    }
+
     func retrieveNotesFor(queryType: QueryAnalyzer.QueryType, keywords: [String], timeScope: QueryAnalyzer.TimeScope, limit: Int) async throws -> [Note] {
         switch queryType {
         case .pattern, .general:

@@ -285,6 +285,37 @@ class DatabaseService: ObservableObject {
         return notes
     }
 
+    func getEmotionalNotes(keywords: [String], limit: Int) async throws -> [Note] {
+        guard !keywords.isEmpty else { return [] }
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Build compound keyword filter: any keyword matches content OR title
+        let keywordFilters = keywords.map { keyword in
+            rawNotes[content].like("%\(keyword)%") || rawNotes[title].like("%\(keyword)%")
+        }
+        let combinedKeywordFilter = keywordFilters.dropFirst().reduce(keywordFilters[0]) { $0 || $1 }
+
+        let query = rawNotes
+            .join(.inner, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .filter(combinedKeywordFilter)
+            .filter(processedNotes[emotionalTone] != nil)
+            .filter(processedNotes[emotionalTone] != "neutral")
+            .filter(rawNotes[testRun] == nil)
+            .order(processedNotes[sentimentScore].absoluteValue.desc, rawNotes[createdAt].desc)
+            .limit(limit)
+
+        var notes: [Note] = []
+
+        for row in try db.prepare(query) {
+            let note = try parseNote(from: row)
+            notes.append(note)
+        }
+
+        return notes
+    }
+
     func getNoteByConcept(_ concept: String, limit: Int = 50) async throws -> [Note] {
         guard let db = db else {
             throw DatabaseError.notConnected

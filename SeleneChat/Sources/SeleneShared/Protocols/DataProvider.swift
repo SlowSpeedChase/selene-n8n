@@ -16,6 +16,9 @@ public protocol DataProvider: AnyObject {
     func getThreadAssignmentsForNotes(_ noteIds: [Int]) async throws -> [Int: (threadName: String, threadId: Int64)]
     func retrieveNotesFor(queryType: QueryAnalyzer.QueryType, keywords: [String], timeScope: QueryAnalyzer.TimeScope, limit: Int) async throws -> [Note]
 
+    /// Find notes with strong emotional signals related to keywords
+    func getEmotionalNotes(keywords: [String], limit: Int) async throws -> [Note]
+
     // MARK: - Threads
 
     func getActiveThreads(limit: Int) async throws -> [Thread]
