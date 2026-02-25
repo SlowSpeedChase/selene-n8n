@@ -23,6 +23,7 @@ class ChatViewModel: ObservableObject {
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
     private let briefingContextBuilder = BriefingContextBuilder()
+    private lazy var contextualRetriever = ContextualRetriever(dataProvider: dataProvider)
     var speechSynthesisService: SpeechSynthesizing?
 
     /// Currently active deep-dive thread (if in deep-dive mode)
@@ -373,10 +374,22 @@ class ChatViewModel: ObservableObject {
             historySection = ""
         }
 
+        // Retrieve contextual blocks (emotional history, task outcomes, sentiment trends)
+        let contextualBlocks = try await contextualRetriever.retrieve(
+            query: query,
+            keywords: analysis.keywords
+        )
+        let contextualSection = contextualBlocks.blocks.isEmpty ? "" : """
+
+        ## Context from your history:
+        \(contextualBlocks.formatted())
+
+        """
+
         // Build full prompt
         let fullPrompt = """
         \(systemPrompt)
-        \(historySection)
+        \(historySection)\(contextualSection)
         Notes:
         \(noteContext)
 
