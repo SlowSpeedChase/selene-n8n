@@ -278,7 +278,7 @@ final class ThreadWorkspacePromptBuilderTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            prompt.lowercased().contains("not summarize") || prompt.lowercased().contains("not a summarizer"),
+            prompt.lowercased().contains("not summarize") || prompt.lowercased().contains("not a summarizer") || prompt.lowercased().contains("never summarize"),
             "Prompt should explicitly discourage summarizing"
         )
     }
