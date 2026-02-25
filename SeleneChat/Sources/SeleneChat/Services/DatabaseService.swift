@@ -116,6 +116,8 @@ class DatabaseService: ObservableObject {
     private let threadsMomentumScore = Expression<Double?>("momentum_score")
     private let threadsLastActivityAt = Expression<String?>("last_activity_at")
     private let threadsCreatedAt = Expression<String>("created_at")
+    private let threadsThreadDigest = Expression<String?>("thread_digest")
+    private let threadsEmotionalCharge = Expression<String?>("emotional_charge")
 
     // thread_notes table (Phase 3 living system)
     private let threadNotesTable = Table("thread_notes")
@@ -459,7 +461,9 @@ class DatabaseService: ObservableObject {
                 noteCount: Int(row[threadsNoteCount]),
                 momentumScore: row[threadsMomentumScore],
                 lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
-                createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+                createdAt: parseDateString(row[threadsCreatedAt]) ?? Date(),
+                threadDigest: try? row.get(threadsThreadDigest),
+                emotionalCharge: try? row.get(threadsEmotionalCharge)
             )
             threads.append(thread)
         }
@@ -501,7 +505,9 @@ class DatabaseService: ObservableObject {
             noteCount: Int(row[threadsNoteCount]),
             momentumScore: row[threadsMomentumScore],
             lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
-            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date(),
+            threadDigest: try? row.get(threadsThreadDigest),
+            emotionalCharge: try? row.get(threadsEmotionalCharge)
         )
 
         // Get linked notes
@@ -754,7 +760,9 @@ class DatabaseService: ObservableObject {
             noteCount: Int(row[threadsNoteCount]),
             momentumScore: row[threadsMomentumScore],
             lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
-            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date(),
+            threadDigest: try? row.get(threadsThreadDigest),
+            emotionalCharge: try? row.get(threadsEmotionalCharge)
         )
     }
 
