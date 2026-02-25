@@ -61,6 +61,8 @@ public struct Note: Identifiable, Codable, Hashable {
     public var sentimentScore: Double?
     public var emotionalTone: String?
     public var energyLevel: String?
+    public var essence: String?
+    public var fidelityTier: String?
     public var calendarEvent: CalendarEventContext?
 
     enum CodingKeys: String, CodingKey {
@@ -87,6 +89,8 @@ public struct Note: Identifiable, Codable, Hashable {
         case sentimentScore = "sentiment_score"
         case emotionalTone = "emotional_tone"
         case energyLevel = "energy_level"
+        case essence
+        case fidelityTier = "fidelity_tier"
         case calendarEvent = "calendar_event"
     }
 
@@ -116,6 +120,8 @@ public struct Note: Identifiable, Codable, Hashable {
         sentimentScore: Double? = nil,
         emotionalTone: String? = nil,
         energyLevel: String? = nil,
+        essence: String? = nil,
+        fidelityTier: String? = nil,
         calendarEvent: CalendarEventContext? = nil
     ) {
         self.id = id
@@ -143,6 +149,8 @@ public struct Note: Identifiable, Codable, Hashable {
         self.sentimentScore = sentimentScore
         self.emotionalTone = emotionalTone
         self.energyLevel = energyLevel
+        self.essence = essence
+        self.fidelityTier = fidelityTier
         self.calendarEvent = calendarEvent
     }
 
@@ -173,6 +181,8 @@ public struct Note: Identifiable, Codable, Hashable {
         sentimentScore = try container.decodeIfPresent(Double.self, forKey: .sentimentScore)
         emotionalTone = try container.decodeIfPresent(String.self, forKey: .emotionalTone)
         energyLevel = try container.decodeIfPresent(String.self, forKey: .energyLevel)
+        essence = try container.decodeIfPresent(String.self, forKey: .essence)
+        fidelityTier = try container.decodeIfPresent(String.self, forKey: .fidelityTier)
 
         // calendar_event is stored as a JSON string in SQLite
         if let jsonString = try container.decodeIfPresent(String.self, forKey: .calendarEvent),
@@ -253,6 +263,8 @@ extension Note {
         sentimentScore: Double? = nil,
         emotionalTone: String? = nil,
         energyLevel: String? = nil,
+        essence: String? = nil,
+        fidelityTier: String? = nil,
         calendarEvent: CalendarEventContext? = nil
     ) -> Note {
         Note(
@@ -281,6 +293,8 @@ extension Note {
             sentimentScore: sentimentScore,
             emotionalTone: emotionalTone,
             energyLevel: energyLevel,
+            essence: essence,
+            fidelityTier: fidelityTier,
             calendarEvent: calendarEvent
         )
     }

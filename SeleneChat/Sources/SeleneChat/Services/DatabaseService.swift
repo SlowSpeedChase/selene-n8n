@@ -75,6 +75,8 @@ class DatabaseService: ObservableObject {
     private let sentimentScore = Expression<Double?>("sentiment_score")
     private let emotionalTone = Expression<String?>("emotional_tone")
     private let energyLevel = Expression<String?>("energy_level")
+    private let essence = Expression<String?>("essence")
+    private let fidelityTier = Expression<String?>("fidelity_tier")
 
     // chat_sessions columns
     private let sessionId = Expression<String>("id")
@@ -576,6 +578,8 @@ class DatabaseService: ObservableObject {
             sentimentScore: try? row.get(processedNotes[sentimentScore]),
             emotionalTone: try? row.get(processedNotes[emotionalTone]),
             energyLevel: try? row.get(processedNotes[energyLevel]),
+            essence: try? row.get(processedNotes[essence]),
+            fidelityTier: try? row.get(processedNotes[fidelityTier]),
             calendarEvent: calendarEventContext
         )
     }
