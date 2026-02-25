@@ -316,6 +316,90 @@ class DatabaseService: ObservableObject {
         return notes
     }
 
+    // MARK: - Task Outcomes
+
+    /// Table and column definitions for task_metadata
+    private let taskMetadataTable = Table("task_metadata")
+    private let tmRawNoteId = SQLite.Expression<Int64>("raw_note_id")
+    private let tmThingsTaskId = SQLite.Expression<String?>("things_task_id")
+    private let tmTaskType = SQLite.Expression<String?>("task_type")
+    private let tmEnergyRequired = SQLite.Expression<String?>("energy_required")
+    private let tmEstimatedMinutes = SQLite.Expression<Int64?>("estimated_minutes")
+    private let tmCreatedAt = SQLite.Expression<String>("created_at")
+    private let tmCompletedAt = SQLite.Expression<String?>("completed_at")
+    private let tmRelatedConcepts = SQLite.Expression<String?>("related_concepts")
+    private let tmOverwhelmFactor = SQLite.Expression<Int64?>("overwhelm_factor")
+
+    func getTaskOutcomes(keywords: [String], limit: Int) async throws -> [TaskOutcome] {
+        guard !keywords.isEmpty else { return [] }
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if task_metadata table exists
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='task_metadata'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        // Build compound keyword filter: any keyword matches content, title, or related_concepts
+        let keywordFilters = keywords.map { keyword in
+            rawNotes[content].like("%\(keyword)%") ||
+            rawNotes[title].like("%\(keyword)%") ||
+            taskMetadataTable[tmRelatedConcepts].like("%\(keyword)%")
+        }
+        let combinedKeywordFilter = keywordFilters.dropFirst().reduce(keywordFilters[0]) { $0 || $1 }
+
+        let query = taskMetadataTable
+            .join(.inner, rawNotes, on: taskMetadataTable[tmRawNoteId] == rawNotes[id])
+            .filter(combinedKeywordFilter)
+            .filter(rawNotes[testRun] == nil)
+            .order(taskMetadataTable[tmCreatedAt].desc)
+            .limit(limit)
+
+        let now = Date()
+        let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: now)!
+        var outcomes: [TaskOutcome] = []
+
+        for row in try db.prepare(query) {
+            let taskCreatedAt = parseDateString(try row.get(taskMetadataTable[tmCreatedAt])) ?? Date()
+            let taskCompletedAt = (try? row.get(taskMetadataTable[tmCompletedAt])).flatMap { parseDateString($0) }
+
+            // Compute status: completed, abandoned (>30 days open), or open
+            let taskStatus: String
+            if taskCompletedAt != nil {
+                taskStatus = "completed"
+            } else if taskCreatedAt < thirtyDaysAgo {
+                taskStatus = "abandoned"
+            } else {
+                taskStatus = "open"
+            }
+
+            // Compute daysOpen: days between creation and completion (or now)
+            let referenceDate = taskCompletedAt ?? now
+            let daysOpen = Calendar.current.dateComponents([.day], from: taskCreatedAt, to: referenceDate).day ?? 0
+
+            let estimatedMins: Int? = (try? row.get(taskMetadataTable[tmEstimatedMinutes])).flatMap { Int($0) }
+
+            let outcome = TaskOutcome(
+                taskTitle: try row.get(rawNotes[title]),
+                taskType: try? row.get(taskMetadataTable[tmTaskType]),
+                energyRequired: try? row.get(taskMetadataTable[tmEnergyRequired]),
+                estimatedMinutes: estimatedMins,
+                status: taskStatus,
+                createdAt: taskCreatedAt,
+                completedAt: taskCompletedAt,
+                daysOpen: daysOpen
+            )
+            outcomes.append(outcome)
+        }
+
+        return outcomes
+    }
+
     func getNoteByConcept(_ concept: String, limit: Int = 50) async throws -> [Note] {
         guard let db = db else {
             throw DatabaseError.notConnected

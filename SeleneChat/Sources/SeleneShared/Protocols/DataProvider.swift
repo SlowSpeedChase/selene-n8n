@@ -19,6 +19,11 @@ public protocol DataProvider: AnyObject {
     /// Find notes with strong emotional signals related to keywords
     func getEmotionalNotes(keywords: [String], limit: Int) async throws -> [Note]
 
+    // MARK: - Tasks
+
+    /// Find task outcomes related to keywords
+    func getTaskOutcomes(keywords: [String], limit: Int) async throws -> [TaskOutcome]
+
     // MARK: - Threads
 
     func getActiveThreads(limit: Int) async throws -> [Thread]

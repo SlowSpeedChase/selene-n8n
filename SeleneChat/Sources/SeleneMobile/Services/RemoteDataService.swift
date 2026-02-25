@@ -132,6 +132,10 @@ actor RemoteDataService: DataProvider {
         return []
     }
 
+    func getTaskOutcomes(keywords: [String], limit: Int) async throws -> [TaskOutcome] {
+        return []
+    }
+
     func retrieveNotesFor(queryType: QueryAnalyzer.QueryType, keywords: [String], timeScope: QueryAnalyzer.TimeScope, limit: Int) async throws -> [Note] {
         switch queryType {
         case .pattern, .general:
