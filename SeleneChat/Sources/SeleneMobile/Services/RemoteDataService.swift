@@ -132,6 +132,10 @@ actor RemoteDataService: DataProvider {
         return []
     }
 
+    func getSentimentTrend(days: Int) async throws -> SentimentTrend {
+        return SentimentTrend(toneCounts: [:], totalNotes: 0, averageSentimentScore: nil, periodDays: days)
+    }
+
     func getTaskOutcomes(keywords: [String], limit: Int) async throws -> [TaskOutcome] {
         return []
     }

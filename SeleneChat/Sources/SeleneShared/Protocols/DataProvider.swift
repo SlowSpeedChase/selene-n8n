@@ -19,6 +19,9 @@ public protocol DataProvider: AnyObject {
     /// Find notes with strong emotional signals related to keywords
     func getEmotionalNotes(keywords: [String], limit: Int) async throws -> [Note]
 
+    /// Get emotional tone distribution over a time window
+    func getSentimentTrend(days: Int) async throws -> SentimentTrend
+
     // MARK: - Tasks
 
     /// Find task outcomes related to keywords

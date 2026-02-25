@@ -316,6 +316,64 @@ class DatabaseService: ObservableObject {
         return notes
     }
 
+    // MARK: - Sentiment Trends
+
+    func getSentimentTrend(days: Int) async throws -> SentimentTrend {
+        guard days > 0 else {
+            return SentimentTrend(toneCounts: [:], totalNotes: 0, averageSentimentScore: nil, periodDays: days)
+        }
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if processed_notes table exists
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='processed_notes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return SentimentTrend(toneCounts: [:], totalNotes: 0, averageSentimentScore: nil, periodDays: days)
+        }
+
+        let sql = """
+            SELECT p.emotional_tone, COUNT(*) as cnt, AVG(p.sentiment_score) as avg_score
+            FROM processed_notes p
+            JOIN raw_notes r ON p.raw_note_id = r.id
+            WHERE r.created_at >= datetime('now', ? || ' days')
+              AND r.test_run IS NULL
+              AND p.emotional_tone IS NOT NULL
+            GROUP BY p.emotional_tone
+        """
+
+        var toneCounts: [String: Int] = [:]
+        var totalNotes = 0
+        var weightedScoreSum = 0.0
+        var scoreCount = 0
+
+        for row in try db.prepare(sql, "-\(days)") {
+            guard let tone = row[0] as? String else { continue }
+            let count = Int(row[1] as? Int64 ?? 0)
+            let avgScore = row[2] as? Double
+
+            toneCounts[tone] = count
+            totalNotes += count
+
+            if let avg = avgScore {
+                weightedScoreSum += avg * Double(count)
+                scoreCount += count
+            }
+        }
+
+        let averageScore: Double? = scoreCount > 0 ? weightedScoreSum / Double(scoreCount) : nil
+
+        return SentimentTrend(
+            toneCounts: toneCounts,
+            totalNotes: totalNotes,
+            averageSentimentScore: averageScore,
+            periodDays: days
+        )
+    }
+
     // MARK: - Task Outcomes
 
     /// Table and column definitions for task_metadata
