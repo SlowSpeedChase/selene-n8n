@@ -218,6 +218,18 @@ public class ThreadWorkspacePromptBuilder {
         "what now",
         "next step",
         "next steps",
+        "what should i focus on",
+        "what needs my attention",
+        "what needs attention",
+        "what's most important",
+        "whats most important",
+        "what am i missing",
+        "what's stalled",
+        "whats stalled",
+        "what's stuck",
+        "whats stuck",
+        "where should i focus",
+        "what deserves energy",
     ]
 
     /// Detect if a query is asking "what's next"
@@ -245,6 +257,16 @@ public class ThreadWorkspacePromptBuilder {
         "think about this", "reason through",
         "prioritize", "what matters most", "most important",
         "next move", "what to tackle",
+        "i'm stuck", "im stuck",
+        "i don't know where to start", "don't know where to start",
+        "what would you recommend",
+        "talk me through",
+        "i'm overwhelmed", "im overwhelmed",
+        "i keep putting this off", "keep avoiding", "why am i avoiding",
+        "what's the simplest", "simplest first step",
+        "how do i even begin", "how do i begin",
+        "break this into pieces", "break this into steps",
+        "what's blocking", "what blocks", "where's the resistance",
     ]
 
     /// Detect if a query has planning/help intent (distinct from "what's next").
