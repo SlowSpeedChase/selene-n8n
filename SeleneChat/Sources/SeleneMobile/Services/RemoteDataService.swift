@@ -359,6 +359,8 @@ private struct ThreadDTO: Codable {
     let momentumScore: Double?
     let lastActivityAt: Date?
     let createdAt: Date
+    let threadDigest: String?
+    let emotionalCharge: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, why, summary, status
@@ -366,6 +368,8 @@ private struct ThreadDTO: Codable {
         case momentumScore = "momentum_score"
         case lastActivityAt = "last_activity_at"
         case createdAt = "created_at"
+        case threadDigest = "thread_digest"
+        case emotionalCharge = "emotional_charge"
     }
 
     func toThread() -> SeleneShared.Thread {
@@ -378,7 +382,9 @@ private struct ThreadDTO: Codable {
             noteCount: noteCount,
             momentumScore: momentumScore,
             lastActivityAt: lastActivityAt,
-            createdAt: createdAt
+            createdAt: createdAt,
+            threadDigest: threadDigest,
+            emotionalCharge: emotionalCharge
         )
     }
 }

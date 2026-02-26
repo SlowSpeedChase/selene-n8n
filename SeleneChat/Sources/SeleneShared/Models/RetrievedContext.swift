@@ -15,6 +15,12 @@ public struct ContextBlock: Hashable {
     public let sourceDate: Date?
     public let sourceTitle: String?
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+
     public init(type: ContextBlockType, content: String,
                 sourceDate: Date? = nil, sourceTitle: String? = nil) {
         self.type = type
@@ -26,9 +32,7 @@ public struct ContextBlock: Hashable {
     public var formatted: String {
         let dateStr: String
         if let date = sourceDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            dateStr = " - \(formatter.string(from: date))"
+            dateStr = " - \(Self.dateFormatter.string(from: date))"
         } else {
             dateStr = ""
         }

@@ -293,7 +293,8 @@ class DatabaseService: ObservableObject {
 
         // Build compound keyword filter: any keyword matches content OR title
         let keywordFilters = keywords.map { keyword in
-            rawNotes[content].like("%\(keyword)%") || rawNotes[title].like("%\(keyword)%")
+            let escaped = escapeLikePattern(keyword)
+            return rawNotes[content].like("%\(escaped)%") || rawNotes[title].like("%\(escaped)%")
         }
         let combinedKeywordFilter = keywordFilters.dropFirst().reduce(keywordFilters[0]) { $0 || $1 }
 
@@ -405,9 +406,10 @@ class DatabaseService: ObservableObject {
 
         // Build compound keyword filter: any keyword matches content, title, or related_concepts
         let keywordFilters = keywords.map { keyword in
-            rawNotes[content].like("%\(keyword)%") ||
-            rawNotes[title].like("%\(keyword)%") ||
-            taskMetadataTable[tmRelatedConcepts].like("%\(keyword)%")
+            let escaped = escapeLikePattern(keyword)
+            return rawNotes[content].like("%\(escaped)%") ||
+                rawNotes[title].like("%\(escaped)%") ||
+                taskMetadataTable[tmRelatedConcepts].like("%\(escaped)%")
         }
         let combinedKeywordFilter = keywordFilters.dropFirst().reduce(keywordFilters[0]) { $0 || $1 }
 
@@ -1522,6 +1524,12 @@ class DatabaseService: ObservableObject {
             noteTitle: try? row.get(rawNotes[title]),
             noteContent: try? row.get(rawNotes[content])
         )
+    }
+
+    /// Escape LIKE wildcard characters in a keyword for safe pattern matching
+    private func escapeLikePattern(_ value: String) -> String {
+        value.replacingOccurrences(of: "%", with: "\\%")
+             .replacingOccurrences(of: "_", with: "\\_")
     }
 
     /// Parse date string from SQLite format or ISO8601
