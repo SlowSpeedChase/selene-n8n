@@ -108,7 +108,7 @@ final class SynthesisIntegrationTests: XCTestCase {
         // 3. Verify prompt is ready for LLM
         XCTAssertTrue(prompt.count > 200)
         XCTAssertTrue(prompt.contains("Project Alpha"))
-        XCTAssertTrue(prompt.contains("**Recommended Focus:**"))
+        XCTAssertTrue(prompt.contains("2-3"), "Prompt should present options")
     }
 
     // MARK: - Edge Cases
@@ -251,15 +251,15 @@ final class SynthesisIntegrationTests: XCTestCase {
 
     // MARK: - Recommendation Format
 
-    func testSynthesisPromptIncludesRecommendationStructure() {
+    func testSynthesisPromptIncludesOptionsBasedRecommendation() {
         let promptBuilder = SynthesisPromptBuilder()
         let threads = [SeleneChat.Thread.mock(name: "Test Thread")]
 
         let prompt = promptBuilder.buildSynthesisPrompt(threads: threads, notesPerThread: [:])
 
-        // Should include structured recommendation format
-        XCTAssertTrue(prompt.contains("**Recommended Focus:**"))
-        XCTAssertTrue(prompt.contains("**Why:**"))
+        // Should include options-based recommendation format
+        XCTAssertTrue(prompt.contains("2-3"), "Prompt should present multiple options")
+        XCTAssertTrue(prompt.lowercased().contains("resonate"), "Prompt should ask what resonates")
     }
 
     // MARK: - Token Budget Handling

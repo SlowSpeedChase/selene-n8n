@@ -272,7 +272,7 @@ final class ThreadWorkspaceChatViewModelTests: XCTestCase {
         let prompt = vm.buildPrompt(for: "help me make a plan for this")
 
         XCTAssertTrue(
-            prompt.contains("Do NOT jump to a full plan yet"),
+            prompt.contains("Do NOT jump to a full plan"),
             "Planning queries should use the dedicated planning prompt"
         )
     }
@@ -285,7 +285,7 @@ final class ThreadWorkspaceChatViewModelTests: XCTestCase {
         let prompt = vm.buildPrompt(for: "tell me about this thread")
 
         XCTAssertFalse(
-            prompt.contains("Do NOT jump to a full plan yet"),
+            prompt.contains("Do NOT jump to a full plan"),
             "Non-planning queries should NOT use the dedicated planning prompt"
         )
     }
