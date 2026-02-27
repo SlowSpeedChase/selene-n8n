@@ -46,7 +46,7 @@ These have acceptance criteria, ADHD check, and scope check. Ready to create a b
 
 | Date | Document | Topic | Notes |
 |------|----------|-------|-------|
-| 2026-02-15 | 2026-02-15-thinking-partner-upgrade-design.md | selenechat, cloud-ai | Interactive planning + Cloud AI with file workspace (builds on Phase 7.3) |
+| 2026-02-15 | 2026-02-15-thinking-partner-upgrade-design.md | selenechat, cloud-ai | Partially superseded by intelligence-upgrade (Phase 1). Phase 2 (cloud + file workspace) deferred. |
 | 2026-02-13 | 2026-02-13-kitchenos-selene-integration-design.md | integrations, meal-planning | KitchenOS recipe indexing + conversational meal planning in SeleneChat |
 | 2026-02-13 | 2026-02-13-trmnl-daily-digest-design.md | integrations | Push morning digest to TRMNL e-ink display |
 | 2026-02-13 | 2026-02-13-voice-conversation-design.md | selenechat | Voice Phase 2: TTS responses, voice-in = voice-out conversation mode |
@@ -77,6 +77,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
+| 2026-02-24 | 2026-02-24-selene-intelligence-upgrade-design.md | feature/intelligence-upgrade | Layers 1+2: Enhanced retrieval + prompt rewrite. 659 tests, 0 failures. |
 
 ---
 

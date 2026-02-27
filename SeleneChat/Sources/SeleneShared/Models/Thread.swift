@@ -10,6 +10,8 @@ public struct Thread: Identifiable, Hashable {
     public let momentumScore: Double?
     public let lastActivityAt: Date?
     public let createdAt: Date
+    public let threadDigest: String?
+    public let emotionalCharge: String?
 
     public init(
         id: Int64,
@@ -20,7 +22,9 @@ public struct Thread: Identifiable, Hashable {
         noteCount: Int,
         momentumScore: Double? = nil,
         lastActivityAt: Date? = nil,
-        createdAt: Date
+        createdAt: Date,
+        threadDigest: String? = nil,
+        emotionalCharge: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -31,6 +35,8 @@ public struct Thread: Identifiable, Hashable {
         self.momentumScore = momentumScore
         self.lastActivityAt = lastActivityAt
         self.createdAt = createdAt
+        self.threadDigest = threadDigest
+        self.emotionalCharge = emotionalCharge
     }
 
     public var momentumDisplay: String {
@@ -67,7 +73,9 @@ extension Thread {
         noteCount: Int = 5,
         momentumScore: Double? = 0.5,
         lastActivityAt: Date? = Date(),
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        threadDigest: String? = nil,
+        emotionalCharge: String? = nil
     ) -> Thread {
         Thread(
             id: id,
@@ -78,7 +86,9 @@ extension Thread {
             noteCount: noteCount,
             momentumScore: momentumScore,
             lastActivityAt: lastActivityAt,
-            createdAt: createdAt
+            createdAt: createdAt,
+            threadDigest: threadDigest,
+            emotionalCharge: emotionalCharge
         )
     }
 }

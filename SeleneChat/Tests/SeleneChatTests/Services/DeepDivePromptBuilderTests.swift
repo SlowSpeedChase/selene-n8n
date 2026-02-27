@@ -43,15 +43,14 @@ final class DeepDivePromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.lowercased().contains("thinking partner"), "Prompt should include thinking partner framing")
     }
 
-    func testBuildInitialPromptIncludesWordLimit() {
+    func testBuildInitialPromptEncouragesConciseness() {
         let thread = Thread.mock(name: "Test Thread")
         let notes = [Note.mock()]
 
         let builder = DeepDivePromptBuilder()
         let prompt = builder.buildInitialPrompt(thread: thread, notes: notes)
 
-        // Should include 200 word limit
-        XCTAssertTrue(prompt.contains("200"), "Prompt should include 200 word limit")
+        XCTAssertTrue(prompt.contains("Every word earns its place"), "Prompt should encourage conciseness")
     }
 
     // MARK: - Follow-Up Prompt Tests
@@ -99,7 +98,7 @@ final class DeepDivePromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.contains("Architecture Decisions"), "Prompt should include thread name")
     }
 
-    func testBuildFollowUpPromptIncludesWordLimit() {
+    func testBuildFollowUpPromptEncouragesConciseness() {
         let thread = Thread.mock(name: "Test Thread")
         let notes = [Note.mock()]
 
@@ -111,8 +110,7 @@ final class DeepDivePromptBuilderTests: XCTestCase {
             currentQuery: "Next question"
         )
 
-        // Should include 150 word limit for follow-ups
-        XCTAssertTrue(prompt.contains("150"), "Follow-up prompt should include 150 word limit")
+        XCTAssertTrue(prompt.contains("Every word earns its place"), "Follow-up prompt should encourage conciseness")
     }
 
     // MARK: - Action Guidance Tests

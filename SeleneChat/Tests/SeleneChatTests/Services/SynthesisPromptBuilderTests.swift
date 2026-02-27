@@ -78,7 +78,7 @@ final class SynthesisPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.lowercased().contains("thinking partner"), "Prompt should include thinking partner framing")
     }
 
-    func testSynthesisPromptIncludesRecommendationFormat() {
+    func testSynthesisPromptPresentsOptions() {
         let threads = [
             SeleneChat.Thread.mock(id: 1, name: "Test Thread")
         ]
@@ -90,12 +90,11 @@ final class SynthesisPromptBuilderTests: XCTestCase {
         let builder = SynthesisPromptBuilder()
         let prompt = builder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
 
-        // Should include recommendation format
-        XCTAssertTrue(prompt.contains("**Recommended Focus:**"), "Prompt should include recommended focus format")
-        XCTAssertTrue(prompt.contains("**Why:**"), "Prompt should include why format")
+        XCTAssertTrue(prompt.contains("2-3"), "Prompt should present multiple options")
+        XCTAssertTrue(prompt.lowercased().contains("resonate"), "Prompt should ask what resonates")
     }
 
-    func testSynthesisPromptIncludesWordLimit() {
+    func testSynthesisPromptEncouragesConciseness() {
         let threads = [
             SeleneChat.Thread.mock(id: 1, name: "Test Thread")
         ]
@@ -107,8 +106,7 @@ final class SynthesisPromptBuilderTests: XCTestCase {
         let builder = SynthesisPromptBuilder()
         let prompt = builder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
 
-        // Should include 200 word limit
-        XCTAssertTrue(prompt.contains("200"), "Prompt should include 200 word limit")
+        XCTAssertTrue(prompt.contains("Every word earns its place"), "Prompt should encourage conciseness")
     }
 
     func testSynthesisPromptIncludesDirectnessInstruction() {
@@ -123,9 +121,8 @@ final class SynthesisPromptBuilderTests: XCTestCase {
         let builder = SynthesisPromptBuilder()
         let prompt = builder.buildSynthesisPrompt(threads: threads, notesPerThread: notesPerThread)
 
-        // Should include directness instruction
         XCTAssertTrue(prompt.contains("Be direct"), "Prompt should include directness instruction")
-        XCTAssertTrue(prompt.contains("it depends"), "Prompt should discourage 'it depends' responses")
+        XCTAssertTrue(prompt.lowercased().contains("specific"), "Prompt should encourage specificity")
     }
 
     // MARK: - Build Synthesis Prompt With History Tests
@@ -186,7 +183,7 @@ final class SynthesisPromptBuilderTests: XCTestCase {
         XCTAssertTrue(prompt.contains("Testing Strategy"), "Prompt should include second thread name")
     }
 
-    func testSynthesisPromptWithHistoryIncludesWordLimit() {
+    func testSynthesisPromptWithHistoryEncouragesConciseness() {
         let threads = [
             SeleneChat.Thread.mock(id: 1, name: "Test Thread")
         ]
@@ -203,8 +200,7 @@ final class SynthesisPromptBuilderTests: XCTestCase {
             currentQuery: "Next question"
         )
 
-        // Should include 200 word limit
-        XCTAssertTrue(prompt.contains("200"), "Prompt should include 200 word limit")
+        XCTAssertTrue(prompt.contains("Every word earns its place"), "Prompt with history should encourage conciseness")
     }
 
     func testSynthesisPromptWithHistoryIncludesADHDFraming() {

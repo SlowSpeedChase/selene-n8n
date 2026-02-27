@@ -23,6 +23,7 @@ class ChatViewModel: ObservableObject {
     private let actionExtractor = ActionExtractor()
     private let actionService = ActionService()
     private let briefingContextBuilder = BriefingContextBuilder()
+    private lazy var contextualRetriever = ContextualRetriever(dataProvider: dataProvider)
     var speechSynthesisService: SpeechSynthesizing?
 
     /// Currently active deep-dive thread (if in deep-dive mode)
@@ -373,10 +374,22 @@ class ChatViewModel: ObservableObject {
             historySection = ""
         }
 
+        // Retrieve contextual blocks (emotional history, task outcomes, sentiment trends)
+        let contextualBlocks = try await contextualRetriever.retrieve(
+            query: query,
+            keywords: analysis.keywords
+        )
+        let contextualSection = contextualBlocks.blocks.isEmpty ? "" : """
+
+        ## Context from your history:
+        \(contextualBlocks.formatted())
+
+        """
+
         // Build full prompt
         let fullPrompt = """
         \(systemPrompt)
-        \(historySection)
+        \(historySection)\(contextualSection)
         Notes:
         \(noteContext)
 
@@ -730,57 +743,56 @@ class ChatViewModel: ObservableObject {
     }
 
     private func buildSystemPrompt(for queryType: QueryAnalyzer.QueryType) -> String {
-        var basePrompt = """
-        You are Selene, a personal AI assistant helping someone with ADHD manage their thoughts and notes.
+        var prompt = """
+        You are Selene. Minimal. Precise. Kind.
 
-        Your role:
-        - Analyze patterns in their notes (energy, mood, themes, concepts)
-        - Provide actionable recommendations
-        - Be conversational and supportive
-        - Focus on insights that lead to action
+        RULES:
+        - Never summarize unless asked. Engage.
+        - If the user wants help: ask 1-2 questions first. Understand what they're stuck on before responding.
+        - Cite specific notes by title and date. Never say "based on your notes" generically.
+        - Present 2-3 options with tradeoffs when the user faces a decision.
+        - If context shows repeated patterns or failed attempts: name them directly. Kindly.
+        - End by asking what resonates. Never end with a monologue.
+        - Short sentences. No filler. Every word earns its place.
 
-        """
+        CONTEXT BLOCKS:
+        You may receive labeled context like [EMOTIONAL HISTORY], [TASK HISTORY], [EMOTIONAL TREND], [THREAD STATE].
+        Use these to ground your response in evidence. Reference them naturally — don't list them back.
 
-        // Memories will be injected here asynchronously in the caller
-
-        basePrompt += """
-        IMPORTANT - Citations:
-        - When referencing specific notes, ALWAYS cite them as: [Note: 'Title' - Date]
+        CITATIONS:
+        - When referencing specific notes, cite them as: [Note: 'Title' - Date]
         - Example: "You mentioned feeling productive in the morning [Note: 'Morning Routine' - Nov 14]"
         - Place citations immediately after the relevant statement
         - Use exact note titles and dates provided in the context
 
-        Guidelines:
-        - Keep responses concise but insightful
-        - Highlight patterns and correlations when they exist
-        - Suggest concrete next steps
-        - Be empathetic about ADHD challenges
-
-        The user's notes contain timestamps, energy levels, sentiment, themes, and concepts extracted by AI.
         """
 
-        // Add query-specific instructions
-        let querySpecific: String
+        // Query-specific additions
         switch queryType {
         case .pattern:
-            querySpecific = "\n\nAnalyze these notes for trends and patterns. Look for patterns in energy, themes, sentiment, and timing. Be specific and cite notes as evidence."
+            prompt += "\nFOCUS: Identify patterns across these notes. Name tensions. Ask what the user sees.\n"
         case .search:
-            querySpecific = "\n\nSummarize what these notes say about the topic. Highlight key points and cite relevant notes."
+            prompt += "\nFOCUS: Surface what's relevant. Cite specific notes. Ask if this is what they're looking for.\n"
         case .knowledge:
-            querySpecific = "\n\nAnswer this question based on the note content. Cite specific notes that contain the answer."
+            prompt += "\nFOCUS: Answer from note evidence. Cite sources. If the answer isn't in the notes, say so.\n"
         case .general:
-            querySpecific = "\n\nProvide insights based on recent notes. Highlight interesting patterns and cite specific examples."
+            prompt += "\nFOCUS: Engage with what's on their mind. Use context blocks to ground the conversation.\n"
         case .thread:
-            querySpecific = "\n\nThis is a thread-related query. Show emerging threads and patterns in the notes. Group related ideas and cite specific notes."
+            prompt += "\nFOCUS: Show what's emerging across threads. Name connections. Ask where to focus.\n"
         case .semantic:
-            querySpecific = "\n\nThese notes are conceptually related to the query. Explore the connections and themes. Highlight how ideas relate to each other and cite specific notes."
+            prompt += "\nFOCUS: These notes are conceptually connected. Name the connection. Ask if it resonates.\n"
         case .deepDive:
-            querySpecific = "\n\nThis is a deep-dive into a specific thread. Analyze the thread's evolution, key insights, tensions, and suggest next actions. Use [ACTION: description | ENERGY: level | TIMEFRAME: time] markers for actionable items."
+            prompt += "\nFOCUS: Go deep on this thread. Identify tensions, open questions, next actions. Use [ACTION: description | ENERGY: level | TIMEFRAME: time] for actionable items.\n"
         case .synthesis:
-            querySpecific = "\n\nThis is a synthesis/prioritization request. Analyze active threads and help prioritize where to focus energy. Consider thread momentum, urgency, and the user's current energy state."
+            prompt += "\nFOCUS: Cross-thread synthesis. What patterns connect different lines of thinking? What deserves energy right now?\n"
         }
 
-        return basePrompt + querySpecific
+        return prompt
+    }
+
+    /// Exposed for testing only
+    func buildSystemPromptForTesting(queryType: QueryAnalyzer.QueryType) -> String {
+        return buildSystemPrompt(for: queryType)
     }
 
     /// Build system prompt with relevant memories injected

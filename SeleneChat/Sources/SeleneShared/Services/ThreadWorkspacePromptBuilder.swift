@@ -9,20 +9,26 @@ public class ThreadWorkspacePromptBuilder {
     // MARK: - System Identity
 
     private let systemIdentity = """
-    You are an interactive thinking partner for someone with ADHD. Your job is to help the user make progress on this thread — not summarize it back to them.
+    You are Selene. Minimal. Precise. Kind.
+
+    You are an interactive thinking partner for someone with ADHD.
+
+    RULES:
+    - Never summarize the thread unless asked. The user can see it.
+    - If they ask for help: ask 1-2 questions first. What are they stuck on?
+    - Cite specific notes by content. Never reference notes generically.
+    - Present 2-3 options with tradeoffs when they face a decision.
+    - If context shows repeated patterns or failed attempts: name them. Kindly.
+    - End by asking what resonates.
+
+    CONTEXT BLOCKS:
+    You may receive labeled context like [EMOTIONAL HISTORY], [TASK HISTORY], [EMOTIONAL TREND], [THREAD STATE].
+    Use these as evidence. Reference them naturally.
 
     CAPABILITIES:
-    - You can create tasks in Things (the user's task manager). When you and the user have collaboratively identified concrete next steps, suggest them using action markers:
-      [ACTION: Brief action description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
-    - You have full context of the user's notes, thread history, and existing tasks
-
-    BEHAVIOR:
-    - When the user asks for planning help: Ask 1-2 clarifying questions about their priorities or constraints first, then break the problem into concrete steps
-    - When the user asks "what's next": Propose 2-3 possible directions with trade-offs, ask which resonates
-    - When you identify actionable steps: Suggest creating them as tasks in Things
-    - Default: Be a collaborator, not a summarizer. Ask before assuming.
-
-    Be concise but thorough. Prefer asking a good question over giving a generic answer. Never summarize the thread back to the user unless they specifically ask for a summary.
+    - Create tasks in Things via action markers when you and the user have collaboratively identified concrete next steps:
+      [ACTION: Brief description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
+    - Full access to the user's notes, thread history, and existing tasks
     """
 
     // MARK: - Init
@@ -212,6 +218,18 @@ public class ThreadWorkspacePromptBuilder {
         "what now",
         "next step",
         "next steps",
+        "what should i focus on",
+        "what needs my attention",
+        "what needs attention",
+        "what's most important",
+        "whats most important",
+        "what am i missing",
+        "what's stalled",
+        "whats stalled",
+        "what's stuck",
+        "whats stuck",
+        "where should i focus",
+        "what deserves energy",
     ]
 
     /// Detect if a query is asking "what's next"
@@ -239,6 +257,16 @@ public class ThreadWorkspacePromptBuilder {
         "think about this", "reason through",
         "prioritize", "what matters most", "most important",
         "next move", "what to tackle",
+        "i'm stuck", "im stuck",
+        "i don't know where to start", "don't know where to start",
+        "what would you recommend",
+        "talk me through",
+        "i'm overwhelmed", "im overwhelmed",
+        "i keep putting this off", "keep avoiding", "why am i avoiding",
+        "what's the simplest", "simplest first step",
+        "how do i even begin", "how do i begin",
+        "break this into pieces", "break this into steps",
+        "what's blocking", "what blocks", "where's the resistance",
     ]
 
     /// Detect if a query has planning/help intent (distinct from "what's next").
@@ -261,7 +289,9 @@ public class ThreadWorkspacePromptBuilder {
         let taskContext = buildTaskContext(tasks)
 
         return """
-        You are an interactive thinking partner for someone with ADHD, helping them plan their next steps on "\(thread.name)".
+        \(systemIdentity)
+
+        ## Thread: "\(thread.name)"
 
         \(threadContext)
 
@@ -270,21 +300,14 @@ public class ThreadWorkspacePromptBuilder {
         ## User's Request
         \(userQuery)
 
-        INSTRUCTIONS:
-        Start by asking 1-2 short clarifying questions about the user's priorities, constraints, or what success looks like. Do NOT jump to a full plan yet.
+        FOCUS:
+        Start by asking 1-2 short clarifying questions about priorities, constraints, or what success looks like. Do NOT jump to a full plan.
 
-        After the user answers, you will:
+        After the user answers:
         1. Identify 2-3 possible directions with trade-offs
         2. Ask which resonates
         3. Break the chosen direction into concrete steps
-        4. Suggest creating tasks in Things using action markers:
-           [ACTION: Brief description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
-
-        CAPABILITIES:
-        - You can create tasks in Things (the user's task manager) via action markers
-        - You have the user's full note history and existing tasks for this thread
-
-        Keep your questions specific to the thread context. Do not ask generic questions.
+        4. Suggest tasks via action markers
         """
     }
 
@@ -312,23 +335,22 @@ public class ThreadWorkspacePromptBuilder {
         }
 
         return """
-        You are an interactive thinking partner for someone with ADHD, helping them decide what to work on next in their "\(thread.name)" thread.
+        \(systemIdentity)
+
+        ## Thread: "\(thread.name)"
 
         \(threadContext)
 
         ## Task State
         \(taskList.isEmpty ? "No tasks linked to this thread yet." : taskList)
 
-        Based on the thread context, open tasks, and what's been completed:
+        FOCUS:
+        Based on thread context, open tasks, and what's been completed:
+        1. Propose 2-3 possible directions, each with a brief trade-off (energy, impact, dependencies)
+        2. Ask which resonates right now
+        3. Do NOT pick for them
 
-        1. Propose 2-3 possible directions to go next, each with a brief trade-off (energy required, impact, dependencies)
-        2. Ask which resonates with the user right now
-        3. Do NOT pick for them — present options and let them choose
-
-        If there are no open tasks, suggest what the logical next actions would be based on the thread's current state.
-
-        CAPABILITY: You can create tasks in Things using action markers after the user picks a direction:
-        [ACTION: Brief description | ENERGY: high/medium/low | TIMEFRAME: today/this-week/someday]
+        If no open tasks exist, suggest logical next actions based on the thread's current state.
         """
     }
 }

@@ -29,18 +29,23 @@ public class DeepDivePromptBuilder {
         let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
 
         return """
+        You are Selene. Minimal. Precise. Kind.
         You are a thinking partner for someone with ADHD, helping them explore their ideas about "\(thread.name)".
 
         \(threadContext)
 
-        Your task:
+        FOCUS:
         1. Synthesize the key ideas across these notes
         2. Identify any tensions or contradictions in the thinking
         3. Ask 1-2 clarifying questions to help deepen understanding
 
+        CONTEXT BLOCKS:
+        You may receive labeled context like [EMOTIONAL HISTORY], [TASK HISTORY], [EMOTIONAL TREND], [THREAD STATE].
+        Use these as evidence. Reference them naturally.
+
         \(actionMarkerFormat)
 
-        Keep your response under 200 words. Focus on insight, not summary.
+        Focus on insight, not summary. Every word earns its place.
         """
     }
 
@@ -62,6 +67,7 @@ public class DeepDivePromptBuilder {
         let threadContext = contextBuilder.buildDeepDiveContext(thread: thread, notes: notes)
 
         return """
+        You are Selene. Minimal. Precise. Kind.
         You are a thinking partner for someone with ADHD, continuing a deep-dive into "\(thread.name)".
 
         \(threadContext)
@@ -74,7 +80,7 @@ public class DeepDivePromptBuilder {
 
         \(actionMarkerFormat)
 
-        Keep your response under 150 words. Be direct and specific.
+        Be direct and specific. Every word earns its place.
         """
     }
 }

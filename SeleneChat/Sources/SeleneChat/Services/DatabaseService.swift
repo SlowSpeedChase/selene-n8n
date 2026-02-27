@@ -75,6 +75,8 @@ class DatabaseService: ObservableObject {
     private let sentimentScore = Expression<Double?>("sentiment_score")
     private let emotionalTone = Expression<String?>("emotional_tone")
     private let energyLevel = Expression<String?>("energy_level")
+    private let essence = Expression<String?>("essence")
+    private let fidelityTier = Expression<String?>("fidelity_tier")
 
     // chat_sessions columns
     private let sessionId = Expression<String>("id")
@@ -114,6 +116,8 @@ class DatabaseService: ObservableObject {
     private let threadsMomentumScore = Expression<Double?>("momentum_score")
     private let threadsLastActivityAt = Expression<String?>("last_activity_at")
     private let threadsCreatedAt = Expression<String>("created_at")
+    private let threadsThreadDigest = Expression<String?>("thread_digest")
+    private let threadsEmotionalCharge = Expression<String?>("emotional_charge")
 
     // thread_notes table (Phase 3 living system)
     private let threadNotesTable = Table("thread_notes")
@@ -279,6 +283,181 @@ class DatabaseService: ObservableObject {
         }
 
         return notes
+    }
+
+    func getEmotionalNotes(keywords: [String], limit: Int) async throws -> [Note] {
+        guard !keywords.isEmpty else { return [] }
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Build compound keyword filter: any keyword matches content OR title
+        let keywordFilters = keywords.map { keyword in
+            let escaped = escapeLikePattern(keyword)
+            return rawNotes[content].like("%\(escaped)%") || rawNotes[title].like("%\(escaped)%")
+        }
+        let combinedKeywordFilter = keywordFilters.dropFirst().reduce(keywordFilters[0]) { $0 || $1 }
+
+        let query = rawNotes
+            .join(.inner, processedNotes, on: rawNotes[id] == processedNotes[rawNoteId])
+            .filter(combinedKeywordFilter)
+            .filter(processedNotes[emotionalTone] != nil)
+            .filter(processedNotes[emotionalTone] != "neutral")
+            .filter(rawNotes[testRun] == nil)
+            .order(processedNotes[sentimentScore].absoluteValue.desc, rawNotes[createdAt].desc)
+            .limit(limit)
+
+        var notes: [Note] = []
+
+        for row in try db.prepare(query) {
+            let note = try parseNote(from: row)
+            notes.append(note)
+        }
+
+        return notes
+    }
+
+    // MARK: - Sentiment Trends
+
+    func getSentimentTrend(days: Int) async throws -> SentimentTrend {
+        guard days > 0 else {
+            return SentimentTrend(toneCounts: [:], totalNotes: 0, averageSentimentScore: nil, periodDays: days)
+        }
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if processed_notes table exists
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='processed_notes'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return SentimentTrend(toneCounts: [:], totalNotes: 0, averageSentimentScore: nil, periodDays: days)
+        }
+
+        let sql = """
+            SELECT p.emotional_tone, COUNT(*) as cnt, AVG(p.sentiment_score) as avg_score
+            FROM processed_notes p
+            JOIN raw_notes r ON p.raw_note_id = r.id
+            WHERE r.created_at >= datetime('now', ? || ' days')
+              AND r.test_run IS NULL
+              AND p.emotional_tone IS NOT NULL
+            GROUP BY p.emotional_tone
+        """
+
+        var toneCounts: [String: Int] = [:]
+        var totalNotes = 0
+        var weightedScoreSum = 0.0
+        var scoreCount = 0
+
+        for row in try db.prepare(sql, "-\(days)") {
+            guard let tone = row[0] as? String else { continue }
+            let count = Int(row[1] as? Int64 ?? 0)
+            let avgScore = row[2] as? Double
+
+            toneCounts[tone] = count
+            totalNotes += count
+
+            if let avg = avgScore {
+                weightedScoreSum += avg * Double(count)
+                scoreCount += count
+            }
+        }
+
+        let averageScore: Double? = scoreCount > 0 ? weightedScoreSum / Double(scoreCount) : nil
+
+        return SentimentTrend(
+            toneCounts: toneCounts,
+            totalNotes: totalNotes,
+            averageSentimentScore: averageScore,
+            periodDays: days
+        )
+    }
+
+    // MARK: - Task Outcomes
+
+    /// Table and column definitions for task_metadata
+    private let taskMetadataTable = Table("task_metadata")
+    private let tmRawNoteId = SQLite.Expression<Int64>("raw_note_id")
+    private let tmThingsTaskId = SQLite.Expression<String?>("things_task_id")
+    private let tmTaskType = SQLite.Expression<String?>("task_type")
+    private let tmEnergyRequired = SQLite.Expression<String?>("energy_required")
+    private let tmEstimatedMinutes = SQLite.Expression<Int64?>("estimated_minutes")
+    private let tmCreatedAt = SQLite.Expression<String>("created_at")
+    private let tmCompletedAt = SQLite.Expression<String?>("completed_at")
+    private let tmRelatedConcepts = SQLite.Expression<String?>("related_concepts")
+    private let tmOverwhelmFactor = SQLite.Expression<Int64?>("overwhelm_factor")
+
+    func getTaskOutcomes(keywords: [String], limit: Int) async throws -> [TaskOutcome] {
+        guard !keywords.isEmpty else { return [] }
+        guard let db = db else {
+            throw DatabaseError.notConnected
+        }
+
+        // Check if task_metadata table exists
+        let tableExists = try db.scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='task_metadata'"
+        ) as? Int64 ?? 0
+
+        if tableExists == 0 {
+            return []
+        }
+
+        // Build compound keyword filter: any keyword matches content, title, or related_concepts
+        let keywordFilters = keywords.map { keyword in
+            let escaped = escapeLikePattern(keyword)
+            return rawNotes[content].like("%\(escaped)%") ||
+                rawNotes[title].like("%\(escaped)%") ||
+                taskMetadataTable[tmRelatedConcepts].like("%\(escaped)%")
+        }
+        let combinedKeywordFilter = keywordFilters.dropFirst().reduce(keywordFilters[0]) { $0 || $1 }
+
+        let query = taskMetadataTable
+            .join(.inner, rawNotes, on: taskMetadataTable[tmRawNoteId] == rawNotes[id])
+            .filter(combinedKeywordFilter)
+            .filter(rawNotes[testRun] == nil)
+            .order(taskMetadataTable[tmCreatedAt].desc)
+            .limit(limit)
+
+        let now = Date()
+        let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: now)!
+        var outcomes: [TaskOutcome] = []
+
+        for row in try db.prepare(query) {
+            let taskCreatedAt = parseDateString(try row.get(taskMetadataTable[tmCreatedAt])) ?? Date()
+            let taskCompletedAt = (try? row.get(taskMetadataTable[tmCompletedAt])).flatMap { parseDateString($0) }
+
+            // Compute status: completed, abandoned (>30 days open), or open
+            let taskStatus: String
+            if taskCompletedAt != nil {
+                taskStatus = "completed"
+            } else if taskCreatedAt < thirtyDaysAgo {
+                taskStatus = "abandoned"
+            } else {
+                taskStatus = "open"
+            }
+
+            // Compute daysOpen: days between creation and completion (or now)
+            let referenceDate = taskCompletedAt ?? now
+            let daysOpen = Calendar.current.dateComponents([.day], from: taskCreatedAt, to: referenceDate).day ?? 0
+
+            let estimatedMins: Int? = (try? row.get(taskMetadataTable[tmEstimatedMinutes])).flatMap { Int($0) }
+
+            let outcome = TaskOutcome(
+                taskTitle: try row.get(rawNotes[title]),
+                taskType: try? row.get(taskMetadataTable[tmTaskType]),
+                energyRequired: try? row.get(taskMetadataTable[tmEnergyRequired]),
+                estimatedMinutes: estimatedMins,
+                status: taskStatus,
+                createdAt: taskCreatedAt,
+                completedAt: taskCompletedAt,
+                daysOpen: daysOpen
+            )
+            outcomes.append(outcome)
+        }
+
+        return outcomes
     }
 
     func getNoteByConcept(_ concept: String, limit: Int = 50) async throws -> [Note] {
@@ -457,7 +636,9 @@ class DatabaseService: ObservableObject {
                 noteCount: Int(row[threadsNoteCount]),
                 momentumScore: row[threadsMomentumScore],
                 lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
-                createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+                createdAt: parseDateString(row[threadsCreatedAt]) ?? Date(),
+                threadDigest: try? row.get(threadsThreadDigest),
+                emotionalCharge: try? row.get(threadsEmotionalCharge)
             )
             threads.append(thread)
         }
@@ -499,7 +680,9 @@ class DatabaseService: ObservableObject {
             noteCount: Int(row[threadsNoteCount]),
             momentumScore: row[threadsMomentumScore],
             lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
-            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date(),
+            threadDigest: try? row.get(threadsThreadDigest),
+            emotionalCharge: try? row.get(threadsEmotionalCharge)
         )
 
         // Get linked notes
@@ -576,6 +759,8 @@ class DatabaseService: ObservableObject {
             sentimentScore: try? row.get(processedNotes[sentimentScore]),
             emotionalTone: try? row.get(processedNotes[emotionalTone]),
             energyLevel: try? row.get(processedNotes[energyLevel]),
+            essence: try? row.get(processedNotes[essence]),
+            fidelityTier: try? row.get(processedNotes[fidelityTier]),
             calendarEvent: calendarEventContext
         )
     }
@@ -750,7 +935,9 @@ class DatabaseService: ObservableObject {
             noteCount: Int(row[threadsNoteCount]),
             momentumScore: row[threadsMomentumScore],
             lastActivityAt: row[threadsLastActivityAt].flatMap { parseDateString($0) },
-            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date()
+            createdAt: parseDateString(row[threadsCreatedAt]) ?? Date(),
+            threadDigest: try? row.get(threadsThreadDigest),
+            emotionalCharge: try? row.get(threadsEmotionalCharge)
         )
     }
 
@@ -1337,6 +1524,12 @@ class DatabaseService: ObservableObject {
             noteTitle: try? row.get(rawNotes[title]),
             noteContent: try? row.get(rawNotes[content])
         )
+    }
+
+    /// Escape LIKE wildcard characters in a keyword for safe pattern matching
+    private func escapeLikePattern(_ value: String) -> String {
+        value.replacingOccurrences(of: "%", with: "\\%")
+             .replacingOccurrences(of: "_", with: "\\_")
     }
 
     /// Parse date string from SQLite format or ISO8601
