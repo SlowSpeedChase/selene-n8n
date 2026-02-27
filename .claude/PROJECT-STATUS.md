@@ -1,6 +1,6 @@
 # Selene Project - Current Status
 
-**Last Updated:** 2026-02-22
+**Last Updated:** 2026-02-27
 **Status:** Dev Environment Isolation | Living System Active
 
 ---
@@ -22,6 +22,14 @@ Notes form **threads** - lines of thinking that span multiple notes, have underl
 All three "Ready" designs from 2026-02-12 are now implemented and merged. The system has grown significantly: menu bar orchestrator manages workflow scheduling, voice memos are auto-transcribed via whisper.cpp, and the morning briefing got a full redesign with structured cards.
 
 ### Recent Completions
+- **Intelligence Upgrade Layers 1+2** (2026-02-27) - Prosthetic executive function for chat
+  - `ContextualRetriever` — multi-signal retrieval (emotional history, task outcomes, sentiment trends, thread state)
+  - `RetrievedContext`/`ContextBlock` — labeled context blocks for structured LLM injection
+  - New DB queries: `getEmotionalNotes`, `getTaskOutcomes`, `getSentimentTrend`
+  - All 5 prompt builders rewritten with zen personality (cite evidence, ask first, present options)
+  - Planning intent detection expanded to 53 patterns
+  - `Note` gains `essence`/`fidelityTier`, `Thread` gains `threadDigest`/`emotionalCharge`
+  - 743 tests, 34 files changed, +1614/-167 lines
 - **Tiered Context Compression** (2026-02-22) - Lifecycle-based fidelity tiers for LLM context scaling
   - `ContextBuilder` shared utility — tiered rendering (full/high/summary/skeleton) within token budgets
   - `distill-essences.ts` — backfills note essences (1-2 sentence distillations) at ~120/hour

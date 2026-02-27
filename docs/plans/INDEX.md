@@ -1,6 +1,6 @@
 # Design Documents Index
 
-**Last Updated:** 2026-02-22
+**Last Updated:** 2026-02-27
 
 Design docs are the planning unit for Selene development. Each doc captures an idea, architecture, and implementation plan.
 
@@ -77,7 +77,6 @@ Branch exists, actively being worked on.
 
 | Date | Document | Branch | Notes |
 |------|----------|--------|-------|
-| 2026-02-24 | 2026-02-24-selene-intelligence-upgrade-design.md | feature/intelligence-upgrade | Layers 1+2: Enhanced retrieval + prompt rewrite. 659 tests, 0 failures. |
 
 ---
 
@@ -85,6 +84,7 @@ Branch exists, actively being worked on.
 
 | Date | Document | Completed | Notes |
 |------|----------|-----------|-------|
+| 2026-02-24 | 2026-02-24-selene-intelligence-upgrade-design.md | 2026-02-27 | Layers 1+2: ContextualRetriever, zen prompt rewrite, 53 planning patterns, 743 tests |
 | 2026-02-21 | 2026-02-21-tiered-context-compression-design.md | 2026-02-22 | ContextBuilder, 3 new workflows, tier evaluation, essence backfill, health endpoint |
 | 2026-02-21 | 2026-02-21-dev-environment-isolation-design.md | 2026-02-22 | Overmind + Procfile.dev, 536 seed notes, vault export fix, all 9 acceptance criteria pass |
 | 2026-02-14 | 2026-02-14-context-blocks-apple-intelligence-design.md | 2026-02-14 | Chunk-based retrieval, Apple Intelligence LLM, LLM Router, background chunking pipeline |
